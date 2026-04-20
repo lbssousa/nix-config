@@ -24,10 +24,7 @@
     nixos-hardware.url = "github:NixOS/nixos-hardware";
 
     # Lanzaboote for Secure Boot (used on barbudus for NVIDIA module signing)
-    lanzaboote = {
-      url = "github:nix-community/lanzaboote/v0.4.1";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    lanzaboote.url = "github:nix-community/lanzaboote/v0.4.1";
 
     # nix-homebrew for Linuxbrew/Homebrew support
     # NOTA: O suporte ao Homebrew é configurado diretamente em modules/homebrew.nix
@@ -58,9 +55,6 @@
             # Impermanence module
             impermanence.nixosModules.impermanence
 
-            # Lanzaboote module (for Secure Boot)
-            lanzaboote.nixosModules.lanzaboote
-
             # Host-specific hardware configuration
             ./hosts/${hostname}/hardware-configuration.nix
 
@@ -89,7 +83,8 @@
         # Dell Inspiron 14 5490 (Intel i5-10210U, 16GB RAM, Intel + Nvidia MX230)
         # NOTA: Não há módulo nixos-hardware específico para este modelo.
         # Se disponível no futuro, adicione em extraModules.
-        barbudus = mkHost "barbudus" "x86_64-linux" [ ];
+        # O módulo lanzaboote é incluído apenas para este host (usa Secure Boot)
+        barbudus = mkHost "barbudus" "x86_64-linux" [ lanzaboote.nixosModules.lanzaboote ];
 
         # Morefine M6 Mini-PC (Intel N200, 16GB RAM, Intel UHD Graphics)
         bigodon = mkHost "bigodon" "x86_64-linux" [ ];
