@@ -31,25 +31,25 @@
 
   # Serviço ecbd da Epson (Epson Communication Bridge Daemon)
   # Necessário para o utilitário epson-printer-utility funcionar corretamente.
-  # NOTA: O pacote epson-printer-utility (que contém o binário ecbd) não está
-  # disponível no nixpkgs oficial. Instale-o manualmente ou configure o path
-  # abaixo após a instalação manual do pacote da Epson.
   #
-  # Para instalar manualmente (arquivo .deb ou .rpm da Epson):
-  # https://download.ebz.epson.net/dsc/search/01/search/?OSC=LX
+  # ⚠️  AÇÃO NECESSÁRIA ANTES DE HABILITAR:
+  # 1. Instale o epson-printer-utility da Epson:
+  #    https://download.ebz.epson.net/dsc/search/01/search/?OSC=LX
+  #    (baixe o arquivo .deb ou .rpm e instale manualmente via alien/dpkg/rpm)
+  # 2. Atualize o path do binário abaixo (ExecStart) para o path correto
+  # 3. Altere enable = false para enable = true neste arquivo
+  # 4. Execute: sudo nixos-rebuild switch --flake /etc/nixos#<host>
   #
-  # Após instalar, defina o path correto em:
-  # systemd.services.ecbd.serviceConfig.ExecStart
+  # O serviço está DESABILITADO por padrão para evitar erros na ausência do binário.
   systemd.services.ecbd = {
     description = "Epson Communication Bridge Daemon";
     wantedBy = [ "multi-user.target" ];
     after = [ "network.target" ];
-    # Enable = false por padrão até que o binário esteja instalado
+    # DESABILITADO por padrão - habilite após instalar o epson-printer-utility
     enable = lib.mkDefault false;
     serviceConfig = {
       Type = "forking";
-      # Atualize este path após instalar o epson-printer-utility:
-      # ExecStart = "/opt/epson-printer-utility/bin/ecbd";
+      # Atualize este path para o binário ecbd após instalar o epson-printer-utility:
       ExecStart = lib.mkDefault "/usr/bin/ecbd";
       PIDFile = "/run/ecbd.pid";
       Restart = "on-failure";

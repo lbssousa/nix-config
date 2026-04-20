@@ -97,7 +97,7 @@
       dkc = "podman-compose";
     };
 
-    initContent = ''
+    initExtra = ''
       # Zoxide (cd inteligente)
       eval "$(zoxide init zsh)"
 
