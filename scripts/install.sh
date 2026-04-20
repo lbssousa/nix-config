@@ -6,22 +6,25 @@
 #   2. Seleciona o host e o disco de destino
 #   3. Particiona e formata o disco com disko
 #   4. Gera o hostId ZFS e atualiza hardware-configuration.nix
-#   5. Cria o arquivo de usuário a partir do skeleton
-#   6. Adiciona o arquivo de usuário ao índice do git (git add --force)
-#   7. Atualiza configuration.nix com o import do usuário
+#   5. Cria arquivos de usuário a partir do skeleton
+#   6. Adiciona os arquivos de usuário ao índice do git (git add --force)
+#   7. Atualiza configuration.nix com os imports dos usuários
 #   8. Instala o NixOS
 #   9. Define senhas via nixos-enter
 #
 # Uso:
 #   bash scripts/install.sh [--host <hostname>] [--disk <device>]
-#                           [--user <username>] [--full-name "<Nome Completo>"]
+#                           [--user "login:Nome Completo:sudo"]
+#                           [--user "login2:Nome2:nosudo"] ...
 #                           [--non-interactive]
 #
 # Opções:
 #   --host            Nome do host NixOS (ex: barbudus, bigodon)
 #   --disk            Dispositivo de disco (ex: /dev/nvme0n1, /dev/sda)
-#   --user            Nome do usuário a criar
-#   --full-name       Nome completo do usuário (entre aspas)
+#   --user            Usuário no formato "login:Nome Completo:sudo|nosudo".
+#                     Pode ser repetido para criar múltiplos usuários.
+#                     "sudo" (padrão) inclui o usuário no grupo wheel (sudo).
+#                     "nosudo" cria o usuário sem permissão de sudo.
 #   --non-interactive Não faz perguntas; falha se informações obrigatórias
 #                     não forem fornecidas via flags
 
@@ -63,16 +66,39 @@ require_cmd() {
 
 OPT_HOST=""
 OPT_DISK=""
-OPT_USER=""
-OPT_FULL_NAME=""
+OPT_USERS_LOGIN=()
+OPT_USERS_FULLNAME=()
+OPT_USERS_SUDO=()
 OPT_NON_INTERACTIVE=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --host)           OPT_HOST="$2";          shift 2 ;;
     --disk)           OPT_DISK="$2";          shift 2 ;;
-    --user)           OPT_USER="$2";          shift 2 ;;
-    --full-name)      OPT_FULL_NAME="$2";     shift 2 ;;
+    --user)
+      # Formato: "login:Nome Completo:sudo|nosudo"
+      # O terceiro campo é opcional (padrão: sudo).
+      _spec="$2"
+      _login="${_spec%%:*}"
+      _after_login="${_spec#*:}"
+      if [[ "$_after_login" == "$_spec" ]]; then
+        # Apenas login, sem separadores
+        _fname=""
+        _sudo_flag="true"
+      else
+        _last_field="${_after_login##*:}"
+        if [[ "$_last_field" == "nosudo" || "$_last_field" == "false" || "$_last_field" == "no" ]]; then
+          _sudo_flag="false"
+          _fname="${_after_login%:*}"
+        else
+          _sudo_flag="true"
+          _fname="$_after_login"
+        fi
+      fi
+      OPT_USERS_LOGIN+=("$_login")
+      OPT_USERS_FULLNAME+=("$_fname")
+      OPT_USERS_SUDO+=("$_sudo_flag")
+      shift 2 ;;
     --non-interactive) OPT_NON_INTERACTIVE=true; shift ;;
     *) die "Opção desconhecida: $1" ;;
   esac
@@ -275,92 +301,149 @@ if [[ -n "$GENERATED_HW" && -s "$GENERATED_HW" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 5. Criar arquivo de usuário
+# 5. Criar arquivos de usuário
 # ---------------------------------------------------------------------------
 
 echo
-info "==> Passo 5: Criar arquivo de usuário"
+info "==> Passo 5: Criar contas de usuário"
 
-ask OPT_USER "Nome de usuário (login)"
-[[ -n "$OPT_USER" ]] || die "Nome de usuário é obrigatório."
+USERS_LOGIN=()
+USERS_FULLNAME=()
+USERS_SUDO=()
 
-# Validar nome de usuário POSIX (máximo 32 chars = LOGIN_NAME_MAX em Linux)
-if ! [[ "$OPT_USER" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
-  die "Nome de usuário inválido: '$OPT_USER'. Use apenas letras minúsculas, números, hifens e underscores."
-fi
+_create_user_file() {
+  local user="$1" full_name="$2" sudo_flag="$3"
+  local user_file="$CONFIG_DIR/users/$user.nix"
 
-USER="$OPT_USER"
-USER_FILE="$CONFIG_DIR/users/$USER.nix"
-
-ask OPT_FULL_NAME "Nome completo do usuário" "$USER"
-FULL_NAME="${OPT_FULL_NAME:-$USER}"
-
-if [[ -f "$USER_FILE" ]]; then
-  warn "Arquivo $USER_FILE já existe."
-  if ! confirm "Sobrescrever?"; then
-    info "Mantendo arquivo existente."
-  else
-    cp "$CONFIG_DIR/users/skeleton.nix" "$USER_FILE"
-    # Substituir "skeleton" pelo nome real e a descrição pelo nome completo
-    sed -i \
-      -e "s|users\.users\.skeleton|users.users.$USER|g" \
-      -e "s|users\.skeleton\b|users.$USER|g" \
-      -e "s|home-manager\.users\.skeleton|home-manager.users.$USER|g" \
-      -e "s|Nome Completo do Usuário|$FULL_NAME|g" \
-      "$USER_FILE"
-    success "Arquivo de usuário $USER_FILE criado."
+  if [[ -f "$user_file" ]]; then
+    warn "Arquivo $user_file já existe."
+    if ! confirm "Sobrescrever?"; then
+      info "Mantendo arquivo existente para $user."
+      return
+    fi
   fi
-else
-  cp "$CONFIG_DIR/users/skeleton.nix" "$USER_FILE"
+
+  cp "$CONFIG_DIR/users/skeleton.nix" "$user_file"
   sed -i \
-    -e "s|users\.users\.skeleton|users.users.$USER|g" \
-    -e "s|users\.skeleton\b|users.$USER|g" \
-    -e "s|home-manager\.users\.skeleton|home-manager.users.$USER|g" \
-    -e "s|Nome Completo do Usuário|$FULL_NAME|g" \
-    "$USER_FILE"
-  success "Arquivo de usuário $USER_FILE criado."
+    -e "s|users\.users\.skeleton|users.users.$user|g" \
+    -e "s|users\.skeleton\b|users.$user|g" \
+    -e "s|home-manager\.users\.skeleton|home-manager.users.$user|g" \
+    -e "s|Nome Completo do Usuário|$full_name|g" \
+    "$user_file"
+
+  # Remover grupo wheel (sudo) se não solicitado
+  if [[ "$sudo_flag" == "false" ]]; then
+    sed -i '/# Remova "wheel" abaixo se o usuário NÃO deve ter permissão de sudo:/d' "$user_file"
+    sed -i '/"wheel" # sudo/d' "$user_file"
+  fi
+
+  success "Arquivo de usuário $user_file criado (sudo: $sudo_flag)."
+}
+
+if [[ "$OPT_NON_INTERACTIVE" == "true" ]]; then
+  [[ ${#OPT_USERS_LOGIN[@]} -gt 0 ]] || die "Modo não-interativo: nenhum usuário definido. Use --user 'login:Nome:sudo'."
+  USERS_LOGIN=("${OPT_USERS_LOGIN[@]}")
+  USERS_FULLNAME=("${OPT_USERS_FULLNAME[@]}")
+  USERS_SUDO=("${OPT_USERS_SUDO[@]}")
+else
+  # Pré-popular com usuários passados via flags
+  USERS_LOGIN=("${OPT_USERS_LOGIN[@]}")
+  USERS_FULLNAME=("${OPT_USERS_FULLNAME[@]}")
+  USERS_SUDO=("${OPT_USERS_SUDO[@]}")
+
+  # Loop interativo para adicionar usuários
+  while true; do
+    if [[ ${#USERS_LOGIN[@]} -gt 0 ]]; then
+      echo
+      echo "Usuários definidos:"
+      for _i in "${!USERS_LOGIN[@]}"; do
+        _sudo_label="com sudo"
+        [[ "${USERS_SUDO[$_i]}" == "false" ]] && _sudo_label="sem sudo"
+        echo "  $((_i + 1)). ${USERS_LOGIN[$_i]} (${USERS_FULLNAME[$_i]:-}) — $_sudo_label"
+      done
+      if ! confirm "Adicionar outro usuário?"; then
+        break
+      fi
+    fi
+
+    echo -ne "${BOLD}Nome de usuário (login): ${RESET}"
+    read -r _tmp_login
+    if [[ -z "$_tmp_login" ]]; then
+      warn "Nome de usuário vazio, tente novamente."
+      continue
+    fi
+    if ! [[ "$_tmp_login" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
+      error "Nome de usuário inválido: '$_tmp_login'. Use apenas letras minúsculas, números, hifens e underscores."
+      continue
+    fi
+
+    echo -ne "${BOLD}Nome completo [$_tmp_login]: ${RESET}"
+    read -r _tmp_fname
+    [[ -z "$_tmp_fname" ]] && _tmp_fname="$_tmp_login"
+
+    echo -ne "${BOLD}Conceder permissão sudo (wheel)? [S/n]: ${RESET}"
+    read -r _tmp_sudo_resp
+    _tmp_sudo="true"
+    [[ "$_tmp_sudo_resp" =~ ^[nN]$ ]] && _tmp_sudo="false"
+
+    USERS_LOGIN+=("$_tmp_login")
+    USERS_FULLNAME+=("$_tmp_fname")
+    USERS_SUDO+=("$_tmp_sudo")
+  done
+
+  [[ ${#USERS_LOGIN[@]} -gt 0 ]] || die "Pelo menos um usuário deve ser definido."
 fi
 
+for _i in "${!USERS_LOGIN[@]}"; do
+  _create_user_file "${USERS_LOGIN[$_i]}" "${USERS_FULLNAME[$_i]:-${USERS_LOGIN[$_i]}}" "${USERS_SUDO[$_i]:-true}"
+done
+
 # ---------------------------------------------------------------------------
-# 6. Adicionar arquivo de usuário ao índice do git (ESSENCIAL)
+# 6. Adicionar arquivos de usuário ao índice do git (ESSENCIAL)
 # ---------------------------------------------------------------------------
 
 echo
-info "==> Passo 6: Registrar arquivo de usuário no índice do git"
+info "==> Passo 6: Registrar arquivos de usuário no índice do git"
 
 # O Nix avalia flakes a partir do índice do git.
 # Arquivos gitignored que não estejam no índice são invisíveis ao Nix,
 # causando erros "module not found" no nixos-install.
 # git add --force adiciona ao índice sem fazer commit.
-git add --force "$USER_FILE"
-success "Arquivo $USER_FILE adicionado ao índice do git (sem commit)."
+for _i in "${!USERS_LOGIN[@]}"; do
+  _ufile="$CONFIG_DIR/users/${USERS_LOGIN[$_i]}.nix"
+  git add --force "$_ufile"
+  success "Arquivo $_ufile adicionado ao índice do git (sem commit)."
+done
 
 # ---------------------------------------------------------------------------
-# 7. Atualizar configuration.nix com o import do usuário
+# 7. Atualizar configuration.nix com os imports dos usuários
 # ---------------------------------------------------------------------------
 
 echo
-info "==> Passo 7: Configurar importação do usuário em $CFG_FILE"
+info "==> Passo 7: Configurar importações dos usuários em $CFG_FILE"
 
-USER_IMPORT="./../../users/$USER.nix"
+for _i in "${!USERS_LOGIN[@]}"; do
+  _user="${USERS_LOGIN[$_i]}"
+  USER_IMPORT="./../../users/$_user.nix"
 
-if grep -qF "$USER_IMPORT" "$CFG_FILE"; then
-  info "Import de $USER.nix já presente em $CFG_FILE."
-else
-  # Substituir o placeholder comentado, se existir
-  if grep -q 'seu-usuario\.nix\|<seu-usuario>' "$CFG_FILE"; then
-    sed -i "s|# .*seu-usuario\.nix.*|$USER_IMPORT|g" "$CFG_FILE"
-    success "Placeholder substituído pelo import de $USER.nix."
-  elif grep -q "# Carregar configurações de usuário" "$CFG_FILE"; then
-    # Inserir após o comentário de usuários
-    sed -i "/# Carregar configurações de usuário/a\\    $USER_IMPORT" "$CFG_FILE"
-    success "Import de $USER.nix adicionado após comentário de usuários."
+  if grep -qF "$USER_IMPORT" "$CFG_FILE"; then
+    info "Import de $_user.nix já presente em $CFG_FILE."
   else
-    # Inserir no final dos imports
-    sed -i "/^  \];$/i\\    $USER_IMPORT" "$CFG_FILE"
-    success "Import de $USER.nix adicionado aos imports."
+    # Substituir o placeholder comentado, se existir (apenas para o primeiro usuário)
+    if grep -q 'seu-usuario\.nix\|<seu-usuario>' "$CFG_FILE"; then
+      sed -i "s|# .*seu-usuario\.nix.*|$USER_IMPORT|g" "$CFG_FILE"
+      success "Placeholder substituído pelo import de $_user.nix."
+    elif grep -q "# Carregar configurações de usuário" "$CFG_FILE"; then
+      # Inserir após o comentário de usuários
+      sed -i "/# Carregar configurações de usuário/a\\    $USER_IMPORT" "$CFG_FILE"
+      success "Import de $_user.nix adicionado após comentário de usuários."
+    else
+      # Inserir no final dos imports
+      sed -i "/^  \];$/i\\    $USER_IMPORT" "$CFG_FILE"
+      success "Import de $_user.nix adicionado aos imports."
+    fi
   fi
-fi
+done
 
 # Garantir que configuration.nix também está no índice (pode ter sido editado)
 git add "$CFG_FILE" "$HW_FILE" "$DISKO_FILE"
@@ -402,10 +485,13 @@ fi
 echo
 info "==> Passo 9: Definir senhas"
 
-if confirm "Definir senha para o usuário '$USER' agora (via nixos-enter)?"; then
-  info "Entrando no sistema instalado para definir a senha de '$USER'..."
-  sudo nixos-enter --root /mnt -- passwd "$USER"
-  success "Senha do usuário '$USER' definida."
+if confirm "Definir senhas para os usuários criados agora (via nixos-enter)?"; then
+  for _i in "${!USERS_LOGIN[@]}"; do
+    _user="${USERS_LOGIN[$_i]}"
+    info "Definindo senha para '$_user'..."
+    sudo nixos-enter --root /mnt -- passwd "$_user"
+    success "Senha do usuário '$_user' definida."
+  done
 fi
 
 if confirm "Definir senha do root também?"; then
