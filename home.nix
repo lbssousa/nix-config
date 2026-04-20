@@ -209,7 +209,6 @@
     # Configuração do SSH do usuário
     ssh = {
       enable = true;
-      enableDefaultConfig = false;
       matchBlocks."*" = {
         addKeysToAgent = "yes";
         serverAliveInterval = 60;
