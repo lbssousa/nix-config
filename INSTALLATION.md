@@ -220,6 +220,68 @@ sudo sbctl verify
 sudo nixos-rebuild switch --flake /etc/nixos#barbudus
 ```
 
+## 🔑 Desbloqueio Automático LUKS via TPM2
+
+Esta configuração inclui suporte ao desbloqueio automático do volume LUKS utilizando o chip TPM2 do hardware. Quando configurado, o sistema desbloqueia o disco automaticamente durante o boot, sem solicitar senha — desde que as medições de integridade do sistema não tenham sido alteradas.
+
+### Como Funciona
+
+O TPM2 armazena a chave LUKS protegida por **PCRs (Platform Configuration Registers)** — medições do estado do firmware e do boot loader. Se o hardware ou software for adulterado, os PCRs mudam e o TPM2 recusa liberar a chave, exigindo a senha de recuperação.
+
+**PCRs configurados:**
+| PCR | O que mede |
+|-----|-----------|
+| 0   | Firmware UEFI (integridade da BIOS) |
+| 2   | Código de opção UEFI (drivers ROM) |
+| 7   | Estado do Secure Boot |
+
+### Registrar o TPM2 no Volume LUKS
+
+Execute após o primeiro boot com o sistema instalado:
+
+```bash
+# Verificar se o TPM2 está disponível
+ls /dev/tpm* && tpm2_getcap properties-fixed 2>/dev/null | head -5
+
+# Identificar a partição LUKS
+# (normalmente a segunda partição do disco de instalação)
+lsblk -f | grep crypto_LUKS
+
+# Registrar o TPM2 (substitua /dev/nvme0n1p2 pela sua partição LUKS)
+sudo systemd-cryptenroll \
+  --tpm2-device=auto \
+  --tpm2-pcrs=0+2+7 \
+  /dev/disk/by-partlabel/luks
+
+# Ou usando o device diretamente:
+# sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+2+7 /dev/nvme0n1p2
+```
+
+Durante o registro, será solicitada a senha atual do LUKS para autorizar a adição do TPM2.
+
+### Testar o Desbloqueio
+
+```bash
+# Verificar os slots LUKS configurados
+sudo cryptsetup luksDump /dev/disk/by-partlabel/luks | grep -A5 "Tokens\|Keyslots"
+
+# Reiniciar para testar o desbloqueio automático
+sudo reboot
+```
+
+### Remoção do TPM2 (Revogação)
+
+Para revogar o acesso TPM2 (ex: antes de vender ou reparar o hardware):
+
+```bash
+# Remover o token TPM2 e seu keyslot associado
+sudo systemd-cryptenroll --wipe-slot=tpm2 /dev/disk/by-partlabel/luks
+```
+
+### Fallback para Senha Manual
+
+Se o TPM2 falhar (boot em hardware diferente, atualização de firmware, mudança no Secure Boot), o sistema solicitará a senha LUKS automaticamente como fallback. **Sempre mantenha a senha de recuperação em local seguro.**
+
 ## 🔍 Sensor de Impressão Digital (barbudus)
 
 Para usar o sensor de impressão digital Goodix no barbudus:
