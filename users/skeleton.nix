@@ -7,7 +7,7 @@
 #
 # NOTA: Os arquivos em users/ (exceto este skeleton) são ignorados pelo git.
 # Veja .gitignore para mais detalhes.
-{ config, lib, pkgs, ... }:
+{ pkgs, ... }:
 
 {
   # Definição do usuário no sistema
@@ -16,13 +16,13 @@
     description = "Nome Completo do Usuário";
     # Grupos essenciais para desktop com GNOME + containers
     extraGroups = [
-      "networkmanager"  # Gerenciar conexões de rede
-      "wheel"           # sudo
-      "video"           # Acesso à GPU
-      "audio"           # Acesso ao áudio
-      "plugdev"         # Acesso a dispositivos USB
-      "dialout"         # Portas seriais
-      "docker"          # Compatibilidade com Docker (Podman)
+      "networkmanager" # Gerenciar conexões de rede
+      "wheel" # sudo
+      "video" # Acesso à GPU
+      "audio" # Acesso ao áudio
+      "plugdev" # Acesso a dispositivos USB
+      "dialout" # Portas seriais
+      "docker" # Compatibilidade com Docker (Podman)
     ];
     shell = pkgs.zsh; # Shell padrão (Zsh)
     # IMPORTANTE: Não defina senha aqui!
@@ -41,18 +41,15 @@
         "Music"
         ".ssh"
         ".gnupg"
-        ".local/share/keyrings"   # GNOME Keyring
-        ".config/gh"              # GitHub CLI
-        ".local/share/flatpak"    # Dados de Flatpaks do usuário
-        ".var/app"                # Dados de Flatpaks (XDG)
+        ".local/share/keyrings" # GNOME Keyring
+        ".config/gh" # GitHub CLI
+        ".local/share/flatpak" # Dados de Flatpaks do usuário
+        ".var/app" # Dados de Flatpaks (XDG)
         ".local/share/containers" # Podman rootless
-        ".config/distrobox"       # Distrobox
-        ".local/share/fish"       # Histórico do Fish shell
+        ".config/distrobox" # Distrobox
+        ".local/share/fish" # Histórico do Fish shell
       ];
-      files = [
-        ".bash_history"
-        ".zsh_history"
-      ];
+      files = [ ".bash_history" ".zsh_history" ];
     };
   };
 

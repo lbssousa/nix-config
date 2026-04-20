@@ -38,3 +38,4 @@ result-*
 # --- Flake lock (opcional - depende do workflow) ---
 # Manter o flake.lock commitado para builds reproduzíveis
 # flake.lock
+nixfmt

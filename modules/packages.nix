@@ -1,5 +1,5 @@
 # Módulo de pacotes: Ferramentas essenciais do sistema
-{ config, lib, pkgs, ... }:
+{ pkgs, ... }:
 
 {
   environment.systemPackages = with pkgs; [
@@ -23,8 +23,8 @@
     p7zip
 
     # Editores de texto para console
-    neovim    # Editor padrão
-    helix     # Editor alternativo moderno
+    neovim # Editor padrão
+    helix # Editor alternativo moderno
 
     # Ferramentas de rede
     nmap
@@ -34,7 +34,7 @@
 
     # Monitoramento
     lm_sensors
-    nvtopPackages.full  # Monitor de GPU
+    nvtopPackages.full # Monitor de GPU
 
     # Utilitários do sistema
     gptfdisk
