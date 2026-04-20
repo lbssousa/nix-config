@@ -1,34 +1,36 @@
 # Módulo Homebrew: Suporte ao Linuxbrew/Homebrew
 # Permite instalar ferramentas CLI via Homebrew, similar ao Fedora Silverblue/Bluefin
-{ config, lib, pkgs, ... }:
+{ lib, pkgs, ... }:
 
 {
-  # Dependências necessárias para o Homebrew funcionar no Linux
-  environment.systemPackages = with pkgs; [
-    # Ferramentas básicas que o Homebrew precisa
-    gcc
-    gnumake
-    binutils
-    # curl e git já são instalados em packages.nix
-  ];
+  environment = {
+    # Dependências necessárias para o Homebrew funcionar no Linux
+    systemPackages = with pkgs; [
+      # Ferramentas básicas que o Homebrew precisa
+      gcc
+      gnumake
+      binutils
+      # curl e git já são instalados em packages.nix
+    ];
 
-  # Variáveis de ambiente para o Homebrew (Linuxbrew)
-  # O Homebrew é instalado em /home/linuxbrew/.linuxbrew por padrão no Linux
-  environment.variables = {
-    HOMEBREW_PREFIX = lib.mkDefault "/home/linuxbrew/.linuxbrew";
-    HOMEBREW_CELLAR = lib.mkDefault "/home/linuxbrew/.linuxbrew/Cellar";
-    HOMEBREW_REPOSITORY = lib.mkDefault "/home/linuxbrew/.linuxbrew/Homebrew";
+    # Variáveis de ambiente para o Homebrew (Linuxbrew)
+    # O Homebrew é instalado em /home/linuxbrew/.linuxbrew por padrão no Linux
+    variables = {
+      HOMEBREW_PREFIX = lib.mkDefault "/home/linuxbrew/.linuxbrew";
+      HOMEBREW_CELLAR = lib.mkDefault "/home/linuxbrew/.linuxbrew/Cellar";
+      HOMEBREW_REPOSITORY = lib.mkDefault "/home/linuxbrew/.linuxbrew/Homebrew";
+    };
+
+    # Adicionar Homebrew ao PATH para todos os usuários via /etc/profile
+    extraInit = ''
+      # Homebrew (Linuxbrew)
+      if [ -d "/home/linuxbrew/.linuxbrew" ]; then
+        export PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:$PATH"
+        export MANPATH="/home/linuxbrew/.linuxbrew/share/man:$MANPATH"
+        export INFOPATH="/home/linuxbrew/.linuxbrew/share/info:$INFOPATH"
+      fi
+    '';
   };
-
-  # Adicionar Homebrew ao PATH para todos os usuários via /etc/profile
-  environment.extraInit = ''
-    # Homebrew (Linuxbrew)
-    if [ -d "/home/linuxbrew/.linuxbrew" ]; then
-      export PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:$PATH"
-      export MANPATH="/home/linuxbrew/.linuxbrew/share/man:$MANPATH"
-      export INFOPATH="/home/linuxbrew/.linuxbrew/share/info:$INFOPATH"
-    fi
-  '';
 
   # Script de instalação do Homebrew (executar manualmente após instalação do NixOS):
   # /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -41,10 +43,8 @@
     createHome = true;
     description = "Homebrew system user";
   };
-  users.groups.linuxbrew = {};
+  users.groups.linuxbrew = { };
 
   # Garantir que o diretório do Homebrew seja persistente entre boots
-  environment.persistence."/persist".directories = [
-    "/home/linuxbrew"
-  ];
+  environment.persistence."/persist".directories = [ "/home/linuxbrew" ];
 }

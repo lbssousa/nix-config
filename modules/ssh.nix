@@ -1,5 +1,5 @@
 # Módulo SSH: Servidor OpenSSH com chaves em /persist
-{ config, lib, pkgs, ... }:
+{ lib, ... }:
 
 {
   services.openssh = {

@@ -1,12 +1,10 @@
 # Módulo de containers: Podman rootless + Distrobox
 # Experiência similar ao Fedora Silverblue
-{ config, lib, pkgs, ... }:
+{ pkgs, ... }:
 
 {
   # Habilitar subsistema de containers
-  virtualisation.containers = {
-    enable = true;
-  };
+  virtualisation.containers = { enable = true; };
 
   # Podman - runtime de containers rootless
   virtualisation.podman = {

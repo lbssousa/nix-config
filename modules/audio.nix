@@ -1,5 +1,5 @@
 # Módulo de áudio: PipeWire com compatibilidade PulseAudio/JACK
-{ config, lib, pkgs, ... }:
+{ lib, ... }:
 
 {
   # Desabilitar PulseAudio (substituído pelo PipeWire)

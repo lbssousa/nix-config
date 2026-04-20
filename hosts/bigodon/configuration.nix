@@ -1,6 +1,6 @@
 # Configuração principal para bigodon (Morefine M6 Mini-PC)
 # Hardware: Intel N200, 16 GB RAM, Intel UHD Graphics (integrada)
-{ config, lib, pkgs, inputs, ... }:
+{ pkgs, ... }:
 
 {
   imports = [
@@ -31,9 +31,9 @@
     enable32Bit = true;
     # VA-API para aceleração de vídeo
     extraPackages = with pkgs; [
-      intel-media-driver    # iHD driver (N200 usa Jasper Lake)
-      intel-vaapi-driver    # i965 driver (fallback)
-      libvdpau-va-gl        # VDPAU via VA-API
+      intel-media-driver # iHD driver (N200 usa Jasper Lake)
+      intel-vaapi-driver # i965 driver (fallback)
+      libvdpau-va-gl # VDPAU via VA-API
     ];
   };
 
