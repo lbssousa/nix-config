@@ -62,6 +62,21 @@ require_cmd() {
   command -v "$1" >/dev/null 2>&1 || die "Comando '$1' não encontrado. Certifique-se de estar no ambiente live do NixOS."
 }
 
+# insert_before_last_line <file> <content>
+# Insere <content> imediatamente antes da última linha do arquivo (normalmente o `}` de fechamento).
+# Garante que o conteúdo fique dentro do attrset Nix e não após o fechamento.
+insert_before_last_line() {
+  local file="$1" content="$2"
+  local tmp
+  tmp=$(mktemp)
+  # shellcheck disable=SC2064
+  trap "rm -f '$tmp'" RETURN
+  head -n -1 "$file" > "$tmp"
+  printf '%s\n' "$content" >> "$tmp"
+  tail -n 1 "$file" >> "$tmp"
+  mv "$tmp" "$file"
+}
+
 # ---------------------------------------------------------------------------
 # Argumento parsing
 # ---------------------------------------------------------------------------
@@ -364,13 +379,16 @@ if [[ -n "$GENERATED_HW" && -s "$GENERATED_HW" ]]; then
   fi
 
   # Garantir fileSystems."/persist".neededForBoot = true
+  # Inserir antes do } final para não quebrar a sintaxe Nix
   if ! grep -q 'neededForBoot' "$TMP_HW"; then
-    echo '  fileSystems."/persist".neededForBoot = true;' >> "$TMP_HW"
+    insert_before_last_line "$TMP_HW" '  fileSystems."/persist".neededForBoot = true;'
   fi
 
   # Garantir zramSwap (copiar do template original se necessário)
+  # Inserir antes do } final para não quebrar a sintaxe Nix
   if ! grep -q 'zramSwap' "$TMP_HW" && grep -q 'zramSwap' "$HW_FILE"; then
-    grep -A5 'zramSwap' "$HW_FILE" >> "$TMP_HW"
+    insert_before_last_line "$TMP_HW" \
+      "$(awk '/[[:space:]]zramSwap[[:space:]]*=/,/^[[:space:]]*\};/' "$HW_FILE")"
   fi
 
   sudo cp "$TMP_HW" "$HW_FILE"
