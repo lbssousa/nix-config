@@ -407,7 +407,7 @@ Para usar o sensor de impressão digital Goodix no barbudus:
 nix-prefetch-github infinytum libfprint --rev unstable
 
 # Obter hash do goodix-fp-dump:
-nix-prefetch-github goodix-fp-linux-dev goodix-fp-dump --rev main
+nix-prefetch-github goodix-fp-linux-dev goodix-fp-dump --rev master
 
 # 2. Atualizar os sha256 em hosts/barbudus/configuration.nix
 
