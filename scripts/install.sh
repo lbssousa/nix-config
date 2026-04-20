@@ -62,21 +62,6 @@ require_cmd() {
   command -v "$1" >/dev/null 2>&1 || die "Comando '$1' não encontrado. Certifique-se de estar no ambiente live do NixOS."
 }
 
-# insert_before_last_line <file> <content>
-# Insere <content> imediatamente antes da última linha do arquivo (normalmente o `}` de fechamento).
-# Garante que o conteúdo fique dentro do attrset Nix e não após o fechamento.
-insert_before_last_line() {
-  local file="$1" content="$2"
-  local tmp
-  tmp=$(mktemp)
-  # shellcheck disable=SC2064
-  trap "rm -f '$tmp'" RETURN
-  head -n -1 "$file" > "$tmp"
-  printf '%s\n' "$content" >> "$tmp"
-  tail -n 1 "$file" >> "$tmp"
-  mv "$tmp" "$file"
-}
-
 # ---------------------------------------------------------------------------
 # Argumento parsing
 # ---------------------------------------------------------------------------
@@ -331,7 +316,7 @@ success "Disco particionado e formatado com sucesso."
 echo
 info "==> Passo 4: Configurar hostId ZFS"
 
-HOST_ID=$(head -c 8 /dev/urandom | od -A n -t x1 | tr -d ' \n')
+HOST_ID=$(head -c 4 /dev/urandom | od -A n -t x1 | tr -d ' \n')
 info "hostId gerado: $HOST_ID"
 
 # Atualizar (ou inserir) networking.hostId em hardware-configuration.nix
@@ -349,51 +334,11 @@ else
   success "networking.hostId inserido em $HW_FILE"
 fi
 
-# Gerar hardware-configuration.nix real e preservar as partes essenciais
-info "Gerando hardware-configuration.nix via nixos-generate-config..."
-GENERATED_HW=/tmp/nixos-generate-config-hw.nix
-GEN_STDERR=$(mktemp /tmp/nixos-gen-stderr-XXXXXX)
-sudo nixos-generate-config --no-filesystems --root /mnt --show-hardware-config > "$GENERATED_HW" 2>"$GEN_STDERR" || {
-  warn "nixos-generate-config falhou ou não está disponível. Mantendo o template existente."
-  [[ -s "$GEN_STDERR" ]] && warn "Saída de erro: $(cat "$GEN_STDERR")"
-  GENERATED_HW=""
-}
-rm -f "$GEN_STDERR"
-
-if [[ -n "$GENERATED_HW" && -s "$GENERATED_HW" ]]; then
-  # Preservar as linhas essenciais do template existente que o gerador omite
-  TMP_HW=$(mktemp /tmp/hw-XXXXXX.nix)
-  # Usar o arquivo gerado como base
-  cp "$GENERATED_HW" "$TMP_HW"
-
-  # Garantir que hostId está presente
-  if ! grep -q 'networking\.hostId' "$TMP_HW"; then
-    sed -i "/nixpkgs\.hostPlatform/i\\  networking.hostId = \"$HOST_ID\";" "$TMP_HW"
-  else
-    sed -i "s|networking\.hostId = \"[^\"]*\"|networking.hostId = \"$HOST_ID\"|g" "$TMP_HW"
-  fi
-
-  # Garantir que ./disko.nix está nos imports
-  if ! grep -q 'disko\.nix\|./disko' "$TMP_HW"; then
-    sed -i '/imports = \[/a\    ./disko.nix' "$TMP_HW"
-  fi
-
-  # Garantir fileSystems."/persist".neededForBoot = true
-  # Inserir antes do } final para não quebrar a sintaxe Nix
-  if ! grep -q 'neededForBoot' "$TMP_HW"; then
-    insert_before_last_line "$TMP_HW" '  fileSystems."/persist".neededForBoot = true;'
-  fi
-
-  # Garantir zramSwap (copiar do template original se necessário)
-  # Inserir antes do } final para não quebrar a sintaxe Nix
-  if ! grep -q 'zramSwap' "$TMP_HW" && grep -q 'zramSwap' "$HW_FILE"; then
-    insert_before_last_line "$TMP_HW" \
-      "$(awk '/[[:space:]]zramSwap[[:space:]]*=/,/^[[:space:]]*\};/' "$HW_FILE")"
-  fi
-
-  sudo cp "$TMP_HW" "$HW_FILE"
-  success "hardware-configuration.nix atualizado com a configuração real do hardware."
-fi
+# O arquivo hardware-configuration.nix do repositório é mantido como fonte da verdade.
+# Ele já contém todos os módulos, opções de swap, disko e sysctl corretos para o host.
+# Apenas o networking.hostId é atualizado acima com um valor gerado aleatoriamente.
+# Se necessário atualizar os módulos do kernel após a instalação, edite o arquivo
+# hosts/<host>/hardware-configuration.nix diretamente e reaplique com nixos-rebuild.
 
 # ---------------------------------------------------------------------------
 # 5. Criar arquivos de usuário
