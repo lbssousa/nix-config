@@ -44,7 +44,7 @@ let
     "org.gtk.Gtk3theme.adw-gtk3-dark"
     "page.tesk.Refine"
   ];
-  # Hash (8 hex chars) da lista para detectar mudanças e reexecutar a instalação
+  # Hash (8 hex chars, suficiente para detectar mudanças na lista) para reexecutar a instalação
   flatpaksListHash = builtins.substring 0 8 (
     builtins.hashString "sha256" (lib.concatStringsSep "\n" systemFlatpaks)
   );
@@ -129,10 +129,7 @@ in
   systemd.services.install-system-flatpaks = {
     description = "Instalar Flatpaks padrão do sistema";
     wantedBy = [ "multi-user.target" ];
-    after = [
-      "network-online.target"
-      "flatpak-system-helper.service"
-    ];
+    after = [ "network-online.target" ];
     wants = [ "network-online.target" ];
     unitConfig.ConditionPathExists = "!${flatpakDoneFile}";
     serviceConfig = {
@@ -140,18 +137,23 @@ in
       RemainAfterExit = true;
       StateDirectory = "nixos-flatpak-setup";
     };
-    script = ''
-      # Adicionar repositório Flathub se não existir
-      ${pkgs.flatpak}/bin/flatpak remote-add --system --if-not-exists flathub \
-        https://dl.flathub.org/repo/flathub.flatpakrepo
-      # Instalar Flatpaks do sistema (falhas individuais são registradas mas não interrompem)
-      for pkg in ${lib.escapeShellArgs systemFlatpaks}; do
-        if ! ${pkgs.flatpak}/bin/flatpak install --system --noninteractive flathub "$pkg"; then
-          echo "AVISO: Falha ao instalar $pkg" >&2
+    script =
+      ''
+        # Adicionar repositório Flathub se não existir
+        ${pkgs.flatpak}/bin/flatpak remote-add --system --if-not-exists flathub \
+          https://dl.flathub.org/repo/flathub.flatpakrepo
+        # Instalar Flatpaks do sistema (falhas individuais são registradas mas não interrompem)
+      ''
+      + lib.concatMapStrings (pkg: ''
+        if ! ${pkgs.flatpak}/bin/flatpak install --system --noninteractive flathub ${
+          lib.escapeShellArg pkg
+        }; then
+          echo "AVISO: Falha ao instalar ${lib.escapeShellArg pkg}" >&2
         fi
-      done
-      touch ${lib.escapeShellArg flatpakDoneFile}
-    '';
+      '') systemFlatpaks
+      + ''
+        touch ${lib.escapeShellArg flatpakDoneFile}
+      '';
   };
 
   # Fontes essenciais para o desktop
