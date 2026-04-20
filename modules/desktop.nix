@@ -1,30 +1,39 @@
 # Módulo de ambiente gráfico: GNOME + Flatpak + Brave
 # Experiência similar ao Fedora Silverblue / Bluefin
-{ config, lib, pkgs, ... }:
+{ pkgs, ... }:
 
 {
-  # Servidor X11 básico (necessário mesmo com Wayland)
-  services.xserver = {
-    enable = true;
-    # Driver de vídeo definido por cada host
-  };
+  services = {
+    # Servidor X11 básico (necessário mesmo com Wayland)
+    xserver = {
+      enable = true;
+      # Driver de vídeo definido por cada host
+      displayManager.gdm = {
+        enable = true;
+        wayland = true; # Preferir sessão Wayland
+      };
+      desktopManager.gnome.enable = true;
+    };
 
-  # GNOME como ambiente desktop
-  services.xserver.displayManager.gdm = {
-    enable = true;
-    wayland = true; # Preferir sessão Wayland
+    # Flatpak - instalação system-wide
+    flatpak.enable = true;
+
+    # Bluetooth
+    blueman.enable = true;
+
+    # Impressão (CUPS)
+    printing.enable = true;
   };
-  services.xserver.desktopManager.gnome.enable = true;
 
   # Excluir pacotes padrão do GNOME que serão substituídos por Flatpaks
   environment.gnome.excludePackages = with pkgs; [
-    gnome-software      # Substituído pelo Bazaar (Flatpak)
+    gnome-software # Substituído pelo Bazaar (Flatpak)
     gnome-tour
-    epiphany            # Browser padrão do GNOME - usar Brave
-    evince              # PDF viewer - usar Papers (Flatpak)
-    gnome-terminal      # Terminal - usar Ptyxis (Flatpak)
-    totem               # Player de vídeo
-    cheese              # Webcam app
+    epiphany # Browser padrão do GNOME - usar Brave
+    evince # PDF viewer - usar Papers (Flatpak)
+    gnome-terminal # Terminal - usar Ptyxis (Flatpak)
+    totem # Player de vídeo
+    cheese # Webcam app
     gnome-music
     gnome-maps
     gnome-weather
@@ -32,9 +41,6 @@
     gnome-calendar
     gnome-clocks
   ];
-
-  # Flatpak - instalação system-wide
-  services.flatpak.enable = true;
 
   # Regra Polkit para permitir instalação de Flatpaks system-wide sem senha
   # Similar ao comportamento do Fedora Silverblue
@@ -59,16 +65,10 @@
     enable = true;
     powerOnBoot = true;
   };
-  services.blueman.enable = true;
-
-  # Impressão (CUPS)
-  services.printing.enable = true;
 
   # Brave browser - instalado via Nix para todos os usuários
   # Definido como browser padrão do sistema
-  environment.systemPackages = with pkgs; [
-    brave
-  ];
+  environment.systemPackages = with pkgs; [ brave ];
 
   # Definir Brave como browser padrão via xdg-mime
   xdg.mime.defaultApplications = {

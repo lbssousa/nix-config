@@ -1,7 +1,7 @@
 # Módulo de usuários: Esqueleto para definição de usuários
 # Os arquivos reais de usuário ficam em users/ e são ignorados pelo git
 # Consulte users/skeleton.nix para criar seu arquivo de usuário
-{ config, lib, pkgs, ... }:
+{ ... }:
 
 {
   # Habilitar Zsh globalmente (necessário para usar como shell de usuário)
@@ -21,10 +21,10 @@
 
   # Configuração de grupos padrão disponíveis
   users.groups = {
-    plugdev = {};      # Acesso a dispositivos USB
-    dialout = {};      # Portas seriais
-    video = {};        # Acesso à GPU
-    audio = {};        # Acesso ao áudio
-    docker = {};       # Compatibilidade com Docker (Podman)
+    plugdev = { }; # Acesso a dispositivos USB
+    dialout = { }; # Portas seriais
+    video = { }; # Acesso à GPU
+    audio = { }; # Acesso ao áudio
+    docker = { }; # Compatibilidade com Docker (Podman)
   };
 }
