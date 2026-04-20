@@ -52,10 +52,7 @@ let
 in
 {
   services = {
-    # Servidor X11 básico (necessário mesmo com Wayland)
-    xserver.enable = true;
-
-    # Driver de vídeo definido por cada host
+    # Display Manager e Desktop Environment (Wayland)
     displayManager.gdm = {
       enable = true;
       wayland = true; # Preferir sessão Wayland

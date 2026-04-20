@@ -93,7 +93,7 @@ in
   # --- Fingerprint (sensor Goodix) ---
   # fprintd com suporte ao sensor Goodix (fork do infinytum/libfprint)
   services = {
-    # Módulo de vídeo NVIDIA para X11
+    # Módulo de vídeo NVIDIA (KMS/Wayland)
     xserver.videoDrivers = [ "nvidia" ];
 
     fprintd = {
