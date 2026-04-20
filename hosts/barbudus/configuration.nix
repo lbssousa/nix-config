@@ -18,7 +18,7 @@ let
       rev = "main";
       # NOTA: Atualize o hash abaixo com:
       # nix-prefetch-github goodix-fp-linux-dev goodix-fp-dump --rev main
-      sha256 = lib.fakeSha256; # SUBSTITUA pelo hash real
+      sha256 = "sha256-JqY0kRMm//xsmcpGOkUjUD/WNqTZM8oKGNxir/Hkyfg=";
     };
     # Dependências Python do requirements.txt
     nativeBuildInputs = with pkgs; [ makeWrapper ];
