@@ -302,6 +302,9 @@ if ! confirm "Continuar com a formatação de $DISK?"; then
   die "Formatação cancelada pelo usuário."
 fi
 
+info "Carregando módulo ZFS..."
+sudo modprobe zfs || die "Falha ao carregar o módulo ZFS. Verifique se o kernel suporta ZFS (ex: nixos-enter ou use um Live CD com suporte a ZFS)."
+
 info "Executando disko..."
 sudo nix run github:nix-community/disko -- --mode disko "$DISKO_FILE"
 success "Disco particionado e formatado com sucesso."
