@@ -49,5 +49,9 @@
   users.defaultUserShell = pkgs.zsh;
 
   # Adicionar shells ao /etc/shells
-  environment.shells = with pkgs; [ bash fish zsh ];
+  environment.shells = with pkgs; [
+    bash
+    fish
+    zsh
+  ];
 }
