@@ -1,5 +1,5 @@
 # Módulo de shells: Bash, Fish e Zsh (Zsh como padrão)
-{ config, lib, pkgs, ... }:
+{ pkgs, ... }:
 
 {
   # Instalar as três shells
@@ -18,29 +18,31 @@
   ];
 
   # Habilitar Bash (já é padrão, mas garantimos configuração)
-  programs.bash = {
-    # Completions extras para Bash
-    completion.enable = true;
-  };
-
-  # Habilitar Fish shell
-  programs.fish = {
-    enable = true;
-    # Completions adicionais
-    vendor = {
-      completions.enable = true;
-      config.enable = true;
-      functions.enable = true;
+  programs = {
+    bash = {
+      # Completions extras para Bash
+      completion.enable = true;
     };
-  };
 
-  # Habilitar Zsh como shell padrão do sistema
-  programs.zsh = {
-    enable = true;
-    enableCompletion = true;
-    autosuggestions.enable = true;
-    syntaxHighlighting.enable = true;
-    # histFile e histSize são configurados por usuário via home-manager (home.nix)
+    # Habilitar Fish shell
+    fish = {
+      enable = true;
+      # Completions adicionais
+      vendor = {
+        completions.enable = true;
+        config.enable = true;
+        functions.enable = true;
+      };
+    };
+
+    # Habilitar Zsh como shell padrão do sistema
+    zsh = {
+      enable = true;
+      enableCompletion = true;
+      autosuggestions.enable = true;
+      syntaxHighlighting.enable = true;
+      # histFile e histSize são configurados por usuário via home-manager (home.nix)
+    };
   };
 
   # Definir Zsh como shell padrão para novos usuários

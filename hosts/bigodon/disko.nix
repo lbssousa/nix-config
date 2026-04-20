@@ -5,6 +5,6 @@
 import ../../disko.nix {
   inherit lib;
   device = "/dev/nvme0n1"; # Ajuste conforme necessário (verifique com: lsblk)
-  swapSize = "20G";        # Para suportar hibernação (16 GB RAM + margem)
+  swapSize = "20G"; # Para suportar hibernação (16 GB RAM + margem)
   poolName = "rpool";
 }

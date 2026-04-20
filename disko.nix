@@ -9,8 +9,7 @@
 }:
 let
   hasSwap = swapSize != "0" && swapSize != "";
-in
-{
+in {
   disko.devices = {
     disk.main = {
       inherit device;
@@ -37,9 +36,7 @@ in
             content = {
               type = "luks";
               name = "crypted";
-              settings = {
-                allowDiscards = true;
-              };
+              settings = { allowDiscards = true; };
               # Dentro do LUKS, usa LVM para swap + pool ZFS
               content = {
                 type = "lvm_pv";

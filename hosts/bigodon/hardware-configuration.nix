@@ -1,7 +1,7 @@
 # Hardware configuration para bigodon (Morefine M6 Mini-PC)
 # NOTA: Este arquivo deve ser regenerado com: nixos-generate-config --no-filesystems --root /mnt
 # após a instalação do disko. O arquivo gerado deve substituir este template.
-{ config, lib, pkgs, modulesPath, ... }:
+{ lib, modulesPath, ... }:
 
 {
   imports = [
@@ -11,20 +11,18 @@
   ];
 
   # Módulos do kernel para Intel N200 + NVME + USB
-  boot.initrd.availableKernelModules = [
-    "xhci_pci"
-    "ahci"
-    "nvme"
-    "usb_storage"
-    "sd_mod"
-  ];
-  boot.initrd.kernelModules = [
-    "dm-snapshot"
-    # Intel KMS para boot flicker-free
-    "i915"
-  ];
-  boot.kernelModules = [ "kvm-intel" ];
-  boot.extraModulePackages = [];
+  boot = {
+    initrd = {
+      availableKernelModules = [ "xhci_pci" "ahci" "nvme" "usb_storage" "sd_mod" ];
+      kernelModules = [
+        "dm-snapshot"
+        # Intel KMS para boot flicker-free
+        "i915"
+      ];
+    };
+    kernelModules = [ "kvm-intel" ];
+    extraModulePackages = [ ];
+  };
 
   # ID único do host para ZFS (gerado com: head -c 8 /dev/urandom | od -A n -t x1 | tr -d ' \n')
   networking.hostId = "b9c4d5e6"; # ALTERE para um valor único gerado no seu sistema
@@ -33,7 +31,7 @@
   hardware.cpu.intel.updateMicrocode = true;
 
   # Filesystems configurados via disko.nix
-  swapDevices = lib.mkForce [];
+  swapDevices = lib.mkForce [ ];
 
   # Marcar /persist como necessário no boot (impermanence)
   fileSystems."/persist".neededForBoot = true;

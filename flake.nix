@@ -35,57 +35,59 @@
     # nix-homebrew.url = "github:zhaofengli-wip/nix-homebrew";
   };
 
-  outputs = { self, nixpkgs, home-manager, disko, impermanence, lanzaboote, ... }@inputs:
-  let
-    # Helper to build a NixOS configuration for a given host
-    mkHost = hostname: system: extraModules: nixpkgs.lib.nixosSystem {
-      inherit system;
-      specialArgs = { inherit inputs; };
-      modules = [
-        # Disko module
-        disko.nixosModules.disko
+  outputs = { nixpkgs, home-manager, disko, impermanence, lanzaboote, ... }@inputs:
+    let
+      # Helper to build a NixOS configuration for a given host
+      mkHost = hostname: system: extraModules:
+        nixpkgs.lib.nixosSystem {
+          inherit system;
+          specialArgs = { inherit inputs; };
+          modules = [
+            # Disko module
+            disko.nixosModules.disko
 
-        # Impermanence module
-        impermanence.nixosModules.impermanence
+            # Impermanence module
+            impermanence.nixosModules.impermanence
 
-        # Lanzaboote module (for Secure Boot)
-        lanzaboote.nixosModules.lanzaboote
+            # Lanzaboote module (for Secure Boot)
+            lanzaboote.nixosModules.lanzaboote
 
-        # Host-specific hardware configuration
-        ./hosts/${hostname}/hardware-configuration.nix
+            # Host-specific hardware configuration
+            ./hosts/${hostname}/hardware-configuration.nix
 
-        # Host-specific system configuration
-        ./hosts/${hostname}/configuration.nix
+            # Host-specific system configuration
+            ./hosts/${hostname}/configuration.nix
 
-        # Home Manager as NixOS module
-        home-manager.nixosModules.home-manager
-        {
-          home-manager.useGlobalPkgs = true;
-          home-manager.useUserPackages = true;
-          home-manager.backupFileExtension = "hm-backup";
-          # User-specific home-manager configs are loaded from ./users/
-          # See users/skeleton.nix for the template
-          # Real user configs are gitignored (see .gitignore)
-        }
-      ] ++ extraModules;
+            # Home Manager as NixOS module
+            home-manager.nixosModules.home-manager
+            {
+              home-manager = {
+                useGlobalPkgs = true;
+                useUserPackages = true;
+                backupFileExtension = "hm-backup";
+                # User-specific home-manager configs are loaded from ./users/
+                # See users/skeleton.nix for the template
+                # Real user configs are gitignored (see .gitignore)
+              };
+            }
+          ] ++ extraModules;
+        };
+    in {
+      # NixOS configurations
+      nixosConfigurations = {
+        # Dell Inspiron 14 5490 (Intel i5-10210U, 16GB RAM, Intel + Nvidia MX230)
+        # NOTA: Não há módulo nixos-hardware específico para este modelo.
+        # Se disponível no futuro, adicione em extraModules.
+        barbudus = mkHost "barbudus" "x86_64-linux" [ ];
+
+        # Morefine M6 Mini-PC (Intel N200, 16GB RAM, Intel UHD Graphics)
+        bigodon = mkHost "bigodon" "x86_64-linux" [ ];
+      };
+
+      # Expose disko configurations for standalone partitioning
+      diskoConfigurations = {
+        barbudus = import ./hosts/barbudus/disko.nix { inherit (nixpkgs) lib; };
+        bigodon = import ./hosts/bigodon/disko.nix { inherit (nixpkgs) lib; };
+      };
     };
-  in
-  {
-    # NixOS configurations
-    nixosConfigurations = {
-      # Dell Inspiron 14 5490 (Intel i5-10210U, 16GB RAM, Intel + Nvidia MX230)
-      # NOTA: Não há módulo nixos-hardware específico para este modelo.
-      # Se disponível no futuro, adicione em extraModules.
-      barbudus = mkHost "barbudus" "x86_64-linux" [];
-
-      # Morefine M6 Mini-PC (Intel N200, 16GB RAM, Intel UHD Graphics)
-      bigodon = mkHost "bigodon" "x86_64-linux" [];
-    };
-
-    # Expose disko configurations for standalone partitioning
-    diskoConfigurations = {
-      barbudus = import ./hosts/barbudus/disko.nix { inherit (nixpkgs) lib; };
-      bigodon = import ./hosts/bigodon/disko.nix { inherit (nixpkgs) lib; };
-    };
-  };
 }

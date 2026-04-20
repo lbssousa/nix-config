@@ -23,7 +23,7 @@
 #   sudo systemd-cryptenroll --wipe-slot=tpm2 /dev/disk/by-partlabel/luks
 #
 # Referência: https://wiki.archlinux.org/title/Trusted_Platform_Module
-{ config, lib, pkgs, ... }:
+{ pkgs, ... }:
 
 {
   # Suporte ao TPM2 no NixOS
@@ -38,15 +38,12 @@
   # Módulos do kernel necessários para o TPM2
   # tpm_tis: driver para TPM 1.2/2.0 via LPC/SPI (maioria dos laptops e desktops)
   # tpm_crb: driver para TPM 2.0 via CRB (Command Response Buffer) - padrão moderno
-  boot.initrd.kernelModules = [
-    "tpm_tis"
-    "tpm_crb"
-  ];
+  boot.initrd.kernelModules = [ "tpm_tis" "tpm_crb" ];
 
   # Ferramentas de userspace para gerenciar o TPM2
   environment.systemPackages = with pkgs; [
-    tpm2-tools       # Ferramentas de linha de comando para TPM2
-    tpm2-tss         # TCG Software Stack (TSS) para TPM2
+    tpm2-tools # Ferramentas de linha de comando para TPM2
+    tpm2-tss # TCG Software Stack (TSS) para TPM2
   ];
 
   # Configurar o volume LUKS para aceitar desbloqueio via TPM2
@@ -56,8 +53,8 @@
   # se falhar (ex: PCRs modificados), pede a senha ao usuário como fallback.
   boot.initrd.luks.devices."crypted" = {
     crypttabExtraOpts = [
-      "tpm2-device=auto"     # Usar o TPM2 disponível automaticamente
-      "tpm2-pcrs=0+2+7"      # PCRs a verificar (firmware + Secure Boot state)
+      "tpm2-device=auto" # Usar o TPM2 disponível automaticamente
+      "tpm2-pcrs=0+2+7" # PCRs a verificar (firmware + Secure Boot state)
     ];
   };
 }
