@@ -209,6 +209,9 @@
     # Configuração do SSH do usuário
     ssh = {
       enable = true;
+      # Desabilita os valores padrão obsoletos; os valores desejados são
+      # definidos explicitamente em matchBlocks abaixo
+      enableDefaultConfig = false;
       matchBlocks."*" = {
         addKeysToAgent = "yes";
         serverAliveInterval = 60;
