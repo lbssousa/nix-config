@@ -13,15 +13,27 @@
   # Módulos do kernel para Intel + NVME + USB
   boot = {
     initrd = {
-      availableKernelModules =
-        [ "xhci_pci" "ahci" "nvme" "usb_storage" "sd_mod" "rtsx_pci_sdmmc" ];
+      availableKernelModules = [
+        "xhci_pci"
+        "ahci"
+        "nvme"
+        "usb_storage"
+        "sd_mod"
+        "rtsx_pci_sdmmc"
+      ];
       kernelModules = [
         "dm-snapshot"
         # Intel KMS para boot flicker-free
         "i915"
       ];
     };
-    kernelModules = [ "kvm-intel" "nvidia" "nvidia_modeset" "nvidia_uvm" "nvidia_drm" ];
+    kernelModules = [
+      "kvm-intel"
+      "nvidia"
+      "nvidia_modeset"
+      "nvidia_uvm"
+      "nvidia_drm"
+    ];
     extraModulePackages = [ ];
   };
 

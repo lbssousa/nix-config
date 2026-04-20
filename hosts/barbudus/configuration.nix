@@ -1,6 +1,11 @@
 # Configuração principal para barbudus (Dell Inspiron 14 5490)
 # Hardware: Intel i5-10210U, 16 GB RAM, Intel UHD 620 + NVIDIA GeForce MX230
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   # Scripts goodix-fp-dump para diagnóstico do sensor de impressão digital
@@ -29,7 +34,8 @@ let
       chmod +x $out/share/goodix-fp-dump/*.py 2>/dev/null || true
     '';
   };
-in {
+in
+{
   imports = [
     ../../modules/common.nix
     ../../modules/audio.nix
@@ -115,8 +121,14 @@ in {
   environment.systemPackages = [
     goodix-fp-dump
     # Dependências Python para os scripts
-    (pkgs.python3.withPackages
-      (ps: with ps; [ pyusb cryptography construct pillow ]))
+    (pkgs.python3.withPackages (
+      ps: with ps; [
+        pyusb
+        cryptography
+        construct
+        pillow
+      ]
+    ))
   ];
 
   # Preservar configurações de Secure Boot em /persist

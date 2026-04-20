@@ -49,7 +49,10 @@
         ".config/distrobox" # Distrobox
         ".local/share/fish" # Histórico do Fish shell
       ];
-      files = [ ".bash_history" ".zsh_history" ];
+      files = [
+        ".bash_history"
+        ".zsh_history"
+      ];
     };
   };
 
