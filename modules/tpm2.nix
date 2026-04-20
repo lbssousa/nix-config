@@ -38,7 +38,10 @@
   # Módulos do kernel necessários para o TPM2
   # tpm_tis: driver para TPM 1.2/2.0 via LPC/SPI (maioria dos laptops e desktops)
   # tpm_crb: driver para TPM 2.0 via CRB (Command Response Buffer) - padrão moderno
-  boot.initrd.kernelModules = [ "tpm_tis" "tpm_crb" ];
+  boot.initrd.kernelModules = [
+    "tpm_tis"
+    "tpm_crb"
+  ];
 
   # Ferramentas de userspace para gerenciar o TPM2
   environment.systemPackages = with pkgs; [

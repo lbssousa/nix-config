@@ -1,7 +1,7 @@
 # Módulo de usuários: Esqueleto para definição de usuários
 # Os arquivos reais de usuário ficam em users/ e são ignorados pelo git
 # Consulte users/skeleton.nix para criar seu arquivo de usuário
-{ ... }:
+_:
 
 {
   # Habilitar Zsh globalmente (necessário para usar como shell de usuário)

@@ -15,7 +15,9 @@
     before = [ "sysroot.mount" ];
     path = [ pkgs.zfs ];
     unitConfig.DefaultDependencies = "no";
-    serviceConfig = { Type = "oneshot"; };
+    serviceConfig = {
+      Type = "oneshot";
+    };
     script = ''
       zfs rollback -r rpool/local/root@blank
     '';
