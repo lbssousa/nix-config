@@ -10,7 +10,96 @@ Este guia cobre a instalação do NixOS usando esta configuração baseada em Fl
 
 ## 🚀 Instalação
 
-### 1. Preparar o ambiente
+### Script de Instalação Automatizada (`install.sh`)
+
+O repositório inclui o script `scripts/install.sh` que automatiza todos os passos de instalação descritos neste guia. É a forma mais rápida e segura de instalar o sistema.
+
+#### Como usar
+
+```bash
+# 1. Boot no USB do NixOS
+
+# 2. Clonar o repositório
+nix-shell -p git
+git clone https://github.com/lbssousa/nixos-config.git /tmp/nixos-config
+cd /tmp/nixos-config
+
+# 3. Executar o script (modo interativo — recomendado para a maioria dos casos)
+bash scripts/install.sh
+```
+
+O script irá guiar você por cada etapa, perguntando as informações necessárias.
+
+#### Opções do script
+
+```
+Uso:
+  bash scripts/install.sh [--host <hostname>] [--disk <device>]
+                          [--user "login:Nome Completo:sudo"]
+                          [--user "login2:Nome2:nosudo"] ...
+                          [--non-interactive]
+                          [--help]
+
+Opções:
+  --host            Nome do host NixOS (ex: barbudus, bigodon).
+                    Se omitido, é perguntado interativamente.
+  --disk            Dispositivo de disco de destino (ex: /dev/nvme0n1, /dev/sda).
+                    Se omitido, é perguntado interativamente.
+  --user            Usuário no formato "login:Nome Completo:sudo|nosudo".
+                    Pode ser repetido para criar múltiplos usuários.
+                    "sudo" (padrão) inclui o usuário no grupo wheel (sudo).
+                    "nosudo" cria o usuário sem permissão de sudo.
+                    Se omitido, é perguntado interativamente.
+  --non-interactive Não faz perguntas; falha se informações obrigatórias
+                    não forem fornecidas via flags.
+  --help, -h        Exibe esta ajuda e sai.
+```
+
+Para ver a ajuda diretamente:
+
+```bash
+bash scripts/install.sh --help
+```
+
+#### Exemplos
+
+**Instalação totalmente interativa** (recomendado para iniciantes):
+
+```bash
+bash scripts/install.sh
+```
+
+**Instalação não-interativa** (útil para automação ou reinstalações):
+
+```bash
+bash scripts/install.sh \
+  --host barbudus \
+  --disk /dev/nvme0n1 \
+  --user "joao:cavalo:sudo" \
+  --user "maria:macaco:nosudo" \
+  --non-interactive
+```
+
+**Pré-selecionar host e disco, mas confirmar usuários interativamente:**
+
+```bash
+bash scripts/install.sh --host bigodon --disk /dev/sda
+```
+
+#### O que o script faz
+
+1. Habilita Flakes no ambiente live (usuário atual e root)
+2. Lista hosts e discos disponíveis para seleção
+3. Atualiza o `disko.nix` do host com o disco escolhido
+4. Particiona e formata o disco com disko (⚠️ apaga todos os dados!)
+5. Gera o `hostId` ZFS e atualiza `hardware-configuration.nix`
+6. Cria arquivos de usuário a partir do skeleton
+7. Adiciona os arquivos de usuário ao índice do git (`git add --force`)
+8. Atualiza `configuration.nix` com os imports dos usuários
+9. Copia a configuração para `/mnt/etc/nixos` e executa `nixos-install`
+10. Define senhas via `nixos-enter`
+
+### Instalação Manual (passo a passo)
 
 ```bash
 # Conectar à internet (se necessário)
