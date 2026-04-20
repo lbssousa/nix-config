@@ -92,8 +92,7 @@
         gl = "git pull";
         # NixOS shortcuts
         nrs = "sudo nixos-rebuild switch --flake /etc/nixos";
-        nru =
-          "sudo nix flake update /etc/nixos && sudo nixos-rebuild switch --flake /etc/nixos";
+        nru = "sudo nix flake update /etc/nixos && sudo nixos-rebuild switch --flake /etc/nixos";
         nrb = "sudo nixos-rebuild boot --flake /etc/nixos";
         hms = "home-manager switch --flake /etc/nixos";
         # Podman/Docker aliases

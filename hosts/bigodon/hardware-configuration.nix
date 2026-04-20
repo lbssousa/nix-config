@@ -13,8 +13,7 @@
   # Módulos do kernel para Intel N200 + NVME + USB
   boot = {
     initrd = {
-      availableKernelModules =
-        [ "xhci_pci" "ahci" "nvme" "usb_storage" "sd_mod" ];
+      availableKernelModules = [ "xhci_pci" "ahci" "nvme" "usb_storage" "sd_mod" ];
       kernelModules = [
         "dm-snapshot"
         # Intel KMS para boot flicker-free
@@ -26,8 +25,7 @@
   };
 
   # ID único do host para ZFS (gerado com: head -c 8 /dev/urandom | od -A n -t x1 | tr -d ' \n')
-  networking.hostId =
-    "b9c4d5e6"; # ALTERE para um valor único gerado no seu sistema
+  networking.hostId = "b9c4d5e6"; # ALTERE para um valor único gerado no seu sistema
 
   # Microcode Intel
   hardware.cpu.intel.updateMicrocode = true;

@@ -1,6 +1,5 @@
 {
-  description =
-    "NixOS configuration with ZFS, impermanence, GNOME, and hybrid swap";
+  description = "NixOS configuration with ZFS, impermanence, GNOME, and hybrid swap";
 
   inputs = {
     # NixOS unstable channel
@@ -36,8 +35,7 @@
     # nix-homebrew.url = "github:zhaofengli-wip/nix-homebrew";
   };
 
-  outputs =
-    { nixpkgs, home-manager, disko, impermanence, lanzaboote, ... }@inputs:
+  outputs = { nixpkgs, home-manager, disko, impermanence, lanzaboote, ... }@inputs:
     let
       # Helper to build a NixOS configuration for a given host
       mkHost = hostname: system: extraModules:

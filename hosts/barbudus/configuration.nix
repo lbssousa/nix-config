@@ -66,12 +66,10 @@ in {
     # Usar driver estável (580.x para NixOS unstable)
     package = config.boot.kernelPackages.nvidiaPackages.stable;
     modesetting.enable = true;
-    open =
-      false; # MX230 é GPU antiga, usar driver proprietário (não o open-source)
+    open = false; # MX230 é GPU antiga, usar driver proprietário (não o open-source)
     powerManagement = {
       enable = true;
-      finegrained =
-        true; # Desligar GPU NVIDIA quando não usada (economia de bateria)
+      finegrained = true; # Desligar GPU NVIDIA quando não usada (economia de bateria)
     };
     prime = {
       # IDs de barramento PCI (verifique com: lspci | grep -E "VGA|3D")
@@ -107,8 +105,7 @@ in {
   # --- Secure Boot com Lanzaboote ---
   # Para Secure Boot com NVIDIA (assina módulos do kernel)
   # NOTA: Requer configuração inicial de chaves (ver INSTALLATION.md)
-  boot.loader.systemd-boot.enable =
-    lib.mkForce false; # Substituído pelo lanzaboote
+  boot.loader.systemd-boot.enable = lib.mkForce false; # Substituído pelo lanzaboote
   boot.lanzaboote = {
     enable = true;
     pkiBundle = "/persist/etc/secureboot"; # Chaves armazenadas em /persist
