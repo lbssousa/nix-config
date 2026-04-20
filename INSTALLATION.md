@@ -125,20 +125,30 @@ Após copiar, edite o arquivo para:
 3. Adicionar as configurações de `zramSwap`
 4. Manter `fileSystems."/persist".neededForBoot = true`
 
-### 8. Criar arquivo de usuário
+### 8. Criar arquivos de usuário
+
+É possível criar **uma ou mais contas de usuário**. Para cada conta, defina o nome de login, o nome completo e se ela terá permissão de **sudo** (grupo `wheel`) ou não.
 
 ```bash
-# Copiar o template de usuário
+# Copiar o template para o(s) usuário(s) desejado(s)
 cp users/skeleton.nix users/seu-usuario.nix
 
 # Editar o arquivo (substituir "skeleton" pelo nome real do usuário)
 nano users/seu-usuario.nix
 ```
 
-Descomente a linha de importação do usuário em `hosts/$HOST/configuration.nix`:
+Para **criar um segundo usuário sem sudo**, copie o skeleton novamente e remova a linha `"wheel"` do `extraGroups`:
+
+```bash
+cp users/skeleton.nix users/outro-usuario.nix
+nano users/outro-usuario.nix
+# Remova a linha: "wheel" # sudo
+```
+
+Descomente (ou adicione) as linhas de importação dos usuários em `hosts/$HOST/configuration.nix`:
 ```nix
-# Descomente a linha:
-# ./../../users/seu-usuario.nix
+./../../users/seu-usuario.nix
+./../../users/outro-usuario.nix
 ```
 
 > ⚠️ **IMPORTANTE — adicionar o arquivo ao índice do git**
@@ -175,8 +185,9 @@ Durante a instalação será solicitado:
 # Entrar no sistema recém-instalado
 sudo nixos-enter --root /mnt
 
-# Definir senha para o usuário
+# Definir senha para cada usuário criado
 passwd seu-usuario
+passwd outro-usuario  # se houver mais de um
 
 # Definir senha para o root (opcional, mas recomendado)
 passwd root

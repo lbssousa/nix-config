@@ -25,6 +25,7 @@
     # Grupos essenciais para desktop com GNOME + containers
     extraGroups = [
       "networkmanager" # Gerenciar conexões de rede
+      # Remova "wheel" abaixo se o usuário NÃO deve ter permissão de sudo:
       "wheel" # sudo
       "video" # Acesso à GPU
       "audio" # Acesso ao áudio
