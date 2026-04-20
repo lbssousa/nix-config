@@ -148,13 +148,27 @@ require_cmd lsblk
 require_cmd sed
 
 # Habilitar Flakes no ambiente live (idempotente)
+# Escreve na configuração do usuário atual
 NIX_CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/nix"
 mkdir -p "$NIX_CONF_DIR"
 if ! grep -q "experimental-features" "$NIX_CONF_DIR/nix.conf" 2>/dev/null; then
   echo "experimental-features = nix-command flakes" >> "$NIX_CONF_DIR/nix.conf"
   success "Flakes habilitados em $NIX_CONF_DIR/nix.conf"
 else
-  info "Flakes já estão habilitados."
+  info "Flakes já estão habilitados (usuário atual)."
+fi
+
+# Garantir que o root também leia as features experimentais.
+# Comandos executados com sudo (ex: nixos-install, nix run) usam o ambiente
+# do root e não herdam o nix.conf do usuário atual. Escrevemos em /etc/nix/nix.conf
+# que é lido globalmente, incluindo pelo root.
+ROOT_NIX_CONF="/etc/nix/nix.conf"
+if ! sudo grep -q "experimental-features" "$ROOT_NIX_CONF" 2>/dev/null; then
+  sudo mkdir -p "$(dirname "$ROOT_NIX_CONF")"
+  echo "experimental-features = nix-command flakes" | sudo tee -a "$ROOT_NIX_CONF" > /dev/null
+  success "Flakes habilitados em $ROOT_NIX_CONF (root/global)."
+else
+  info "Flakes já estão habilitados em $ROOT_NIX_CONF."
 fi
 
 # ---------------------------------------------------------------------------
