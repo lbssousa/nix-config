@@ -1,7 +1,55 @@
-# Módulo de ambiente gráfico: GNOME + Flatpak + Brave
+# Módulo de ambiente gráfico: GNOME + Flatpak
 # Experiência similar ao Fedora Silverblue / Bluefin
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
 
+let
+  # Flatpaks padrão do sistema (baseado no projeto Bluefin)
+  # Ref: https://github.com/projectbluefin/common/blob/main/system_files/bluefin/usr/share/ublue-os/homebrew/system-flatpaks.Brewfile
+  # Firefox e Thunderbird excluídos intencionalmente
+  systemFlatpaks = [
+    "com.brave.Browser"
+    "com.github.PintaProject.Pinta"
+    "com.github.tchx84.Flatseal"
+    "com.mattjakeman.ExtensionManager"
+    "com.ranfdev.DistroShelf"
+    "io.github.flattool.Ignition"
+    "io.github.flattool.Warehouse"
+    "io.github.kolunmi.Bazaar"
+    "io.gitlab.adhami3310.Impression"
+    "io.missioncenter.MissionCenter"
+    "it.mijorus.smile"
+    "org.gnome.Calculator"
+    "org.gnome.Calendar"
+    "org.gnome.Characters"
+    "org.gnome.Connections"
+    "org.gnome.Contacts"
+    "org.gnome.DejaDup"
+    "org.gnome.FileRoller"
+    "org.gnome.Firmware"
+    "org.gnome.Logs"
+    "org.gnome.Loupe"
+    "org.gnome.Maps"
+    "org.gnome.NautilusPreviewer"
+    "org.gnome.Papers"
+    "org.gnome.Showtime"
+    "org.gnome.SimpleScan"
+    "org.gnome.Snapshot"
+    "org.gnome.SoundRecorder"
+    "org.gnome.TextEditor"
+    "org.gnome.Weather"
+    "org.gnome.baobab"
+    "org.gnome.clocks"
+    "org.gnome.font-viewer"
+    "org.gtk.Gtk3theme.adw-gtk3"
+    "org.gtk.Gtk3theme.adw-gtk3-dark"
+    "page.tesk.Refine"
+  ];
+  # Hash (8 hex chars, suficiente para detectar mudanças na lista) para reexecutar a instalação
+  flatpaksListHash = builtins.substring 0 8 (
+    builtins.hashString "sha256" (lib.concatStringsSep "\n" systemFlatpaks)
+  );
+  flatpakDoneFile = "/var/lib/nixos-flatpak-setup/done-${flatpaksListHash}";
+in
 {
   services = {
     # Servidor X11 básico (necessário mesmo com Wayland)
@@ -29,7 +77,7 @@
   environment.gnome.excludePackages = with pkgs; [
     gnome-software # Substituído pelo Bazaar (Flatpak)
     gnome-tour
-    epiphany # Browser padrão do GNOME - usar Brave
+    epiphany # Browser padrão do GNOME - usar Brave (Flatpak)
     evince # PDF viewer - usar Papers (Flatpak)
     gnome-terminal # Terminal - usar Ptyxis (Flatpak)
     totem # Player de vídeo
@@ -66,17 +114,46 @@
     powerOnBoot = true;
   };
 
-  # Brave browser - instalado via Nix para todos os usuários
-  # Definido como browser padrão do sistema
-  environment.systemPackages = with pkgs; [ brave ];
-
+  # Brave browser instalado via Flatpak (ver serviço install-system-flatpaks)
   # Definir Brave como browser padrão via xdg-mime
   xdg.mime.defaultApplications = {
-    "text/html" = "brave-browser.desktop";
-    "x-scheme-handler/http" = "brave-browser.desktop";
-    "x-scheme-handler/https" = "brave-browser.desktop";
-    "x-scheme-handler/about" = "brave-browser.desktop";
-    "x-scheme-handler/unknown" = "brave-browser.desktop";
+    "text/html" = "com.brave.Browser.desktop";
+    "x-scheme-handler/http" = "com.brave.Browser.desktop";
+    "x-scheme-handler/https" = "com.brave.Browser.desktop";
+    "x-scheme-handler/about" = "com.brave.Browser.desktop";
+    "x-scheme-handler/unknown" = "com.brave.Browser.desktop";
+  };
+
+  # Instalar Flatpaks padrão automaticamente via Flathub na primeira inicialização
+  # O serviço reexecuta apenas quando a lista de Flatpaks muda (baseado no hash da lista)
+  systemd.services.install-system-flatpaks = {
+    description = "Instalar Flatpaks padrão do sistema";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "network-online.target" ];
+    wants = [ "network-online.target" ];
+    unitConfig.ConditionPathExists = "!${flatpakDoneFile}";
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      StateDirectory = "nixos-flatpak-setup";
+    };
+    script =
+      ''
+        # Adicionar repositório Flathub se não existir
+        ${pkgs.flatpak}/bin/flatpak remote-add --system --if-not-exists flathub \
+          https://dl.flathub.org/repo/flathub.flatpakrepo
+        # Instalar Flatpaks do sistema (falhas individuais são registradas mas não interrompem)
+      ''
+      + lib.concatMapStrings (pkg: ''
+        if ! ${pkgs.flatpak}/bin/flatpak install --system --noninteractive flathub ${
+          lib.escapeShellArg pkg
+        }; then
+          echo "AVISO: Falha ao instalar ${lib.escapeShellArg pkg}" >&2
+        fi
+      '') systemFlatpaks
+      + ''
+        touch ${lib.escapeShellArg flatpakDoneFile}
+      '';
   };
 
   # Fontes essenciais para o desktop
