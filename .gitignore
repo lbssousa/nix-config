@@ -1,0 +1,39 @@
+# Gitignore para o nixos-config
+# Arquivos e diretórios sensíveis que NÃO devem ser commitados
+
+# --- Configurações de usuário ---
+# Os arquivos de usuário real ficam em users/ mas NÃO são commitados
+# Use users/skeleton.nix como template para criar seu usuário
+/users/*.nix
+!/users/skeleton.nix  # Exceto o template skeleton
+
+# --- Segredos e chaves ---
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+.secrets
+
+# --- Hardware específico ---
+# O hardware-configuration.nix gerado automaticamente pode sobrescrever os templates
+# Opcional: descomente para ignorar os arquivos de hardware gerados
+# hosts/*/hardware-configuration.nix
+
+# --- Arquivos temporários ---
+*.swp
+*.swo
+*~
+.DS_Store
+.direnv/
+result
+result-*
+
+# --- Nix ---
+.nix-profile
+.nix-defexpr
+.nix-channels
+
+# --- Flake lock (opcional - depende do workflow) ---
+# Manter o flake.lock commitado para builds reproduzíveis
+# flake.lock

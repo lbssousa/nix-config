@@ -1,0 +1,360 @@
+# Guia de Instalação do NixOS
+
+Este guia cobre a instalação do NixOS usando esta configuração baseada em Flakes com ZFS, disko, impermanence e swap híbrida.
+
+## 📋 Pré-requisitos
+
+1. Baixe a ISO do NixOS: https://nixos.org/download.html
+2. Crie um USB bootável com a ISO
+3. Boot no USB do NixOS
+
+## 🚀 Instalação
+
+### 1. Preparar o ambiente
+
+```bash
+# Conectar à internet (se necessário)
+# Para Wi-Fi via NetworkManager:
+nmcli device wifi list
+nmcli device wifi connect "SSID" password "senha"
+
+# Definir layout do teclado
+loadkeys br-abnt2
+
+# Ativar SSH para instalação remota (opcional)
+sudo systemctl start sshd
+passwd  # Definir senha temporária para o live environment
+
+# Habilitar Flakes temporariamente
+mkdir -p ~/.config/nix
+echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
+```
+
+### 2. Clonar o repositório
+
+```bash
+# Instalar git no live environment
+nix-shell -p git
+
+# Clonar a configuração
+git clone https://github.com/lbssousa/nixos-config.git /tmp/nixos-config
+cd /tmp/nixos-config
+```
+
+### 3. Identificar o disco de instalação
+
+```bash
+# Listar discos disponíveis
+lsblk
+
+# Ou com mais detalhes:
+fdisk -l
+
+# Identificar o disco correto (ex: /dev/nvme0n1 para NVMe, /dev/sda para SATA)
+```
+
+### 4. Ajustar configuração de disco
+
+Edite o arquivo de disko do host desejado para definir o dispositivo correto:
+
+```bash
+# Para barbudus (Dell Inspiron 14 5490):
+nano hosts/barbudus/disko.nix
+
+# Para bigodon (Morefine M6):
+nano hosts/bigodon/disko.nix
+```
+
+Altere `device = "/dev/nvme0n1"` para o disco correto identificado no passo anterior.
+
+### 5. Particionar e formatar o disco
+
+⚠️ **ATENÇÃO**: Este comando IRÁ APAGAR TODOS OS DADOS DO DISCO SELECIONADO!
+
+```bash
+# Escolha o host apropriado
+HOST=barbudus  # ou bigodon
+
+# Executar disko para particionar e formatar
+sudo nix run github:nix-community/disko -- --mode disko ./hosts/$HOST/disko.nix
+```
+
+Este comando irá:
+1. Criar partições GPT (EFI 512MB + partição LUKS)
+2. Configurar criptografia LUKS (será solicitada senha durante o processo)
+3. Criar volumes LVM (swap 20GB + volume ZFS)
+4. Criar pool ZFS `rpool` com os datasets:
+   - `rpool/local/root` → `/` (efêmero)
+   - `rpool/local/nix` → `/nix`
+   - `rpool/local/log` → `/var/log`
+   - `rpool/local/containers` → `/var/lib/containers`
+   - `rpool/safe/home` → `/home`
+   - `rpool/safe/persist` → `/persist`
+   - `rpool/safe/flatpak` → `/var/lib/flatpak`
+5. Montar tudo em `/mnt`
+
+### 6. Configurar o hostId ZFS
+
+O ZFS requer um `hostId` único. Gere e ajuste:
+
+```bash
+# Gerar um hostId único (8 caracteres hexadecimais)
+head -c 8 /dev/urandom | od -A n -t x1 | tr -d ' \n'
+# Exemplo de saída: a8b3c4d5
+
+# Editar hardware-configuration.nix do host
+nano hosts/$HOST/hardware-configuration.nix
+# Substitua o valor de networking.hostId pelo valor gerado acima
+```
+
+### 7. Gerar configuração de hardware (recomendado)
+
+```bash
+# Gerar hardware-configuration.nix automático
+nixos-generate-config --no-filesystems --root /mnt
+
+# Mesclar com o arquivo do host (ou substituir completamente)
+# IMPORTANTE: Mantenha a linha "import ./disko.nix" nos imports
+# e as configurações de zramSwap do arquivo original
+sudo cp /mnt/etc/nixos/hardware-configuration.nix ./hosts/$HOST/hardware-configuration.nix
+```
+
+Após copiar, edite o arquivo para:
+1. Manter `import ./disko.nix` nos imports
+2. Adicionar `networking.hostId` com o valor gerado no passo anterior
+3. Adicionar as configurações de `zramSwap`
+4. Manter `fileSystems."/persist".neededForBoot = true`
+
+### 8. Criar arquivo de usuário
+
+```bash
+# Copiar o template de usuário
+cp users/skeleton.nix users/seu-usuario.nix
+
+# Editar o arquivo (substituir "skeleton" pelo nome real do usuário)
+nano users/seu-usuario.nix
+```
+
+Descomente a linha de importação do usuário em `hosts/$HOST/configuration.nix`:
+```nix
+# Descomente a linha:
+# ./../../users/seu-usuario.nix
+```
+
+### 9. Instalar o NixOS
+
+```bash
+# Copiar a configuração para /mnt
+sudo cp -r /tmp/nixos-config /mnt/etc/nixos
+
+# Instalar o sistema
+sudo nixos-install --flake /mnt/etc/nixos#$HOST
+```
+
+Durante a instalação será solicitado:
+- Senha para o usuário root (após a instalação)
+
+### 10. Configurar senhas
+
+```bash
+# Entrar no sistema recém-instalado
+sudo nixos-enter --root /mnt
+
+# Definir senha para o usuário
+passwd seu-usuario
+
+# Definir senha para o root (opcional, mas recomendado)
+passwd root
+
+exit
+```
+
+### 11. Finalizar instalação
+
+```bash
+# Desmontar e reiniciar
+sudo umount -R /mnt
+sudo reboot
+```
+
+## 🔐 Primeiro Boot
+
+1. **Desbloqueio LUKS**: Digite a senha de criptografia definida durante o disko
+2. **Login**: Use o usuário criado e a senha definida com `passwd`
+3. **Configurar Flatpaks**:
+   ```bash
+   flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+   flatpak install flathub org.gnome.Papers
+   flatpak install flathub app.devsuite.Ptyxis
+   flatpak install flathub io.github.bazaar_cabinet.Bazaar
+   ```
+
+4. **Instalar Homebrew** (opcional):
+   ```bash
+   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+   ```
+
+## 🔒 Configuração do Secure Boot (apenas barbudus)
+
+Para habilitar o Secure Boot com NVIDIA no barbudus, siga estes passos **antes** de habilitar o Secure Boot na BIOS:
+
+```bash
+# 1. Entrar no sistema normalmente (Secure Boot desabilitado)
+
+# 2. Inicializar o bundle PKI do lanzaboote
+sudo sbctl create-keys
+
+# 3. Verificar o status
+sudo sbctl verify
+
+# 4. Assinar os binários do boot
+sudo sbctl sign-all
+
+# 5. Verificar a assinatura
+sudo sbctl verify
+
+# 6. Habilitar Secure Boot na BIOS/UEFI
+# Entre na BIOS, habilite o Secure Boot e adicione suas chaves
+
+# 7. Rebuildar o sistema
+sudo nixos-rebuild switch --flake /etc/nixos#barbudus
+```
+
+## 🔍 Sensor de Impressão Digital (barbudus)
+
+Para usar o sensor de impressão digital Goodix no barbudus:
+
+```bash
+# 1. Atualizar os hashes nos derivativos em hosts/barbudus/configuration.nix
+# Obter hash do libfprint fork:
+nix-prefetch-github infinytum libfprint --rev unstable
+
+# Obter hash do goodix-fp-dump:
+nix-prefetch-github goodix-fp-linux-dev goodix-fp-dump --rev main
+
+# 2. Atualizar os sha256 em hosts/barbudus/configuration.nix
+
+# 3. Rebuildar o sistema
+sudo nixos-rebuild switch --flake /etc/nixos#barbudus
+
+# 4. Registrar impressão digital
+fprintd-enroll
+
+# 5. Testar
+fprintd-verify
+```
+
+## 📝 Pós-instalação
+
+### Atualizar o sistema
+
+```bash
+# Atualizar flake.lock (todos os inputs)
+cd /etc/nixos
+sudo nix flake update
+
+# Rebuildar sistema
+sudo nixos-rebuild switch --flake /etc/nixos#barbudus  # ou bigodon
+```
+
+### Verificar o sistema
+
+```bash
+# Ver datasets ZFS e uso de disco
+zfs list
+
+# Ver swap ativo
+swapon --show
+zramctl
+
+# Ver status do Flatpak
+flatpak list --system
+
+# Ver containers Podman
+podman system info
+```
+
+## 🔧 Solução de Problemas
+
+### Sistema não boota após primeiro setup
+
+Se o sistema não boota na primeira vez após o disko:
+
+```bash
+# Boot no USB live
+# Abrir LUKS
+sudo cryptsetup open /dev/nvme0n1p2 crypted
+
+# Ativar LVM
+sudo vgchange -ay
+
+# Importar pool ZFS
+sudo zpool import -f rpool
+
+# Montar datasets
+sudo mount -t zfs rpool/local/root /mnt
+sudo mount /dev/nvme0n1p1 /mnt/boot
+sudo mount -t zfs rpool/local/nix /mnt/nix
+sudo mount -t zfs rpool/safe/persist /mnt/persist
+
+# Entrar no sistema
+sudo nixos-enter --root /mnt
+```
+
+### Problemas com o rollback ZFS
+
+Se o sistema esquece configurações entre boots (impermanence funcionando):
+
+```bash
+# Verificar snapshots existentes
+zfs list -t snapshot
+
+# Ver o snapshot blank (deve existir após instalação)
+zfs list -t snapshot rpool/local/root
+
+# Criar o snapshot blank manualmente se não existir
+sudo zfs snapshot rpool/local/root@blank
+```
+
+### Verificar ZFS pool
+
+```bash
+# Status do pool
+sudo zpool status
+
+# Verificar integridade
+sudo zpool scrub rpool
+```
+
+### Erro de hostId ZFS
+
+```bash
+# Verificar hostId configurado
+cat /etc/machine-id  # Apenas referência
+
+# Ver hostId atual
+hostid
+
+# O hostId deve ser fixo e definido em hardware-configuration.nix
+# networking.hostId = "xxxxxxxx";
+```
+
+### Problemas com LUKS
+
+```bash
+# Listar containers LUKS
+sudo cryptsetup status crypted
+
+# Verificar cabeçalho LUKS
+sudo cryptsetup luksDump /dev/nvme0n1p2
+```
+
+## 📚 Referências
+
+- [Manual do NixOS](https://nixos.org/manual/nixos/stable/)
+- [Disko](https://github.com/nix-community/disko)
+- [Impermanence](https://github.com/nix-community/impermanence)
+- [Home Manager](https://github.com/nix-community/home-manager)
+- [Lanzaboote (Secure Boot)](https://github.com/nix-community/lanzaboote)
+- [ZFS on NixOS](https://nixos.wiki/wiki/ZFS)
+- [Erase Your Darlings](https://grahamc.com/blog/erase-your-darlings/)
