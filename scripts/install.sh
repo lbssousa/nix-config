@@ -180,7 +180,8 @@ success "Disco selecionado: $OPT_DISK"
 DISK="$OPT_DISK"
 
 # Atualizar disko.nix com o disco correto
-CURRENT_DISK=$(grep -oP '(?<=device = ")[^"]+' "$DISKO_FILE" || true)
+# Extrai o valor entre aspas após 'device = ' usando sed (mais portável que grep -P)
+CURRENT_DISK=$(sed -n 's|.*device = "\([^"]*\)".*|\1|p' "$DISKO_FILE" | head -1)
 if [[ "$CURRENT_DISK" != "$DISK" ]]; then
   info "Atualizando device em $DISKO_FILE: $CURRENT_DISK → $DISK"
   sed -i "s|device = \"[^\"]*\"|device = \"$DISK\"|g" "$DISKO_FILE"
@@ -233,10 +234,13 @@ fi
 # Gerar hardware-configuration.nix real e preservar as partes essenciais
 info "Gerando hardware-configuration.nix via nixos-generate-config..."
 GENERATED_HW=/tmp/nixos-generate-config-hw.nix
-sudo nixos-generate-config --no-filesystems --root /mnt --show-hardware-config > "$GENERATED_HW" 2>/dev/null || {
+GEN_STDERR=$(mktemp /tmp/nixos-gen-stderr-XXXXXX)
+sudo nixos-generate-config --no-filesystems --root /mnt --show-hardware-config > "$GENERATED_HW" 2>"$GEN_STDERR" || {
   warn "nixos-generate-config falhou ou não está disponível. Mantendo o template existente."
+  [[ -s "$GEN_STDERR" ]] && warn "Saída de erro: $(cat "$GEN_STDERR")"
   GENERATED_HW=""
 }
+rm -f "$GEN_STDERR"
 
 if [[ -n "$GENERATED_HW" && -s "$GENERATED_HW" ]]; then
   # Preservar as linhas essenciais do template existente que o gerador omite
@@ -280,7 +284,7 @@ info "==> Passo 5: Criar arquivo de usuário"
 ask OPT_USER "Nome de usuário (login)"
 [[ -n "$OPT_USER" ]] || die "Nome de usuário é obrigatório."
 
-# Validar nome de usuário POSIX
+# Validar nome de usuário POSIX (máximo 32 chars = LOGIN_NAME_MAX em Linux)
 if ! [[ "$OPT_USER" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
   die "Nome de usuário inválido: '$OPT_USER'. Use apenas letras minúsculas, números, hifens e underscores."
 fi
@@ -377,7 +381,8 @@ if confirm "Copiar configuração para /mnt/etc/nixos e executar nixos-install?"
   if command -v rsync >/dev/null 2>&1; then
     sudo rsync -a --delete "$CONFIG_DIR/" /mnt/etc/nixos/
   else
-    sudo cp -r "$CONFIG_DIR" /mnt/etc/nixos
+    # Copiar o conteúdo do diretório (não o diretório em si) para /mnt/etc/nixos/
+    sudo cp -r "$CONFIG_DIR/." /mnt/etc/nixos/
   fi
   success "Configuração copiada para /mnt/etc/nixos."
 
