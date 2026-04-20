@@ -141,6 +141,21 @@ Descomente a linha de importação do usuário em `hosts/$HOST/configuration.nix
 # ./../../users/seu-usuario.nix
 ```
 
+> ⚠️ **IMPORTANTE — adicionar o arquivo ao índice do git**
+>
+> O Nix avalia flakes a partir do **índice do git**, não do sistema de arquivos
+> diretamente. Arquivos git-ignorados que não estejam no índice são
+> **invisíveis ao Nix** e não chegam ao `/nix/store`, causando erros do tipo
+> _"module not found"_ no `nixos-install`.
+>
+> Execute o comando abaixo para incluir o arquivo no índice **sem** fazer commit:
+>
+> ```bash
+> git add --force users/seu-usuario.nix
+> ```
+>
+> Isso torna o arquivo visível ao Nix sem expô-lo no histórico do repositório.
+
 ### 9. Instalar o NixOS
 
 ```bash
