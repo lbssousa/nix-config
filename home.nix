@@ -52,7 +52,7 @@
     # Git - configuração básica (sobrescreva no arquivo do usuário)
     git = {
       enable = true;
-      extraConfig = {
+      settings = {
         init.defaultBranch = "main";
         pull.rebase = true;
         rebase.autostash = true;
@@ -100,7 +100,7 @@
         dkc = "podman-compose";
       };
 
-      initExtra = ''
+      initContent = ''
         # Zoxide (cd inteligente)
         eval "$(zoxide init zsh)"
 
@@ -192,6 +192,8 @@
       defaultEditor = true;
       viAlias = true;
       vimAlias = true;
+      withRuby = false;
+      withPython3 = false;
       extraConfig = ''
         set number
         set relativenumber
@@ -207,11 +209,12 @@
     # Configuração do SSH do usuário
     ssh = {
       enable = true;
-      addKeysToAgent = "yes";
-      extraConfig = ''
-        ServerAliveInterval 60
-        ServerAliveCountMax 3
-      '';
+      enableDefaultConfig = false;
+      matchBlocks."*" = {
+        addKeysToAgent = "yes";
+        serverAliveInterval = 60;
+        serverAliveCountMax = 3;
+      };
     };
 
     # Permitir que o Home Manager gerencie o ambiente de sessão

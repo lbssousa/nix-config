@@ -53,15 +53,15 @@ in
 {
   services = {
     # Servidor X11 básico (necessário mesmo com Wayland)
-    xserver = {
+    xserver.enable = true;
+
+    # Driver de vídeo definido por cada host
+    displayManager.gdm = {
       enable = true;
-      # Driver de vídeo definido por cada host
-      displayManager.gdm = {
-        enable = true;
-        wayland = true; # Preferir sessão Wayland
-      };
-      desktopManager.gnome.enable = true;
+      wayland = true; # Preferir sessão Wayland
     };
+
+    desktopManager.gnome.enable = true;
 
     # Flatpak - instalação system-wide
     flatpak.enable = true;
