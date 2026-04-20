@@ -5,6 +5,8 @@
 {
   # Rollback do dataset raiz para o snapshot @blank a cada boot
   # Executado no initrd, antes de montar /sysroot
+  # NOTA: O nome do pool ZFS está hardcoded como "rpool" para corresponder ao disko.nix
+  # Se alterar poolName em disko.nix, atualize também o nome aqui
   boot.initrd.systemd.enable = true;
   boot.initrd.systemd.services.rollback = {
     description = "Rollback ZFS root dataset to blank snapshot";
