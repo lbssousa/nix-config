@@ -22,13 +22,12 @@
 
   # Utilitário de impressora Epson (epson-printer-utility / ecbd.service)
   # O serviço ecbd gerencia comunicação bidirecional com impressoras Epson
-  environment.systemPackages = with pkgs;
-    [
-      # epson-printer-utility não está no nixpkgs oficialmente.
-      # Instale manualmente ou via Flatpak: com.epson.epsonscanutilities
-      # O pacote abaixo é um wrapper para as ferramentas disponíveis:
-      system-config-printer # Interface gráfica para configuração de impressoras
-    ];
+  environment.systemPackages = with pkgs; [
+    # epson-printer-utility não está no nixpkgs oficialmente.
+    # Instale manualmente ou via Flatpak: com.epson.epsonscanutilities
+    # O pacote abaixo é um wrapper para as ferramentas disponíveis:
+    system-config-printer # Interface gráfica para configuração de impressoras
+  ];
 
   # Serviço ecbd da Epson (Epson Communication Bridge Daemon)
   # Necessário para o utilitário epson-printer-utility funcionar corretamente.

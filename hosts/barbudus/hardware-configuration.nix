@@ -21,14 +21,12 @@
         "i915"
       ];
     };
-    kernelModules =
-      [ "kvm-intel" "nvidia" "nvidia_modeset" "nvidia_uvm" "nvidia_drm" ];
+    kernelModules = [ "kvm-intel" "nvidia" "nvidia_modeset" "nvidia_uvm" "nvidia_drm" ];
     extraModulePackages = [ ];
   };
 
   # ID único do host para ZFS (gerado com: head -c 8 /dev/urandom | od -A n -t x1 | tr -d ' \n')
-  networking.hostId =
-    "a8b3c4d5"; # ALTERE para um valor único gerado no seu sistema
+  networking.hostId = "a8b3c4d5"; # ALTERE para um valor único gerado no seu sistema
 
   # Microcode Intel
   hardware.cpu.intel.updateMicrocode = true;
