@@ -145,10 +145,13 @@ in
         # Instalar Flatpaks do sistema (falhas individuais são registradas mas não interrompem)
       ''
       + lib.concatMapStrings (pkg: ''
-        if ! ${pkgs.flatpak}/bin/flatpak install --system --noninteractive flathub ${
-          lib.escapeShellArg pkg
-        }; then
-          echo "AVISO: Falha ao instalar ${lib.escapeShellArg pkg}" >&2
+        if ! ${pkgs.flatpak}/bin/flatpak info --system ${lib.escapeShellArg pkg} \
+            >/dev/null 2>&1; then
+          if ! ${pkgs.flatpak}/bin/flatpak install --system --noninteractive flathub ${
+            lib.escapeShellArg pkg
+          }; then
+            echo "AVISO: Falha ao instalar ${lib.escapeShellArg pkg}" >&2
+          fi
         fi
       '') systemFlatpaks
       + ''
