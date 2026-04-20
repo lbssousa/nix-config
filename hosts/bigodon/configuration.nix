@@ -15,6 +15,7 @@
     ../../modules/printing.nix
     ../../modules/shells.nix
     ../../modules/ssh.nix
+    ../../modules/tpm2.nix
     ../../modules/users.nix
     # Carregar configurações de usuário (não commitadas - ver .gitignore)
     # Descomente e ajuste conforme necessário:

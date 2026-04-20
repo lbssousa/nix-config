@@ -231,7 +231,18 @@ flatpak install flathub io.github.bazaar_cabinet.Bazaar  # App store
 
 - Criptografia AES-256 por padrão
 - `allowDiscards = true` para melhor performance em SSDs
-- Senha solicitada no boot via Plymouth
+- Senha solicitada no boot via Plymouth como fallback
+
+### TPM2 (Desbloqueio Automático LUKS)
+
+- Módulo: `modules/tpm2.nix`
+- Habilitado por padrão em todos os hosts
+- Usa `systemd-cryptenroll` para vincular a chave LUKS ao TPM2
+- PCRs verificados: 0 (firmware UEFI) + 2 (código de opção UEFI) + 7 (Secure Boot state)
+- Fallback automático para senha manual se os PCRs mudarem
+- Ferramentas incluídas: `tpm2-tools`, `tpm2-tss`
+- Módulos do kernel carregados no initrd: `tpm_tis`, `tpm_crb`
+- **Requer enrollment manual após instalação** (ver INSTALLATION.md)
 
 ### Secure Boot (barbudus)
 
