@@ -17,6 +17,7 @@
 #                           [--user "login:Nome Completo:sudo"]
 #                           [--user "login2:Nome2:nosudo"] ...
 #                           [--non-interactive]
+#                           [--help]
 #
 # Opções:
 #   --host            Nome do host NixOS (ex: barbudus, bigodon)
@@ -27,6 +28,7 @@
 #                     "nosudo" cria o usuário sem permissão de sudo.
 #   --non-interactive Não faz perguntas; falha se informações obrigatórias
 #                     não forem fornecidas via flags
+#   --help, -h        Exibe ajuda e sai
 
 set -euo pipefail
 
@@ -100,7 +102,53 @@ while [[ $# -gt 0 ]]; do
       OPT_USERS_SUDO+=("$_sudo_flag")
       shift 2 ;;
     --non-interactive) OPT_NON_INTERACTIVE=true; shift ;;
-    *) die "Opção desconhecida: $1" ;;
+    --help|-h)
+      cat <<'EOF'
+Uso:
+  bash scripts/install.sh [--host <hostname>] [--disk <device>]
+                          [--user "login:Nome Completo:sudo"]
+                          [--user "login2:Nome2:nosudo"] ...
+                          [--non-interactive] [--help]
+
+Opções:
+  --host            Nome do host NixOS (ex: barbudus, bigodon).
+                    Se omitido, é perguntado interativamente.
+  --disk            Dispositivo de disco de destino (ex: /dev/nvme0n1, /dev/sda).
+                    Se omitido, é perguntado interativamente.
+  --user            Usuário no formato "login:Nome Completo:sudo|nosudo".
+                    Pode ser repetido para criar múltiplos usuários.
+                    "sudo" (padrão) inclui o usuário no grupo wheel (sudo).
+                    "nosudo" cria o usuário sem permissão de sudo.
+                    Se omitido, é perguntado interativamente.
+  --non-interactive Não faz perguntas; falha se informações obrigatórias
+                    não forem fornecidas via flags.
+  --help, -h        Exibe esta ajuda e sai.
+
+Exemplos:
+  # Instalação totalmente interativa (recomendado para iniciantes):
+  bash scripts/install.sh
+
+  # Instalação não-interativa:
+  bash scripts/install.sh \
+    --host barbudus \
+    --disk /dev/nvme0n1 \
+    --user "joao:João Silva:sudo" \
+    --user "maria:Maria Souza:nosudo" \
+    --non-interactive
+
+Este script automatiza os passos descritos em INSTALLATION.md:
+  1. Habilita Flakes no ambiente live
+  2. Seleciona o host e o disco de destino
+  3. Particiona e formata o disco com disko
+  4. Gera o hostId ZFS e atualiza hardware-configuration.nix
+  5. Cria arquivos de usuário a partir do skeleton
+  6. Adiciona os arquivos de usuário ao índice do git (git add --force)
+  7. Atualiza configuration.nix com os imports dos usuários
+  8. Instala o NixOS
+  9. Define senhas via nixos-enter
+EOF
+      exit 0 ;;
+    *) die "Opção desconhecida: $1. Use --help para ver as opções disponíveis." ;;
   esac
 done
 
@@ -160,15 +208,27 @@ fi
 
 # Garantir que o root também leia as features experimentais.
 # Comandos executados com sudo (ex: nixos-install, nix run) usam o ambiente
-# do root e não herdam o nix.conf do usuário atual. Escrevemos em /etc/nix/nix.conf
-# que é lido globalmente, incluindo pelo root.
+# do root e não herdam o nix.conf do usuário atual.
+# Tentamos /etc/nix/nix.conf primeiro (lido globalmente), mas no Live CD do NixOS
+# esse diretório é somente leitura. Nesse caso, usamos /root/.config/nix/nix.conf.
 ROOT_NIX_CONF="/etc/nix/nix.conf"
-if ! sudo grep -q "experimental-features" "$ROOT_NIX_CONF" 2>/dev/null; then
-  sudo mkdir -p "$(dirname "$ROOT_NIX_CONF")"
-  echo "experimental-features = nix-command flakes" | sudo tee -a "$ROOT_NIX_CONF" > /dev/null
-  success "Flakes habilitados em $ROOT_NIX_CONF (root/global)."
+ROOT_USER_NIX_CONF="/root/.config/nix/nix.conf"
+
+if sudo grep -q "experimental-features" "$ROOT_NIX_CONF" 2>/dev/null || \
+   sudo grep -q "experimental-features" "$ROOT_USER_NIX_CONF" 2>/dev/null; then
+  info "Flakes já estão habilitados para o root."
 else
-  info "Flakes já estão habilitados em $ROOT_NIX_CONF."
+  # Tentar /etc/nix/nix.conf (pode ser read-only no Live CD)
+  if sudo mkdir -p "$(dirname "$ROOT_NIX_CONF")" 2>/dev/null && \
+     echo "experimental-features = nix-command flakes" | sudo tee -a "$ROOT_NIX_CONF" > /dev/null 2>&1; then
+    success "Flakes habilitados em $ROOT_NIX_CONF (root/global)."
+  else
+    # Fallback: usar ~/.config/nix/nix.conf do root (gravável no Live CD via tmpfs)
+    warn "/etc/nix é somente leitura (Live CD). Usando $ROOT_USER_NIX_CONF como fallback."
+    sudo mkdir -p "$(dirname "$ROOT_USER_NIX_CONF")"
+    echo "experimental-features = nix-command flakes" | sudo tee -a "$ROOT_USER_NIX_CONF" > /dev/null
+    success "Flakes habilitados em $ROOT_USER_NIX_CONF (root, user-level)."
+  fi
 fi
 
 # ---------------------------------------------------------------------------
