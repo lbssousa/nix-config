@@ -38,7 +38,7 @@
     sessionVariables = {
       EDITOR = "nvim";
       VISUAL = "nvim";
-      BROWSER = "brave";
+      BROWSER = "xdg-open";
     };
 
     # Adicionar diretórios ao PATH do usuário
