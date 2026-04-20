@@ -35,10 +35,19 @@
     # nix-homebrew.url = "github:zhaofengli-wip/nix-homebrew";
   };
 
-  outputs = { nixpkgs, home-manager, disko, impermanence, lanzaboote, ... }@inputs:
+  outputs =
+    {
+      nixpkgs,
+      home-manager,
+      disko,
+      impermanence,
+      lanzaboote,
+      ...
+    }@inputs:
     let
       # Helper to build a NixOS configuration for a given host
-      mkHost = hostname: system: extraModules:
+      mkHost =
+        hostname: system: extraModules:
         nixpkgs.lib.nixosSystem {
           inherit system;
           specialArgs = { inherit inputs; };
@@ -70,9 +79,11 @@
                 # Real user configs are gitignored (see .gitignore)
               };
             }
-          ] ++ extraModules;
+          ]
+          ++ extraModules;
         };
-    in {
+    in
+    {
       # NixOS configurations
       nixosConfigurations = {
         # Dell Inspiron 14 5490 (Intel i5-10210U, 16GB RAM, Intel + Nvidia MX230)

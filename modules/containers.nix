@@ -4,7 +4,9 @@
 
 {
   # Habilitar subsistema de containers
-  virtualisation.containers = { enable = true; };
+  virtualisation.containers = {
+    enable = true;
+  };
 
   # Podman - runtime de containers rootless
   virtualisation.podman = {

@@ -13,7 +13,13 @@
   # Módulos do kernel para Intel N200 + NVME + USB
   boot = {
     initrd = {
-      availableKernelModules = [ "xhci_pci" "ahci" "nvme" "usb_storage" "sd_mod" ];
+      availableKernelModules = [
+        "xhci_pci"
+        "ahci"
+        "nvme"
+        "usb_storage"
+        "sd_mod"
+      ];
       kernelModules = [
         "dm-snapshot"
         # Intel KMS para boot flicker-free
