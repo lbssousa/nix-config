@@ -69,6 +69,8 @@ Configuração pessoal do NixOS baseada em Flakes, com ZFS, particionamento decl
 │   ├── shells.nix            # Bash, Fish, Zsh (padrão: Zsh)
 │   ├── ssh.nix               # Servidor SSH
 │   └── users.nix             # Configuração base de usuários
+├── scripts/
+│   └── install.sh            # Script de instalação automatizada
 ├── users/                    # Configurações de usuário (NÃO commitadas)
 │   └── skeleton.nix          # Template para criar novo usuário
 ├── .gitignore                # Ignorar arquivos sensíveis
@@ -88,7 +90,34 @@ Configuração pessoal do NixOS baseada em Flakes, com ZFS, particionamento decl
 
 Veja o [Guia de Instalação Completo](INSTALLATION.md) para instruções detalhadas.
 
-**Resumo:**
+**Instalação automatizada com o script:**
+
+```bash
+# 1. Boot no USB do NixOS
+
+# 2. Clonar este repositório
+nix-shell -p git
+git clone https://github.com/lbssousa/nixos-config.git /tmp/nixos-config
+cd /tmp/nixos-config
+
+# 3. Executar o script de instalação (guia passo a passo interativo)
+bash scripts/install.sh
+
+# Para ver todas as opções disponíveis:
+bash scripts/install.sh --help
+```
+
+**Instalação não-interativa (exemplo completo):**
+
+```bash
+bash scripts/install.sh \
+  --host barbudus \
+  --disk /dev/nvme0n1 \
+  --user "joao:João Silva:sudo" \
+  --non-interactive
+```
+
+**Instalação manual (passo a passo):**
 
 ```bash
 # 1. Boot no USB do NixOS
