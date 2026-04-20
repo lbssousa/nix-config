@@ -3,15 +3,26 @@
 { pkgs, ... }:
 
 {
-  # Servidor X11 básico (necessário mesmo com Wayland)
-  services.xserver = {
-    enable = true;
-    # Driver de vídeo definido por cada host
-    displayManager.gdm = {
+  services = {
+    # Servidor X11 básico (necessário mesmo com Wayland)
+    xserver = {
       enable = true;
-      wayland = true; # Preferir sessão Wayland
+      # Driver de vídeo definido por cada host
+      displayManager.gdm = {
+        enable = true;
+        wayland = true; # Preferir sessão Wayland
+      };
+      desktopManager.gnome.enable = true;
     };
-    desktopManager.gnome.enable = true;
+
+    # Flatpak - instalação system-wide
+    flatpak.enable = true;
+
+    # Bluetooth
+    blueman.enable = true;
+
+    # Impressão (CUPS)
+    printing.enable = true;
   };
 
   # Excluir pacotes padrão do GNOME que serão substituídos por Flatpaks
@@ -30,9 +41,6 @@
     gnome-calendar
     gnome-clocks
   ];
-
-  # Flatpak - instalação system-wide
-  services.flatpak.enable = true;
 
   # Regra Polkit para permitir instalação de Flatpaks system-wide sem senha
   # Similar ao comportamento do Fedora Silverblue
@@ -57,10 +65,6 @@
     enable = true;
     powerOnBoot = true;
   };
-  services.blueman.enable = true;
-
-  # Impressão (CUPS)
-  services.printing.enable = true;
 
   # Brave browser - instalado via Nix para todos os usuários
   # Definido como browser padrão do sistema
