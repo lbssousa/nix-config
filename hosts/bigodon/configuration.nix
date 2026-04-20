@@ -37,7 +37,7 @@
     ];
   };
 
-  # Driver Intel modesetting para X11
+  # Driver Intel modesetting (KMS/Wayland)
   services.xserver.videoDrivers = [ "modesetting" ];
 
   # Configurações de energia para mini-PC
