@@ -1,6 +1,14 @@
 {
   description = "NixOS configuration with ZFS, impermanence, GNOME, and hybrid swap";
 
+  # Cache binário da comunidade Nix — disponibiliza artefatos pré-compilados do lanzaboote
+  # e outros pacotes da nix-community, evitando compilações do zero (e downloads de crates.io).
+  # Para ativar ao usar este flake manualmente, passe --accept-flake-config ao nix.
+  nixConfig = {
+    extra-substituters = [ "https://nix-community.cachix.org" ];
+    extra-trusted-public-keys = [ "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCUSeBs=" ];
+  };
+
   inputs = {
     # NixOS unstable channel
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
