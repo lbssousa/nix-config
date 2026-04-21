@@ -4,19 +4,19 @@
 
 {
   imports = [
-    ../../modules/common.nix
-    ../../modules/audio.nix
-    ../../modules/boot.nix
-    ../../modules/containers.nix
-    ../../modules/desktop.nix
-    ../../modules/homebrew.nix
-    ../../modules/impermanence.nix
-    ../../modules/packages.nix
-    ../../modules/printing.nix
-    ../../modules/shells.nix
-    ../../modules/ssh.nix
-    ../../modules/tpm2.nix
-    ../../modules/users.nix
+    ../../modules/system/core/common.nix
+    ../../modules/system/core/impermanence.nix
+    ../../modules/system/audio/audio.nix
+    ../../modules/system/boot/boot.nix
+    ../../modules/system/containers/containers.nix
+    ../../modules/system/desktop/desktop.nix
+    ../../modules/system/hardware/printing.nix
+    ../../modules/system/network/ssh.nix
+    ../../modules/system/security/tpm2.nix
+    ../../modules/system/shell/shells.nix
+    ../../modules/system/tools/homebrew.nix
+    ../../modules/system/tools/packages.nix
+    ../../modules/system/users/users.nix
     # Carregar configurações de usuário (não commitadas - ver .gitignore)
     # Descomente e ajuste conforme necessário:
     # ./../../users/seu-usuario.nix
