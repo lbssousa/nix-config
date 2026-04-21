@@ -50,8 +50,8 @@ in
       in
       ''
         if [ ! -f ${flagFile} ]; then
-          ${pkgs.shadow}/bin/chage -d 0 ${escapedUser} 2>/dev/null || true
-          touch ${flagFile}
+          ${pkgs.shadow}/bin/chage -d 0 ${escapedUser} && touch ${flagFile} \
+            || echo "forceInitialPasswordChange: chage failed for ${escapedUser}" >&2
         fi
       ''
     ) (lib.attrNames usersWithInitialPassword);

@@ -622,7 +622,10 @@ if confirm "Definir senhas personalizadas para os usuários criados agora (via n
     info "Definindo senha para '$_user'..."
     sudo nixos-enter --root /mnt -- passwd "$_user"
     success "Senha do usuário '$_user' definida."
-    _USERS_WITH_PASSWORD+=("$_user")
+    # Registrar apenas nomes de usuário com caracteres seguros para nomes de arquivo
+    if [[ "$_user" =~ ^[a-z_][a-z0-9_-]*$ ]]; then
+      _USERS_WITH_PASSWORD+=("$_user")
+    fi
   done
 else
   info "Senhas não definidas agora. No primeiro login, os usuários usarão a senha"
@@ -636,16 +639,26 @@ fi
 
 # Copiar /etc/shadow para /persist/etc/shadow para que as senhas sobrevivam
 # ao rollback ZFS. Sem isso, as senhas são perdidas no primeiro reboot.
-sudo mkdir -p /mnt/persist/etc
-sudo cp -p /mnt/etc/shadow /mnt/persist/etc/shadow
-success "/etc/shadow copiado para /persist/etc/shadow (persiste entre boots)."
+if [ -s /mnt/etc/shadow ]; then
+  sudo mkdir -p /mnt/persist/etc
+  sudo cp -p /mnt/etc/shadow /mnt/persist/etc/shadow
+  sudo chmod 640 /mnt/persist/etc/shadow
+  success "/etc/shadow copiado para /persist/etc/shadow (persiste entre boots)."
+else
+  warn "/mnt/etc/shadow não encontrado ou vazio; pulando cópia para /persist."
+fi
 
 # Criar arquivos de flag para usuários que já definiram senha durante a instalação.
 # Isso evita que o sistema force a troca de senha no primeiro login para esses usuários
 # (a troca forçada via chage é para usuários com a senha temporária 'nixos').
 for _user in "${_USERS_WITH_PASSWORD[@]}"; do
-  sudo touch "/mnt/persist/.password-change-required-${_user}"
-  info "Usuário '$_user': senha pré-definida — troca não será forçada no primeiro login."
+  # Validar que o nome de usuário contém apenas caracteres seguros para nomes de arquivo
+  if [[ "$_user" =~ ^[a-z_][a-z0-9_-]*$ ]]; then
+    sudo touch "/mnt/persist/.password-change-required-${_user}"
+    info "Usuário '$_user': senha pré-definida — troca não será forçada no primeiro login."
+  else
+    warn "Usuário '$_user': nome inválido, arquivo de flag não criado."
+  fi
 done
 
 # ---------------------------------------------------------------------------
