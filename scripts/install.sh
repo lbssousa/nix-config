@@ -553,11 +553,19 @@ if grep -q 'boot\.lanzaboote' "$CFG_FILE" 2>/dev/null; then
   else
     info "Criando chaves PKI para Secure Boot em ${_SECUREBOOT_DIR}..."
     info "(Necessário para que o Lanzaboote instale o bootloader durante nixos-install)"
-    sudo mkdir -p "${_SECUREBOOT_DIR}"
-    sudo nix run \
+    # Usar `nix build` para obter o caminho do binário sbctl na store do Nix
+    # e executá-lo diretamente via sudo.  `sudo nix run` pode não propagar
+    # privilégios de root adequadamente no ambiente live do NixOS, causando
+    # "sbctl requires root to run: open …: permission denied".
+    # A etapa de build não requer root; apenas a execução do sbctl requer.
+    _SBCTL_STORE=$(nix build \
+      --no-link --print-out-paths \
       --option extra-substituters "$NIX_COMMUNITY_SUBSTITUTER" \
       --option extra-trusted-public-keys "$NIX_COMMUNITY_KEY" \
-      nixpkgs#sbctl -- create-keys --database-path "${_SECUREBOOT_DIR}"
+      nixpkgs#sbctl)
+    [ -n "${_SBCTL_STORE}" ] || die "Falha ao obter caminho do sbctl na Nix store."
+    sudo mkdir -p "${_SECUREBOOT_DIR}"
+    sudo "${_SBCTL_STORE}/bin/sbctl" create-keys --database-path "${_SECUREBOOT_DIR}"
     success "Chaves Secure Boot criadas em ${_SECUREBOOT_DIR}."
     warn "As chaves ainda precisam ser registradas no firmware após o primeiro boot."
     warn "Consulte INSTALLATION.md → 'Configuração do Secure Boot' para os próximos passos."
