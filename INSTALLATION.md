@@ -92,13 +92,14 @@ sudo bash scripts/install.sh --host bigodon --disk /dev/sda
 2. Lista hosts e discos disponíveis para seleção
 3. Atualiza o `disko.nix` do host com o disco escolhido
 4. Particiona e formata o disco com disko (⚠️ apaga todos os dados!)
-5. Cria o snapshot Btrfs `@blank` para o rollback de impermanence
-6. Cria arquivos de usuário a partir do skeleton
-7. Adiciona os arquivos de usuário ao índice do git (`git add --force`)
-8. Atualiza `configuration.nix` com os imports dos usuários
-9. Cria chaves Secure Boot em `/persist/etc/secureboot` (apenas hosts com Lanzaboote)
-10. Copia a configuração para `/mnt/etc/nixos` e executa `nixos-install`
-11. Define senhas via `nixos-enter` e copia `/etc/shadow` para `/persist`
+   - A raiz (`/`) é configurada como tmpfs — limpa automaticamente a cada boot
+   - Os dados persistentes ficam em subvolumes Btrfs dedicados
+5. Cria arquivos de usuário a partir do skeleton
+6. Adiciona os arquivos de usuário ao índice do git (`git add --force`)
+7. Atualiza `configuration.nix` com os imports dos usuários
+8. Cria chaves Secure Boot em `/persist/etc/secureboot` (apenas hosts com Lanzaboote)
+9. Copia a configuração para `/mnt/etc/nixos` e executa `nixos-install`
+10. Define senhas via `nixos-enter` e copia `/etc/shadow` para `/persist`
 
 ### Instalação Manual (passo a passo)
 
@@ -182,8 +183,8 @@ Este comando irá:
 1. Criar partições GPT (EFI 512MB + partição LUKS)
 2. Configurar criptografia LUKS (será solicitada senha durante o processo)
 3. Criar volumes LVM (swap 20GB + volume Btrfs)
-4. Formatar o volume Btrfs e criar os subvolumes:
-   - `@` → `/` (efêmero — limpo a cada boot)
+4. Configurar a raiz (`/`) como **tmpfs** — limpa automaticamente a cada boot
+5. Formatar o volume Btrfs e criar os subvolumes de dados persistentes:
    - `@home` → `/home`
    - `@nix` → `/nix`
    - `@persist` → `/persist`
@@ -191,30 +192,9 @@ Este comando irá:
    - `@containers` → `/var/lib/containers`
    - `@flatpak` → `/var/lib/flatpak`
    - `@snapshots` → `/.snapshots`
-5. Montar tudo em `/mnt`
+6. Montar tudo em `/mnt`
 
-### 6. Criar snapshot Btrfs @blank
-
-O módulo `impermanence` utiliza um snapshot somente-leitura `@blank` para restaurar a raiz do sistema a cada boot. Ele deve ser criado logo após o disko, enquanto `@` ainda está vazio.
-
-```bash
-# Montar o volume Btrfs bruto (sem subvolume específico)
-mkdir -p /tmp/btrfs_root
-mount -t btrfs -o subvol=/ /dev/root_vg/root /tmp/btrfs_root
-
-# Criar snapshot somente-leitura de @ como @blank
-btrfs subvolume snapshot -r /tmp/btrfs_root/@ /tmp/btrfs_root/@blank
-
-# Desmontar
-umount /tmp/btrfs_root
-```
-
-> **Por que criar @blank?**
-> A cada boot, o initrd monta o volume Btrfs, deleta o subvolume `@` (que pode ter
-> acumulado arquivos efêmeros) e cria um novo `@` como cópia de `@blank` — garantindo
-> que a raiz do sistema esteja sempre no estado original "limpo".
-
-### 7. Gerar configuração de hardware (recomendado)
+### 6. Gerar configuração de hardware (recomendado)
 
 ```bash
 # Gerar hardware-configuration.nix automático
@@ -231,7 +211,7 @@ Após copiar, edite o arquivo para:
 2. Adicionar as configurações de `zramSwap`
 3. Manter `fileSystems."/persist".neededForBoot = true`
 
-### 8. Criar arquivos de usuário
+### 7. Criar arquivos de usuário
 
 É possível criar **uma ou mais contas de usuário**. Para cada conta, defina o nome de login, o nome completo e se ela terá permissão de **sudo** (grupo `wheel`) ou não.
 
@@ -272,7 +252,7 @@ Descomente (ou adicione) as linhas de importação dos usuários em `hosts/$HOST
 >
 > Isso torna o arquivo visível ao Nix sem expô-lo no histórico do repositório.
 
-### 9. Instalar o NixOS
+### 8. Instalar o NixOS
 
 > **Apenas para `barbudus` (usa Lanzaboote):** crie as chaves Secure Boot *antes* do `nixos-install`. Sem isso, o instalador falha com `Failed to install bootloader`.
 >
@@ -315,11 +295,11 @@ sudo nixos-install \
 Durante a instalação será solicitado:
 - Senha para o usuário root (após a instalação)
 
-### 10. Configurar senhas
+### 9. Configurar senhas
 
 Os usuários criados com `initialPassword = "nixos"` (padrão do skeleton) **serão solicitados a criar sua própria senha no primeiro login**. Não é necessário definir senhas manualmente.
 
-Se preferir definir senhas personalizadas durante a instalação, copie o shadow para `/persist` para que sobreviva ao rollback Btrfs do primeiro boot:
+Se preferir definir senhas personalizadas durante a instalação, copie o shadow para `/persist` para que sobreviva ao próximo boot (a raiz tmpfs é reiniciada a cada boot; `/persist` é preservado via Btrfs):
 
 ```bash
 # Entrar no sistema recém-instalado
@@ -343,9 +323,9 @@ sudo cp -p /mnt/etc/shadow /mnt/persist/etc/shadow
 sudo touch /mnt/persist/.password-change-required-<seu-usuario>
 ```
 
-> **Nota:** Se as senhas forem definidas via `nixos-enter` sem copiar o shadow para `/persist`, elas serão perdidas após o primeiro reboot (o sistema Btrfs reverte `/` para o snapshot `@blank`). Os usuários receberão a senha temporária `nixos` e serão solicitados a trocá-la.
+> **Nota:** Se as senhas forem definidas via `nixos-enter` sem copiar o shadow para `/persist`, elas serão perdidas após o primeiro reboot — a raiz tmpfs é sempre reiniciada com estado vazio. Os usuários receberão a senha temporária `nixos` e serão solicitados a trocá-la.
 
-### 11. Finalizar instalação
+### 10. Finalizar instalação
 
 ```bash
 # Desmontar e reiniciar
@@ -502,8 +482,11 @@ sudo nixos-rebuild switch --flake /etc/nixos#barbudus  # ou bigodon
 
 ```bash
 # Ver subvolumes Btrfs e uso de disco
-sudo btrfs subvolume list /
-sudo btrfs filesystem usage /
+sudo btrfs subvolume list /nix
+sudo btrfs filesystem usage /nix
+
+# Ver uso da raiz tmpfs
+df -h /
 
 # Ver swap ativo
 swapon --show
@@ -525,12 +508,18 @@ sudo btrfs subvolume snapshot /home /.snapshots/home-$(date +%Y%m%d-%H%M%S)
 # Snapshot do persist (dados críticos)
 sudo btrfs subvolume snapshot /persist /.snapshots/persist-$(date +%Y%m%d-%H%M%S)
 
+# Snapshot do nix (opcional, grande)
+sudo btrfs subvolume snapshot /nix /.snapshots/nix-$(date +%Y%m%d-%H%M%S)
+
 # Listar snapshots
 sudo btrfs subvolume list /.snapshots
 
 # Remover snapshot antigo
 sudo btrfs subvolume delete /.snapshots/home-20240101-120000
 ```
+
+> **Nota:** Não é necessário fazer snapshot de `/` — a raiz é um tmpfs que é sempre
+> reiniciada limpa a cada boot. Apenas `/home`, `/persist` e `/nix` precisam de backup.
 
 ## 🔧 Solução de Problemas
 
@@ -547,7 +536,6 @@ sudo cryptsetup open /dev/nvme0n1p2 crypted
 sudo vgchange -ay
 
 # Montar subvolumes Btrfs manualmente
-sudo mount -t btrfs -o subvol=@ /dev/root_vg/root /mnt
 sudo mount /dev/nvme0n1p1 /mnt/boot
 sudo mount -t btrfs -o subvol=@nix /dev/root_vg/root /mnt/nix
 sudo mount -t btrfs -o subvol=@persist /dev/root_vg/root /mnt/persist
@@ -555,26 +543,6 @@ sudo mount -t btrfs -o subvol=@home /dev/root_vg/root /mnt/home
 
 # Entrar no sistema
 sudo nixos-enter --root /mnt
-```
-
-### Snapshot @blank não existe
-
-Se o rollback falhar porque `@blank` não existe:
-
-```bash
-# Boot no USB live e montar o volume Btrfs bruto
-sudo cryptsetup open /dev/nvme0n1p2 crypted
-sudo vgchange -ay
-mkdir -p /tmp/btrfs_root
-sudo mount -t btrfs -o subvol=/ /dev/root_vg/root /tmp/btrfs_root
-
-# Verificar subvolumes existentes
-sudo btrfs subvolume list /tmp/btrfs_root
-
-# Criar @blank a partir do @ atual
-sudo btrfs subvolume snapshot -r /tmp/btrfs_root/@ /tmp/btrfs_root/@blank
-
-sudo umount /tmp/btrfs_root
 ```
 
 ### Verificar Btrfs

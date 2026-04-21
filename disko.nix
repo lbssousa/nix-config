@@ -1,4 +1,6 @@
 # Template base de particionamento para Btrfs com LUKS + LVM
+# A raiz (/) usa tmpfs (sempre limpa a cada boot — sem necessidade de snapshot/rollback)
+# Os demais filesystems usam subvolumes Btrfs (dados persistentes)
 # Utilizado pelos hosts via: import ../../disko.nix { inherit lib; device = "..."; swapSize = "..."; }
 {
   device ? throw "Defina o dispositivo de disco, ex: /dev/nvme0n1",
@@ -11,6 +13,17 @@ let
 in
 {
   disko.devices = {
+    # Raiz efêmera: tmpfs — limpa automaticamente a cada boot, sem rollback necessário
+    # O impermanence preserva arquivos importantes via bind mounts de /persist
+    nodev."/" = {
+      fsType = "tmpfs";
+      mountOptions = [
+        "defaults"
+        "size=50%" # 50% da RAM; ajuste conforme necessário
+        "mode=755"
+      ];
+    };
+
     disk.main = {
       inherit device;
       type = "disk";
@@ -76,16 +89,6 @@ in
               extraArgs = [ "-f" ]; # Forçar criação (sobrescreve fs existente se necessário)
 
               subvolumes = {
-                # Raiz efêmera — limpa a cada boot via rollback para @blank
-                # Convenção @ é compatível com Timeshift e ferramentas de backup
-                "@" = {
-                  mountpoint = "/";
-                  mountOptions = [
-                    "compress=zstd"
-                    "noatime"
-                  ];
-                };
-
                 # Diretórios de usuário — preservados entre boots
                 "@home" = {
                   mountpoint = "/home";

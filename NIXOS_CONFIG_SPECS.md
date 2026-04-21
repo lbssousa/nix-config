@@ -37,30 +37,37 @@ Disco (ex: /dev/nvme0n1)
             └── Btrfs
 ```
 
+### Raiz efêmera (tmpfs)
+
+A raiz do sistema (`/`) é um **tmpfs** — filesystem inteiramente em RAM. Isso significa:
+- É sempre limpa a cada boot (sem dados acumulados, sem rollback necessário)
+- Qualquer arquivo gravado em `/` é perdido ao reiniciar (exceto os preservados em `/persist`)
+- Simples e confiável: não requer snapshot, rollback ou configuração de initrd
+
+**Opções de montagem:** `defaults,size=50%,mode=755`
+
 ### Subvolumes Btrfs
 
 A convenção `@` é compatível com ferramentas como Timeshift e amplamente adotada pela comunidade.
 
 | Subvolume | Mountpoint | Características |
 |-----------|-----------|-----------------|
-| `@` | `/` | Efêmero — limpo a cada boot (rollback para @blank) |
 | `@home` | `/home` | Preservado — diretórios de usuário |
 | `@nix` | `/nix` | Preservado — Nix store (essencial) |
 | `@persist` | `/persist` | Preservado — dados persistentes do sistema (impermanence) |
-| `@log` | `/var/log` | Preservado — logs do sistema (compressão off) |
+| `@log` | `/var/log` | Preservado — logs do sistema (sem compressão) |
 | `@containers` | `/var/lib/containers` | Preservado — dados de containers |
 | `@flatpak` | `/var/lib/flatpak` | Preservado — aplicações Flatpak |
 | `@snapshots` | `/.snapshots` | Preservado — snapshots Btrfs para backup |
 
 **Opções de montagem globais:**
 - `compress=zstd` (exceto `@log`: sem compressão)
-- `noatime` (equivalente a relatime desabilitado)
+- `noatime`
 
-**Impermanence — estratégia de rollback:**
-1. No boot, o initrd monta o volume Btrfs bruto em `/btrfs_tmp`
-2. Deleta o subvolume `@` atual
-3. Cria um novo `@` como cópia do snapshot somente-leitura `@blank`
-4. Desmonta `/btrfs_tmp` e o boot continua normalmente
+**Impermanência — estratégia:**
+- A raiz tmpfs é sempre "limpa" ao boot — não requer snapshot ou rollback
+- Arquivos importantes são preservados em `/persist` via bind mounts (impermanence)
+- O `/persist` é um subvolume Btrfs persistente entre boots
 
 ### Swap Híbrida
 
@@ -201,11 +208,11 @@ flatpak install flathub io.github.bazaar_cabinet.Bazaar  # App store
 
 ### Como Funciona
 
-1. O subvolume Btrfs `@` contém a raiz do sistema
-2. No boot, antes de montar `/`, o initrd monta o volume Btrfs bruto
-3. Deleta o subvolume `@` e cria um novo a partir do snapshot `@blank`
-4. Isso garante que a raiz está sempre "limpa" (como na instalação inicial)
-5. Arquivos e diretórios importantes são preservados via bind mounts de `/persist`
+1. A raiz do sistema (`/`) é um **tmpfs** — filesystem em RAM, sempre vazio ao boot
+2. Não há rollback, snapshot ou serviço de initrd necessário
+3. Arquivos e diretórios importantes são preservados via bind mounts de `/persist`
+4. `/persist` é um subvolume Btrfs persistente (sobrevive a qualquer número de reboots)
+5. `/home`, `/nix`, `/var/log`, `/var/lib/containers` e `/var/lib/flatpak` também são subvolumes Btrfs persistentes
 
 ### Dados Preservados Automaticamente (Sistema)
 

@@ -1,41 +1,10 @@
-# Módulo de impermanência: Sistema efêmero com Btrfs rollback
-# A raiz (/) é limpa a cada boot; dados importantes são preservados em /persist
-{ pkgs, ... }:
+# Módulo de impermanência: Sistema efêmero com tmpfs na raiz
+# A raiz (/) é um tmpfs — limpa automaticamente a cada boot sem necessidade
+# de rollback ou snapshot. Dados importantes são preservados em /persist via
+# bind mounts gerenciados pelo módulo nix-community/impermanence.
+_:
 
 {
-  # Rollback do subvolume raiz (@) para o snapshot @blank a cada boot
-  # Executado no initrd, antes de montar /sysroot
-  # O rollback consiste em:
-  #   1. Montar o volume Btrfs bruto (sem subvolume) em /btrfs_tmp
-  #   2. Deletar o subvolume @ atual
-  #   3. Criar um novo @ a partir do snapshot somente-leitura @blank
-  #   4. Desmontar /btrfs_tmp
-  # O snapshot @blank é criado durante a instalação (ver scripts/install.sh, passo 4)
-  boot.initrd.systemd.enable = true;
-  boot.initrd.supportedFilesystems = [ "btrfs" ];
-  boot.initrd.systemd.services.rollback = {
-    description = "Rollback Btrfs root subvolume to blank snapshot";
-    wantedBy = [ "initrd.target" ];
-    after = [ "systemd-cryptsetup@crypted.service" ];
-    before = [ "sysroot.mount" ];
-    path = [ pkgs.btrfs-progs ];
-    unitConfig.DefaultDependencies = "no";
-    serviceConfig = {
-      Type = "oneshot";
-    };
-    script = ''
-      mkdir -p /btrfs_tmp
-      mount -t btrfs -o subvol=/ /dev/root_vg/root /btrfs_tmp
-
-      if [[ -e /btrfs_tmp/@ ]]; then
-        btrfs subvolume delete /btrfs_tmp/@
-      fi
-      btrfs subvolume snapshot /btrfs_tmp/@blank /btrfs_tmp/@
-
-      umount /btrfs_tmp
-    '';
-  };
-
   # Marcar /persist e /home como necessários no boot (impermanence depende disso)
   fileSystems = {
     "/persist".neededForBoot = true;

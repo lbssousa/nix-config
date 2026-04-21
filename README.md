@@ -8,7 +8,7 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 - ✅ **Disko**: Particionamento declarativo de disco
 - ✅ **LUKS + LVM**: Criptografia completa do disco
 - ✅ **Btrfs**: Sistema de arquivos moderno com compressão zstd, subvolumes e snapshots
-- ✅ **Impermanence**: Sistema efêmero, limpo a cada boot via rollback Btrfs
+- ✅ **Impermanence**: Sistema efêmero com tmpfs na raiz — limpo a cada boot
 - ✅ **Swap híbrida**: zram + swap em disco para máxima performance
 - ✅ **GNOME**: Ambiente desktop moderno com suporte a Wayland
 - ✅ **Flatpak**: Aplicações instaladas system-wide sem senha (como Silverblue)
@@ -63,7 +63,7 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 │   ├── containers.nix        # Podman rootless + Distrobox
 │   ├── desktop.nix           # GNOME, Flatpak, Brave, fontes
 │   ├── homebrew.nix          # Suporte ao Linuxbrew/Homebrew
-│   ├── impermanence.nix      # Rollback Btrfs + diretórios persistentes
+│   ├── impermanence.nix      # Raiz tmpfs + diretórios persistentes (/persist)
 │   ├── packages.nix          # Pacotes essenciais (Neovim, Helix, etc.)
 │   ├── printing.nix          # Impressora Epson ESC-P/R + ecbd.service
 │   ├── shells.nix            # Bash, Fish, Zsh (padrão: Zsh)
@@ -138,23 +138,19 @@ nano hosts/barbudus/disko.nix  # Ajuste /dev/nvme0n1 se necessário
 nano hosts/bigodon/disko.nix
 
 # 5. Particionar e instalar (⚠️ APAGA TODOS OS DADOS DO DISCO!)
+# Cria: raiz tmpfs + subvolumes Btrfs (@home, @nix, @persist, @log, ...)
 HOST=barbudus  # ou bigodon
 sudo nix run github:nix-community/disko -- --mode disko ./hosts/$HOST/disko.nix
 
-# 6. Criar snapshot @blank para impermanence
-mount -t btrfs -o subvol=/ /dev/root_vg/root /mnt/btrfs_root
-btrfs subvolume snapshot -r /mnt/btrfs_root/@ /mnt/btrfs_root/@blank
-umount /mnt/btrfs_root
-
-# 7. Instalar o NixOS
+# 6. Instalar o NixOS
 sudo nixos-install --flake .#$HOST
 
-# 8. Definir senha do usuário
+# 7. Definir senha do usuário
 sudo nixos-enter --root /mnt
 passwd seu-usuario
 exit
 
-# 9. Reiniciar
+# 8. Reiniciar
 sudo reboot
 ```
 
