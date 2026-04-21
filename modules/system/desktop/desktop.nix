@@ -7,7 +7,6 @@ let
   # Ref: https://github.com/projectbluefin/common/blob/main/system_files/bluefin/usr/share/ublue-os/homebrew/system-flatpaks.Brewfile
   # Firefox e Thunderbird excluídos intencionalmente
   systemFlatpaks = [
-    "com.brave.Browser"
     "com.github.PintaProject.Pinta"
     "com.github.tchx84.Flatseal"
     "com.mattjakeman.ExtensionManager"
@@ -70,21 +69,34 @@ in
     printing.enable = true;
   };
 
-  # Excluir pacotes padrão do GNOME que serão substituídos por Flatpaks
+  # Excluir pacotes padrão do GNOME que serão substituídos por Nix ou Flatpaks
   environment.gnome.excludePackages = with pkgs; [
     gnome-software # Substituído pelo Bazaar (Flatpak)
     gnome-tour
-    epiphany # Browser padrão do GNOME - usar Brave (Flatpak)
-    evince # PDF viewer - usar Papers (Flatpak)
-    gnome-terminal # Terminal - usar Ptyxis (Flatpak)
-    totem # Player de vídeo
-    cheese # Webcam app
+    epiphany # Browser padrão do GNOME — usar Brave (Nix)
+    evince # PDF viewer — usar Papers (Flatpak)
+    gnome-console # Terminal (kgx) — usar Ptyxis (Nix)
+    gnome-terminal # Terminal legado — usar Ptyxis (Nix)
+    totem # Player de vídeo — usar Showtime (Flatpak)
+    cheese # Webcam app — usar Snapshot (Flatpak)
+    snapshot # Câmera — usar Snapshot (Flatpak)
+    loupe # Visualizador de imagens — usar Loupe (Flatpak)
     gnome-music
-    gnome-maps
-    gnome-weather
-    gnome-contacts
-    gnome-calendar
-    gnome-clocks
+    gnome-maps # Substituído pelo Maps (Flatpak)
+    gnome-weather # Substituído pelo Weather (Flatpak)
+    gnome-contacts # Substituído pelo Contacts (Flatpak)
+    gnome-calendar # Substituído pelo Calendar (Flatpak)
+    gnome-clocks # Substituído pelo Clocks (Flatpak)
+    gnome-calculator # Substituído pelo Calculator (Flatpak)
+    gnome-characters # Substituído pelo Characters (Flatpak)
+    gnome-connections # Substituído pelo Connections (Flatpak)
+    gnome-logs # Substituído pelo Logs (Flatpak)
+    gnome-system-monitor # Substituído pelo Mission Center (Flatpak)
+    gnome-text-editor # Substituído pelo Text Editor (Flatpak)
+    gnome-font-viewer # Substituído pelo Font Viewer (Flatpak)
+    gnome-sound-recorder # Substituído pelo Sound Recorder (Flatpak)
+    simple-scan # Substituído pelo Simple Scan (Flatpak)
+    baobab # Analisador de disco — usar Baobab (Flatpak)
   ];
 
   # Regra Polkit para permitir instalação de Flatpaks system-wide sem senha
@@ -111,14 +123,20 @@ in
     powerOnBoot = true;
   };
 
-  # Brave browser instalado via Flatpak (ver serviço install-system-flatpaks)
+  # Brave e Ptyxis instalados via Nix
+  environment.systemPackages = with pkgs; [
+    brave # Navegador padrão
+    ptyxis # Terminal moderno (substitui GNOME Console)
+  ];
+
+  # Brave browser instalado via Nix
   # Definir Brave como browser padrão via xdg-mime
   xdg.mime.defaultApplications = {
-    "text/html" = "com.brave.Browser.desktop";
-    "x-scheme-handler/http" = "com.brave.Browser.desktop";
-    "x-scheme-handler/https" = "com.brave.Browser.desktop";
-    "x-scheme-handler/about" = "com.brave.Browser.desktop";
-    "x-scheme-handler/unknown" = "com.brave.Browser.desktop";
+    "text/html" = "brave-browser.desktop";
+    "x-scheme-handler/http" = "brave-browser.desktop";
+    "x-scheme-handler/https" = "brave-browser.desktop";
+    "x-scheme-handler/about" = "brave-browser.desktop";
+    "x-scheme-handler/unknown" = "brave-browser.desktop";
   };
 
   # Instalar Flatpaks padrão automaticamente via Flathub na primeira inicialização
