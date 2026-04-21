@@ -47,6 +47,7 @@
     # Arquivos do sistema a preservar
     files = [
       "/etc/machine-id" # ID único da máquina
+      "/etc/shadow" # Hashes de senha dos usuários
     ];
   };
 

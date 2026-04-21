@@ -34,9 +34,10 @@
       "docker" # Compatibilidade com Docker (Podman)
     ];
     shell = pkgs.zsh; # Shell padrão (Zsh)
-    # IMPORTANTE: Não defina senha aqui!
-    # Após a instalação, execute: passwd <usuario>
-    # Ou use hashedPasswordFile para carregar de /persist
+    # Senha inicial: o usuário será solicitado a trocá-la no primeiro login.
+    # Se uma senha personalizada for definida durante a instalação (ver INSTALLATION.md),
+    # a troca não será exigida.
+    initialPassword = "nixos";
   };
 
   # Diretórios do usuário a preservar entre boots (via impermanence)
