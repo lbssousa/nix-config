@@ -100,17 +100,17 @@ nix-shell -p git
 git clone https://github.com/lbssousa/nixos-config.git /tmp/nixos-config
 cd /tmp/nixos-config
 
-# 3. Executar o script de instalação (guia passo a passo interativo)
-bash scripts/install.sh
+# 3. Executar o script de instalação como root (guia passo a passo interativo)
+sudo bash scripts/install.sh
 
 # Para ver todas as opções disponíveis:
-bash scripts/install.sh --help
+sudo bash scripts/install.sh --help
 ```
 
 **Instalação não-interativa (exemplo completo):**
 
 ```bash
-bash scripts/install.sh \
+sudo bash scripts/install.sh \
   --host barbudus \
   --disk /dev/nvme0n1 \
   --user "joao:João Silva:sudo" \
