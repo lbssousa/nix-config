@@ -19,7 +19,7 @@
 #                        2 = Código de opção UEFI (drivers ROM)
 #                        7 = Estado do Secure Boot
 #   --wipe               Remove o slot TPM2 existente antes de reinscrever
-#                        (útil para reinscreveer após mudanças no firmware)
+#                        (útil para reinscrever após mudanças no firmware)
 #   --help, -h           Exibe ajuda e sai
 
 set -euo pipefail
@@ -78,7 +78,6 @@ Opções:
   --wipe               Remove o slot TPM2 existente antes de reinscrever.
                        Use após atualizações de firmware ou mudanças no
                        Secure Boot que tornem o slot atual inválido.
-  --help, -h           Exibe esta ajuda e sai
 
 Exemplos:
   # Inscrição padrão (PCRs 0+2+7, recomendado com Secure Boot):
@@ -87,7 +86,7 @@ Exemplos:
   # Sem Secure Boot (apenas firmware e código de opção):
   sudo bash scripts/enroll-tpm2.sh --pcrs 0+2
 
-  # Reinscreveer após atualização de firmware:
+  # Reinscrever após atualização de firmware:
   sudo bash scripts/enroll-tpm2.sh --wipe
 
   # Partição LUKS alternativa:
@@ -185,7 +184,7 @@ echo
 info "O sistema desbloqueará automaticamente o disco na próxima inicialização,"
 info "desde que as medições dos PCRs [$PCRS] correspondam ao estado atual."
 echo
-warn "IMPORTANTE: Reinscrevea o TPM2 após:"
+warn "IMPORTANTE: Reinscreva o TPM2 após:"
 warn "  • Atualizações de firmware (UEFI/BIOS)"
 warn "  • Mudanças nas configurações do Secure Boot"
 warn "  • Troca de hardware (placa-mãe, chip TPM)"
