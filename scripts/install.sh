@@ -5,12 +5,11 @@
 #   1. Habilita Flakes no ambiente live
 #   2. Seleciona o host e o disco de destino
 #   3. Particiona e formata o disco com disko
-#   4. Cria o snapshot Btrfs @blank para rollback de impermanence
-#   5. Cria arquivos de usuário a partir do skeleton
-#   6. Adiciona os arquivos de usuário ao índice do git (git add --force)
-#   7. Atualiza configuration.nix com os imports dos usuários
-#   8. Instala o NixOS
-#   9. Define senhas via nixos-enter
+#   4. Cria arquivos de usuário a partir do skeleton
+#   5. Adiciona os arquivos de usuário ao índice do git (git add --force)
+#   6. Atualiza configuration.nix com os imports dos usuários
+#   7. Instala o NixOS
+#   8. Define senhas via nixos-enter
 #
 # Uso:
 #   bash scripts/install.sh [--host <hostname>] [--disk <device>]
@@ -158,12 +157,11 @@ Este script automatiza os passos descritos em INSTALLATION.md:
   1. Habilita Flakes no ambiente live
   2. Seleciona o host e o disco de destino
   3. Particiona e formata o disco com disko
-  4. Cria o snapshot Btrfs @blank para rollback de impermanence
-  5. Cria arquivos de usuário a partir do skeleton
-  6. Adiciona os arquivos de usuário ao índice do git (git add --force)
-  7. Atualiza configuration.nix com os imports dos usuários
-  8. Instala o NixOS
-  9. Define senhas via nixos-enter
+  4. Cria arquivos de usuário a partir do skeleton
+  5. Adiciona os arquivos de usuário ao índice do git (git add --force)
+  6. Atualiza configuration.nix com os imports dos usuários
+  7. Instala o NixOS
+  8. Define senhas via nixos-enter
 EOF
       exit 0 ;;
     *) die "Opção desconhecida: $1. Use --help para ver as opções disponíveis." ;;
@@ -331,39 +329,11 @@ nix run github:nix-community/disko \
 success "Disco particionado e formatado com sucesso."
 
 # ---------------------------------------------------------------------------
-# 4. Criar snapshot Btrfs @blank para rollback de impermanence
+# 4. Criar arquivos de usuário
 # ---------------------------------------------------------------------------
 
 echo
-info "==> Passo 4: Criar snapshot Btrfs @blank"
-info "O snapshot @blank é utilizado pelo módulo impermanence para restaurar"
-info "a raiz (/) ao estado original a cada boot."
-
-BTRFS_DEV="/dev/root_vg/root"
-BTRFS_TMP="/tmp/btrfs_root"
-
-mkdir -p "$BTRFS_TMP"
-# Montar o volume Btrfs bruto (subvol=/) para acessar todos os subvolumes
-mount -t btrfs -o subvol=/ "$BTRFS_DEV" "$BTRFS_TMP"
-
-# Criar snapshot somente-leitura de @ como @blank
-if [[ -e "$BTRFS_TMP/@blank" ]]; then
-  info "Snapshot @blank já existe em $BTRFS_TMP."
-else
-  btrfs subvolume snapshot -r "$BTRFS_TMP/@" "$BTRFS_TMP/@blank"
-  success "Snapshot @blank criado com sucesso."
-fi
-
-umount "$BTRFS_TMP"
-rmdir "$BTRFS_TMP"
-success "Snapshot Btrfs @blank pronto para rollback de impermanence."
-
-# ---------------------------------------------------------------------------
-# 5. Criar arquivos de usuário
-# ---------------------------------------------------------------------------
-
-echo
-info "==> Passo 5: Criar contas de usuário"
+info "==> Passo 4: Criar contas de usuário"
 
 USERS_LOGIN=()
 USERS_FULLNAME=()
@@ -457,11 +427,11 @@ for _i in "${!USERS_LOGIN[@]}"; do
 done
 
 # ---------------------------------------------------------------------------
-# 6. Adicionar arquivos de usuário ao índice do git (ESSENCIAL)
+# 5. Adicionar arquivos de usuário ao índice do git (ESSENCIAL)
 # ---------------------------------------------------------------------------
 
 echo
-info "==> Passo 6: Registrar arquivos de usuário no índice do git"
+info "==> Passo 5: Registrar arquivos de usuário no índice do git"
 
 # O Nix avalia flakes a partir do índice do git.
 # Arquivos gitignored que não estejam no índice são invisíveis ao Nix,
@@ -474,11 +444,11 @@ for _i in "${!USERS_LOGIN[@]}"; do
 done
 
 # ---------------------------------------------------------------------------
-# 7. Atualizar configuration.nix com os imports dos usuários
+# 6. Atualizar configuration.nix com os imports dos usuários
 # ---------------------------------------------------------------------------
 
 echo
-info "==> Passo 7: Configurar importações dos usuários em $CFG_FILE"
+info "==> Passo 6: Configurar importações dos usuários em $CFG_FILE"
 
 for _i in "${!USERS_LOGIN[@]}"; do
   _user="${USERS_LOGIN[$_i]}"
@@ -508,11 +478,11 @@ git add "$CFG_FILE" "$DISKO_FILE"
 success "Arquivos de configuração registrados no índice do git."
 
 # ---------------------------------------------------------------------------
-# 7a. Criar chaves Secure Boot (apenas para hosts com Lanzaboote)
+# 6a. Criar chaves Secure Boot (apenas para hosts com Lanzaboote)
 # ---------------------------------------------------------------------------
 
 echo
-info "==> Passo 7a: Verificar suporte a Secure Boot (Lanzaboote)"
+info "==> Passo 6a: Verificar suporte a Secure Boot (Lanzaboote)"
 
 if grep -q 'boot\.lanzaboote' "$CFG_FILE" 2>/dev/null; then
   # Extrair o caminho do pkiBundle da configuração (ou usar padrão)
@@ -559,11 +529,11 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 8. Instalar o NixOS
+# 7. Instalar o NixOS
 # ---------------------------------------------------------------------------
 
 echo
-info "==> Passo 8: Instalar o NixOS"
+info "==> Passo 7: Instalar o NixOS"
 
 # Copiar a configuração para /mnt (o nixos-install aceitará o caminho local,
 # mas é mais seguro copiar para garantir que /mnt/etc/nixos tenha os arquivos)
@@ -598,13 +568,13 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 9. Definir senhas
+# 8. Definir senhas
 # ---------------------------------------------------------------------------
 
 echo
-info "==> Passo 9: Definir senhas"
-info "Com impermanência (Btrfs rollback), /etc/shadow precisa ser salvo em"
-info "/persist/etc/shadow para sobreviver ao rollback do primeiro boot."
+info "==> Passo 8: Definir senhas"
+info "Com impermanência (tmpfs na raiz), /etc/shadow precisa ser salvo em"
+info "/persist/etc/shadow para sobreviver ao próximo boot."
 
 _USERS_WITH_PASSWORD=()
 # Padrão de nome de usuário seguro para uso em nomes de arquivo
@@ -632,7 +602,7 @@ if confirm "Definir senha do root também?"; then
 fi
 
 # Copiar /etc/shadow para /persist/etc/shadow para que as senhas sobrevivam
-# ao rollback ZFS. Sem isso, as senhas são perdidas no primeiro reboot.
+# ao boot (a raiz tmpfs é reiniciada a cada boot, /persist é preservado via Btrfs).
 # Usar `install` para definir permissões 640 atomicamente (sem janela de acesso).
 if [ -s /mnt/etc/shadow ]; then
   mkdir -p /mnt/persist/etc
