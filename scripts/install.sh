@@ -215,7 +215,7 @@ else
   info "Flakes já estão habilitados (usuário atual)."
 fi
 # Adicionar o cache nix-community ao nix.conf do usuário atual (idempotente)
-if ! grep -qF "$NIX_COMMUNITY_SUBSTITUTER" "$NIX_CONF_DIR/nix.conf" 2>/dev/null; then
+if ! grep -qF "$NIX_COMMUNITY_KEY" "$NIX_CONF_DIR/nix.conf" 2>/dev/null; then
   {
     echo "extra-substituters = $NIX_COMMUNITY_SUBSTITUTER"
     echo "extra-trusted-public-keys = $NIX_COMMUNITY_KEY"
@@ -251,7 +251,7 @@ fi
 # Adicionar o cache nix-community ao nix.conf do root (idempotente).
 # Isso garante que 'nix run' (disko) e 'nixos-install' utilizem o cache.
 # Tentamos primeiro /etc/nix/nix.conf; se somente leitura, usamos o user-level do root.
-if ! sudo grep -qF "$NIX_COMMUNITY_SUBSTITUTER" "$ROOT_NIX_CONF" 2>/dev/null; then
+if ! sudo grep -qF "$NIX_COMMUNITY_KEY" "$ROOT_NIX_CONF" 2>/dev/null; then
   _nix_community_block() {
     printf 'extra-substituters = %s\nextra-trusted-public-keys = %s\n' \
       "$NIX_COMMUNITY_SUBSTITUTER" "$NIX_COMMUNITY_KEY"
@@ -260,7 +260,7 @@ if ! sudo grep -qF "$NIX_COMMUNITY_SUBSTITUTER" "$ROOT_NIX_CONF" 2>/dev/null; th
     success "Cache nix-community adicionado em $ROOT_NIX_CONF."
   else
     # /etc/nix/nix.conf é somente leitura — adicionar ao nix.conf user-level do root
-    if ! sudo grep -qF "$NIX_COMMUNITY_SUBSTITUTER" "$ROOT_USER_NIX_CONF" 2>/dev/null; then
+    if ! sudo grep -qF "$NIX_COMMUNITY_KEY" "$ROOT_USER_NIX_CONF" 2>/dev/null; then
       sudo mkdir -p "$(dirname "$ROOT_USER_NIX_CONF")"
       _nix_community_block | sudo tee -a "$ROOT_USER_NIX_CONF" > /dev/null
       success "Cache nix-community adicionado em $ROOT_USER_NIX_CONF."
@@ -347,7 +347,10 @@ info "Carregando módulo ZFS..."
 sudo modprobe zfs || die "Falha ao carregar o módulo ZFS. Verifique se o kernel suporta ZFS (ex: nixos-enter ou use um Live CD com suporte a ZFS)."
 
 info "Executando disko..."
-sudo nix run github:nix-community/disko -- --mode disko "$DISKO_FILE"
+sudo nix run github:nix-community/disko \
+  --option extra-substituters "$NIX_COMMUNITY_SUBSTITUTER" \
+  --option extra-trusted-public-keys "$NIX_COMMUNITY_KEY" \
+  -- --mode disko "$DISKO_FILE"
 success "Disco particionado e formatado com sucesso."
 
 # ---------------------------------------------------------------------------
@@ -556,6 +559,7 @@ if confirm "Copiar configuração para /mnt/etc/nixos e executar nixos-install?"
   # (ex: dependências Rust do lanzaboote) e downloads frágeis do crates.io.
   sudo nixos-install \
     --flake "/mnt/etc/nixos#$HOST" \
+    --option accept-flake-config true \
     --option extra-substituters "$NIX_COMMUNITY_SUBSTITUTER" \
     --option extra-trusted-public-keys "$NIX_COMMUNITY_KEY"
   success "NixOS instalado com sucesso!"
@@ -563,6 +567,7 @@ else
   warn "Instalação pulada. Execute manualmente:"
   echo "  sudo cp -r $CONFIG_DIR /mnt/etc/nixos"
   echo "  sudo nixos-install --flake /mnt/etc/nixos#$HOST \\"
+  echo "    --option accept-flake-config true \\"
   echo "    --option extra-substituters \"$NIX_COMMUNITY_SUBSTITUTER\" \\"
   echo "    --option extra-trusted-public-keys \"$NIX_COMMUNITY_KEY\""
 fi
