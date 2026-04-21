@@ -63,6 +63,15 @@ require_cmd() {
 }
 
 # ---------------------------------------------------------------------------
+# Constantes de cache binário
+# ---------------------------------------------------------------------------
+# O cache da nix-community disponibiliza artefatos pré-compilados do lanzaboote
+# (e outros pacotes), evitando que o nixos-install precise compilar dependências
+# Rust do zero e fazer downloads do crates.io (que podem falhar com erro 500).
+NIX_COMMUNITY_SUBSTITUTER="https://nix-community.cachix.org"
+NIX_COMMUNITY_KEY="nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCUSeBs="
+
+# ---------------------------------------------------------------------------
 # Argumento parsing
 # ---------------------------------------------------------------------------
 
@@ -205,8 +214,16 @@ if ! grep -q "experimental-features" "$NIX_CONF_DIR/nix.conf" 2>/dev/null; then
 else
   info "Flakes já estão habilitados (usuário atual)."
 fi
+# Adicionar o cache nix-community ao nix.conf do usuário atual (idempotente)
+if ! grep -qF "$NIX_COMMUNITY_SUBSTITUTER" "$NIX_CONF_DIR/nix.conf" 2>/dev/null; then
+  {
+    echo "extra-substituters = $NIX_COMMUNITY_SUBSTITUTER"
+    echo "extra-trusted-public-keys = $NIX_COMMUNITY_KEY"
+  } >> "$NIX_CONF_DIR/nix.conf"
+  success "Cache nix-community adicionado em $NIX_CONF_DIR/nix.conf"
+fi
 
-# Garantir que o root também leia as features experimentais.
+# Garantir que o root também leia as features experimentais e o cache binário.
 # Comandos executados com sudo (ex: nixos-install, nix run) usam o ambiente
 # do root e não herdam o nix.conf do usuário atual.
 # Tentamos /etc/nix/nix.conf primeiro (lido globalmente), mas no Live CD do NixOS
@@ -229,6 +246,30 @@ else
     echo "experimental-features = nix-command flakes" | sudo tee -a "$ROOT_USER_NIX_CONF" > /dev/null
     success "Flakes habilitados em $ROOT_USER_NIX_CONF (root, user-level)."
   fi
+fi
+
+# Adicionar o cache nix-community ao nix.conf do root (idempotente).
+# Isso garante que 'nix run' (disko) e 'nixos-install' utilizem o cache.
+# Tentamos primeiro /etc/nix/nix.conf; se somente leitura, usamos o user-level do root.
+if ! sudo grep -qF "$NIX_COMMUNITY_SUBSTITUTER" "$ROOT_NIX_CONF" 2>/dev/null; then
+  _nix_community_block() {
+    printf 'extra-substituters = %s\nextra-trusted-public-keys = %s\n' \
+      "$NIX_COMMUNITY_SUBSTITUTER" "$NIX_COMMUNITY_KEY"
+  }
+  if _nix_community_block | sudo tee -a "$ROOT_NIX_CONF" > /dev/null 2>&1; then
+    success "Cache nix-community adicionado em $ROOT_NIX_CONF."
+  else
+    # /etc/nix/nix.conf é somente leitura — adicionar ao nix.conf user-level do root
+    if ! sudo grep -qF "$NIX_COMMUNITY_SUBSTITUTER" "$ROOT_USER_NIX_CONF" 2>/dev/null; then
+      sudo mkdir -p "$(dirname "$ROOT_USER_NIX_CONF")"
+      _nix_community_block | sudo tee -a "$ROOT_USER_NIX_CONF" > /dev/null
+      success "Cache nix-community adicionado em $ROOT_USER_NIX_CONF."
+    else
+      info "Cache nix-community já configurado em $ROOT_USER_NIX_CONF."
+    fi
+  fi
+else
+  info "Cache nix-community já configurado em $ROOT_NIX_CONF."
 fi
 
 # ---------------------------------------------------------------------------
@@ -510,12 +551,20 @@ if confirm "Copiar configuração para /mnt/etc/nixos e executar nixos-install?"
   success "Configuração copiada para /mnt/etc/nixos."
 
   info "Executando nixos-install..."
-  sudo nixos-install --flake "/mnt/etc/nixos#$HOST"
+  # Passa os caches binários explicitamente para que o nixos-install os use mesmo
+  # que o nix.conf do live CD não os contenha. Isso evita compilações do zero
+  # (ex: dependências Rust do lanzaboote) e downloads frágeis do crates.io.
+  sudo nixos-install \
+    --flake "/mnt/etc/nixos#$HOST" \
+    --option extra-substituters "$NIX_COMMUNITY_SUBSTITUTER" \
+    --option extra-trusted-public-keys "$NIX_COMMUNITY_KEY"
   success "NixOS instalado com sucesso!"
 else
   warn "Instalação pulada. Execute manualmente:"
   echo "  sudo cp -r $CONFIG_DIR /mnt/etc/nixos"
-  echo "  sudo nixos-install --flake /mnt/etc/nixos#$HOST"
+  echo "  sudo nixos-install --flake /mnt/etc/nixos#$HOST \\"
+  echo "    --option extra-substituters \"$NIX_COMMUNITY_SUBSTITUTER\" \\"
+  echo "    --option extra-trusted-public-keys \"$NIX_COMMUNITY_KEY\""
 fi
 
 # ---------------------------------------------------------------------------
