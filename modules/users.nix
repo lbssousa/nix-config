@@ -1,7 +1,12 @@
 # Módulo de usuários: Esqueleto para definição de usuários
 # Os arquivos reais de usuário ficam em users/ e são ignorados pelo git
 # Consulte users/skeleton.nix para criar seu arquivo de usuário
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   # Usuários normais com senha inicial declarada (initialPassword ou initialHashedPassword).
