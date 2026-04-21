@@ -270,15 +270,11 @@ Descomente (ou adicione) as linhas de importação dos usuários em `hosts/$HOST
 > **Apenas para `barbudus` (usa Lanzaboote):** crie as chaves Secure Boot *antes* do `nixos-install`. Sem isso, o instalador falha com `Failed to install bootloader`.
 >
 > ```bash
-> # Obter o caminho do sbctl na store do Nix e executá-lo diretamente como root
-> # (evita o problema de `sudo nix run` não propagar root no ambiente live)
-> SBCTL_STORE=$(nix build \
->   --no-link --print-out-paths \
+> sudo mkdir -p /mnt/persist/etc/secureboot
+> sudo nix run \
 >   --option extra-substituters "https://nix-community.cachix.org" \
 >   --option extra-trusted-public-keys "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCUSeBs=" \
->   nixpkgs#sbctl)
-> sudo mkdir -p /mnt/persist/etc/secureboot
-> sudo "${SBCTL_STORE}/bin/sbctl" create-keys --database-path /mnt/persist/etc/secureboot
+>   nixpkgs#sbctl -- create-keys --database-path /mnt/persist/etc/secureboot
 > ```
 
 ```bash
