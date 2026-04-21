@@ -33,6 +33,6 @@ _:
     ];
   };
 
-  # Os diretórios de usuário são definidos em modules/users.nix
+  # Os diretórios de usuário são definidos em modules/system/users/users.nix
   # e complementados em hosts/*/configuration.nix
 }

@@ -67,5 +67,11 @@
   };
 
   # Configuração Home Manager para este usuário
-  home-manager.users.skeleton = import ../home.nix;
+  home-manager.users.skeleton = {
+    imports = [
+      ../home.nix
+      # Módulos de usuário opcionais (descomente conforme necessário):
+      # ../modules/user/apps/brave.nix   # Brave Browser via nixpkgs
+    ];
+  };
 }
