@@ -274,8 +274,20 @@ Descomente (ou adicione) as linhas de importação dos usuários em `hosts/$HOST
 > sudo nix run \
 >   --option extra-substituters "https://nix-community.cachix.org" \
 >   --option extra-trusted-public-keys "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCUSeBs=" \
->   nixpkgs#sbctl -- create-keys --database-path /mnt/persist/etc/secureboot
+>   nixpkgs#sbctl -- --disable-landlock create-keys \
+>   --export /mnt/persist/etc/secureboot/keys \
+>   --database-path /mnt/persist/etc/secureboot/GUID
 > ```
+>
+> > **Por quê `--disable-landlock`?** O sbctl ativa o sandbox Landlock (LSM do Linux) antes
+> > de processar as flags de caminho. O Landlock é configurado com o caminho padrão
+> > `/var/lib/sbctl`, bloqueando qualquer acesso a `/mnt/persist/etc/secureboot` — mesmo
+> > para root. Isso causa o erro `sbctl requires root to run: open ... permission denied`.
+> >
+> > **Por quê dois flags de caminho?** `--database-path` define apenas o arquivo GUID;
+> > `--export` define o diretório de chaves. Juntos criam a estrutura completa esperada
+> > pelo Lanzaboote em `pkiBundle = "/persist/etc/secureboot"`:
+> > `GUID`, `keys/PK/`, `keys/KEK/`, `keys/db/`.
 
 ```bash
 # Copiar a configuração para /mnt

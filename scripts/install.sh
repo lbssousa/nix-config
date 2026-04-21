@@ -533,13 +533,29 @@ if grep -q 'boot\.lanzaboote' "$CFG_FILE" 2>/dev/null; then
   else
     info "Criando chaves PKI para Secure Boot em ${_SECUREBOOT_DIR}..."
     info "(Necessário para que o Lanzaboote instale o bootloader durante nixos-install)"
-    # O script já roda como root; nix run executa sbctl com uid 0,
-    # satisfazendo a verificação de root do próprio sbctl.
+    # Por que --disable-landlock é necessário:
+    #   O sbctl ativa o sandbox Landlock (LSM do Linux) antes de processar as
+    #   flags --export e --database-path. O Landlock é configurado com base no
+    #   caminho padrão /var/lib/sbctl, bloqueando acesso a qualquer outro path —
+    #   inclusive para root (é uma restrição do processo, não do usuário).
+    #   Sem --disable-landlock, qualquer acesso a ${_SECUREBOOT_DIR} resulta em
+    #   EACCES, que o sbctl reporta como "sbctl requires root to run: open ...".
+    #
+    # Por que --export e --database-path separados:
+    #   --database-path define apenas o caminho do ARQUIVO GUID (não o diretório).
+    #   --export define o diretório de chaves (keydir).
+    #   Juntos criam a estrutura esperada pelo Lanzaboote em pkiBundle:
+    #     ${_SECUREBOOT_DIR}/GUID
+    #     ${_SECUREBOOT_DIR}/keys/PK/{PK.key,PK.pem}
+    #     ${_SECUREBOOT_DIR}/keys/KEK/{KEK.key,KEK.pem}
+    #     ${_SECUREBOOT_DIR}/keys/db/{db.key,db.pem}
     mkdir -p "${_SECUREBOOT_DIR}"
     nix run \
       --option extra-substituters "$NIX_COMMUNITY_SUBSTITUTER" \
       --option extra-trusted-public-keys "$NIX_COMMUNITY_KEY" \
-      nixpkgs#sbctl -- create-keys --database-path "${_SECUREBOOT_DIR}"
+      nixpkgs#sbctl -- --disable-landlock create-keys \
+      --export "${_SECUREBOOT_DIR}/keys" \
+      --database-path "${_SECUREBOOT_DIR}/GUID"
     success "Chaves Secure Boot criadas em ${_SECUREBOOT_DIR}."
     warn "As chaves ainda precisam ser registradas no firmware após o primeiro boot."
     warn "Consulte INSTALLATION.md → 'Configuração do Secure Boot' para os próximos passos."
