@@ -171,7 +171,10 @@ Altere `device = "/dev/nvme0n1"` para o disco correto identificado no passo ante
 HOST=barbudus  # ou bigodon
 
 # Executar disko para particionar e formatar
-sudo nix run github:nix-community/disko -- --mode disko ./hosts/$HOST/disko.nix
+sudo nix run github:nix-community/disko \
+  --option extra-substituters "https://nix-community.cachix.org" \
+  --option extra-trusted-public-keys "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCUSeBs=" \
+  -- --mode disko ./hosts/$HOST/disko.nix
 ```
 
 Este comando irá:
@@ -270,8 +273,11 @@ sudo cp -r /tmp/nixos-config /mnt/etc/nixos
 # Instalar o sistema
 # Os flags --option passam o cache nix-community explicitamente, tornando a
 # instalação resiliente a falhas de download do crates.io (ex: lanzaboote/Rust).
+# --option accept-flake-config true aplica a nixConfig do flake (substituter + chave)
+# simultaneamente, evitando avisos de substitutos sem chave confiável.
 sudo nixos-install \
   --flake /mnt/etc/nixos#$HOST \
+  --option accept-flake-config true \
   --option extra-substituters "https://nix-community.cachix.org" \
   --option extra-trusted-public-keys "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCUSeBs="
 ```
