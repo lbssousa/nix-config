@@ -5,7 +5,7 @@
 #   1. Habilita Flakes no ambiente live
 #   2. Seleciona o host e o disco de destino
 #   3. Particiona e formata o disco com disko
-#   4. Gera o hostId ZFS e atualiza hardware-configuration.nix
+#   4. Cria o snapshot Btrfs @blank para rollback de impermanence
 #   5. Cria arquivos de usuário a partir do skeleton
 #   6. Adiciona os arquivos de usuário ao índice do git (git add --force)
 #   7. Atualiza configuration.nix com os imports dos usuários
@@ -158,7 +158,7 @@ Este script automatiza os passos descritos em INSTALLATION.md:
   1. Habilita Flakes no ambiente live
   2. Seleciona o host e o disco de destino
   3. Particiona e formata o disco com disko
-  4. Gera o hostId ZFS e atualiza hardware-configuration.nix
+  4. Cria o snapshot Btrfs @blank para rollback de impermanence
   5. Cria arquivos de usuário a partir do skeleton
   6. Adiciona os arquivos de usuário ao índice do git (git add --force)
   7. Atualiza configuration.nix com os imports dos usuários
@@ -323,9 +323,6 @@ if ! confirm "Continuar com a formatação de $DISK?"; then
   die "Formatação cancelada pelo usuário."
 fi
 
-info "Carregando módulo ZFS..."
-modprobe zfs || die "Falha ao carregar o módulo ZFS. Verifique se o kernel suporta ZFS (ex: nixos-enter ou use um Live CD com suporte a ZFS)."
-
 info "Executando disko..."
 nix run github:nix-community/disko \
   --option extra-substituters "$NIX_COMMUNITY_SUBSTITUTER" \
@@ -334,35 +331,32 @@ nix run github:nix-community/disko \
 success "Disco particionado e formatado com sucesso."
 
 # ---------------------------------------------------------------------------
-# 4. Gerar hostId ZFS e atualizar hardware-configuration.nix
+# 4. Criar snapshot Btrfs @blank para rollback de impermanence
 # ---------------------------------------------------------------------------
 
 echo
-info "==> Passo 4: Configurar hostId ZFS"
+info "==> Passo 4: Criar snapshot Btrfs @blank"
+info "O snapshot @blank é utilizado pelo módulo impermanence para restaurar"
+info "a raiz (/) ao estado original a cada boot."
 
-HOST_ID=$(head -c 4 /dev/urandom | od -A n -t x1 | tr -d ' \n')
-info "hostId gerado: $HOST_ID"
+BTRFS_DEV="/dev/root_vg/root"
+BTRFS_TMP="/tmp/btrfs_root"
 
-# Atualizar (ou inserir) networking.hostId em hardware-configuration.nix
-if grep -q 'networking\.hostId' "$HW_FILE"; then
-  sed -i "s|networking\.hostId = \"[^\"]*\"|networking.hostId = \"$HOST_ID\"|g" "$HW_FILE"
-  success "networking.hostId atualizado em $HW_FILE"
+mkdir -p "$BTRFS_TMP"
+# Montar o volume Btrfs bruto (subvol=/) para acessar todos os subvolumes
+mount -t btrfs -o subvol=/ "$BTRFS_DEV" "$BTRFS_TMP"
+
+# Criar snapshot somente-leitura de @ como @blank
+if [[ -e "$BTRFS_TMP/@blank" ]]; then
+  info "Snapshot @blank já existe em $BTRFS_TMP."
 else
-  # Inserir antes da linha nixpkgs.hostPlatform ou no final do bloco raiz
-  if grep -q 'nixpkgs\.hostPlatform' "$HW_FILE"; then
-    sed -i "s|nixpkgs\.hostPlatform|networking.hostId = \"$HOST_ID\"; # gerado por install.sh\n  nixpkgs.hostPlatform|" "$HW_FILE"
-  else
-    warn "Não foi possível localizar o ponto de inserção em $HW_FILE."
-    warn "Adicione manualmente: networking.hostId = \"$HOST_ID\";"
-  fi
-  success "networking.hostId inserido em $HW_FILE"
+  btrfs subvolume snapshot -r "$BTRFS_TMP/@" "$BTRFS_TMP/@blank"
+  success "Snapshot @blank criado com sucesso."
 fi
 
-# O arquivo hardware-configuration.nix do repositório é mantido como fonte da verdade.
-# Ele já contém todos os módulos, opções de swap, disko e sysctl corretos para o host.
-# Apenas o networking.hostId é atualizado acima com um valor gerado aleatoriamente.
-# Se necessário atualizar os módulos do kernel após a instalação, edite o arquivo
-# hosts/<host>/hardware-configuration.nix diretamente e reaplique com nixos-rebuild.
+umount "$BTRFS_TMP"
+rmdir "$BTRFS_TMP"
+success "Snapshot Btrfs @blank pronto para rollback de impermanence."
 
 # ---------------------------------------------------------------------------
 # 5. Criar arquivos de usuário
@@ -509,8 +503,8 @@ for _i in "${!USERS_LOGIN[@]}"; do
   fi
 done
 
-# Garantir que configuration.nix também está no índice (pode ter sido editado)
-git add "$CFG_FILE" "$HW_FILE" "$DISKO_FILE"
+# Garantir que configuration.nix e disko.nix também estão no índice (podem ter sido editados)
+git add "$CFG_FILE" "$DISKO_FILE"
 success "Arquivos de configuração registrados no índice do git."
 
 # ---------------------------------------------------------------------------
@@ -609,7 +603,7 @@ fi
 
 echo
 info "==> Passo 9: Definir senhas"
-info "Com impermanência (ZFS rollback), /etc/shadow precisa ser salvo em"
+info "Com impermanência (Btrfs rollback), /etc/shadow precisa ser salvo em"
 info "/persist/etc/shadow para sobreviver ao rollback do primeiro boot."
 
 _USERS_WITH_PASSWORD=()
