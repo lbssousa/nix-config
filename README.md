@@ -1,14 +1,14 @@
 # nixos-config
 
-Configuração pessoal do NixOS baseada em Flakes, com ZFS, particionamento declarativo (disko), sistema efêmero (impermanence), swap híbrida e ambiente GNOME similar ao Fedora Silverblue/Bluefin.
+Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento declarativo (disko), sistema efêmero (impermanence), swap híbrida e ambiente GNOME similar ao Fedora Silverblue/Bluefin.
 
 ## 🎯 Características
 
 - ✅ **Nix Flakes**: Configuração reproduzível e declarativa
 - ✅ **Disko**: Particionamento declarativo de disco
 - ✅ **LUKS + LVM**: Criptografia completa do disco
-- ✅ **ZFS**: Sistema de arquivos moderno com compressão zstd e snapshots
-- ✅ **Impermanence**: Sistema efêmero, limpo a cada boot via rollback ZFS
+- ✅ **Btrfs**: Sistema de arquivos moderno com compressão zstd, subvolumes e snapshots
+- ✅ **Impermanence**: Sistema efêmero com tmpfs na raiz — limpo a cada boot
 - ✅ **Swap híbrida**: zram + swap em disco para máxima performance
 - ✅ **GNOME**: Ambiente desktop moderno com suporte a Wayland
 - ✅ **Flatpak**: Aplicações instaladas system-wide sem senha (como Silverblue)
@@ -46,7 +46,7 @@ Configuração pessoal do NixOS baseada em Flakes, com ZFS, particionamento decl
 ├── flake.nix                 # Entrada principal do Flake
 ├── flake.lock                # Lockfile das dependências
 ├── home.nix                  # Configuração base do Home Manager
-├── disko.nix                 # Template ZFS de particionamento (LUKS+LVM+ZFS)
+├── disko.nix                 # Template Btrfs de particionamento (LUKS+LVM+Btrfs)
 ├── hosts/                    # Configurações específicas por host
 │   ├── barbudus/
 │   │   ├── configuration.nix        # Config específica (NVIDIA, fprintd, etc.)
@@ -59,11 +59,11 @@ Configuração pessoal do NixOS baseada em Flakes, com ZFS, particionamento decl
 ├── modules/                  # Módulos compartilhados
 │   ├── audio.nix             # PipeWire
 │   ├── boot.nix              # systemd-boot/lanzaboote + Plymouth (flicker-free)
-│   ├── common.nix            # Configurações básicas (locale, nix, ZFS)
+│   ├── common.nix            # Configurações básicas (locale, nix, Btrfs)
 │   ├── containers.nix        # Podman rootless + Distrobox
 │   ├── desktop.nix           # GNOME, Flatpak, Brave, fontes
 │   ├── homebrew.nix          # Suporte ao Linuxbrew/Homebrew
-│   ├── impermanence.nix      # Rollback ZFS + diretórios persistentes
+│   ├── impermanence.nix      # Raiz tmpfs + diretórios persistentes (/persist)
 │   ├── packages.nix          # Pacotes essenciais (Neovim, Helix, etc.)
 │   ├── printing.nix          # Impressora Epson ESC-P/R + ecbd.service
 │   ├── shells.nix            # Bash, Fish, Zsh (padrão: Zsh)
@@ -138,6 +138,7 @@ nano hosts/barbudus/disko.nix  # Ajuste /dev/nvme0n1 se necessário
 nano hosts/bigodon/disko.nix
 
 # 5. Particionar e instalar (⚠️ APAGA TODOS OS DADOS DO DISCO!)
+# Cria: raiz tmpfs + subvolumes Btrfs (@home, @nix, @persist, @log, ...)
 HOST=barbudus  # ou bigodon
 sudo nix run github:nix-community/disko -- --mode disko ./hosts/$HOST/disko.nix
 
@@ -223,4 +224,5 @@ flatpak install flathub io.github.bazaar_cabinet.Bazaar  # Loja de apps
 - [NixOS Hardware](https://github.com/NixOS/nixos-hardware)
 - [Lanzaboote (Secure Boot)](https://github.com/nix-community/lanzaboote)
 - [Erase Your Darlings (impermanence concept)](https://grahamc.com/blog/erase-your-darlings/)
-- [ZFS on NixOS](https://nixos.wiki/wiki/ZFS)
+- [Btrfs on NixOS](https://nixos.wiki/wiki/Btrfs)
+- [Arch Wiki — Btrfs](https://wiki.archlinux.org/title/Btrfs)

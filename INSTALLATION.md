@@ -1,6 +1,6 @@
 # Guia de Instalação do NixOS
 
-Este guia cobre a instalação do NixOS usando esta configuração baseada em Flakes com ZFS, disko, impermanence e swap híbrida.
+Este guia cobre a instalação do NixOS usando esta configuração baseada em Flakes com Btrfs, disko, impermanence e swap híbrida.
 
 ## 📋 Pré-requisitos
 
@@ -92,13 +92,14 @@ sudo bash scripts/install.sh --host bigodon --disk /dev/sda
 2. Lista hosts e discos disponíveis para seleção
 3. Atualiza o `disko.nix` do host com o disco escolhido
 4. Particiona e formata o disco com disko (⚠️ apaga todos os dados!)
-5. Gera o `hostId` ZFS e atualiza `hardware-configuration.nix`
-6. Cria arquivos de usuário a partir do skeleton
-7. Adiciona os arquivos de usuário ao índice do git (`git add --force`)
-8. Atualiza `configuration.nix` com os imports dos usuários
-9. Cria chaves Secure Boot em `/persist/etc/secureboot` (apenas hosts com Lanzaboote)
-10. Copia a configuração para `/mnt/etc/nixos` e executa `nixos-install`
-11. Define senhas via `nixos-enter` e copia `/etc/shadow` para `/persist`
+   - A raiz (`/`) é configurada como tmpfs — limpa automaticamente a cada boot
+   - Os dados persistentes ficam em subvolumes Btrfs dedicados
+5. Cria arquivos de usuário a partir do skeleton
+6. Adiciona os arquivos de usuário ao índice do git (`git add --force`)
+7. Atualiza `configuration.nix` com os imports dos usuários
+8. Cria chaves Secure Boot em `/persist/etc/secureboot` (apenas hosts com Lanzaboote)
+9. Copia a configuração para `/mnt/etc/nixos` e executa `nixos-install`
+10. Define senhas via `nixos-enter` e copia `/etc/shadow` para `/persist`
 
 ### Instalação Manual (passo a passo)
 
@@ -181,32 +182,19 @@ sudo nix run github:nix-community/disko \
 Este comando irá:
 1. Criar partições GPT (EFI 512MB + partição LUKS)
 2. Configurar criptografia LUKS (será solicitada senha durante o processo)
-3. Criar volumes LVM (swap 20GB + volume ZFS)
-4. Criar pool ZFS `rpool` com os datasets:
-   - `rpool/local/root` → `/` (efêmero)
-   - `rpool/local/nix` → `/nix`
-   - `rpool/local/log` → `/var/log`
-   - `rpool/local/containers` → `/var/lib/containers`
-   - `rpool/safe/home` → `/home`
-   - `rpool/safe/persist` → `/persist`
-   - `rpool/safe/flatpak` → `/var/lib/flatpak`
-5. Montar tudo em `/mnt`
+3. Criar volumes LVM (swap 20GB + volume Btrfs)
+4. Configurar a raiz (`/`) como **tmpfs** — limpa automaticamente a cada boot
+5. Formatar o volume Btrfs e criar os subvolumes de dados persistentes:
+   - `@home` → `/home`
+   - `@nix` → `/nix`
+   - `@persist` → `/persist`
+   - `@log` → `/var/log`
+   - `@containers` → `/var/lib/containers`
+   - `@flatpak` → `/var/lib/flatpak`
+   - `@snapshots` → `/.snapshots`
+6. Montar tudo em `/mnt`
 
-### 6. Configurar o hostId ZFS
-
-O ZFS requer um `hostId` único. Gere e ajuste:
-
-```bash
-# Gerar um hostId único (8 caracteres hexadecimais)
-head -c 8 /dev/urandom | od -A n -t x1 | tr -d ' \n'
-# Exemplo de saída: a8b3c4d5
-
-# Editar hardware-configuration.nix do host
-nano hosts/$HOST/hardware-configuration.nix
-# Substitua o valor de networking.hostId pelo valor gerado acima
-```
-
-### 7. Gerar configuração de hardware (recomendado)
+### 6. Gerar configuração de hardware (recomendado)
 
 ```bash
 # Gerar hardware-configuration.nix automático
@@ -220,11 +208,10 @@ sudo cp /mnt/etc/nixos/hardware-configuration.nix ./hosts/$HOST/hardware-configu
 
 Após copiar, edite o arquivo para:
 1. Manter `import ./disko.nix` nos imports
-2. Adicionar `networking.hostId` com o valor gerado no passo anterior
-3. Adicionar as configurações de `zramSwap`
-4. Manter `fileSystems."/persist".neededForBoot = true`
+2. Adicionar as configurações de `zramSwap`
+3. Manter `fileSystems."/persist".neededForBoot = true`
 
-### 8. Criar arquivos de usuário
+### 7. Criar arquivos de usuário
 
 É possível criar **uma ou mais contas de usuário**. Para cada conta, defina o nome de login, o nome completo e se ela terá permissão de **sudo** (grupo `wheel`) ou não.
 
@@ -265,7 +252,7 @@ Descomente (ou adicione) as linhas de importação dos usuários em `hosts/$HOST
 >
 > Isso torna o arquivo visível ao Nix sem expô-lo no histórico do repositório.
 
-### 9. Instalar o NixOS
+### 8. Instalar o NixOS
 
 > **Apenas para `barbudus` (usa Lanzaboote):** crie as chaves Secure Boot *antes* do `nixos-install`. Sem isso, o instalador falha com `Failed to install bootloader`.
 >
@@ -308,11 +295,11 @@ sudo nixos-install \
 Durante a instalação será solicitado:
 - Senha para o usuário root (após a instalação)
 
-### 10. Configurar senhas
+### 9. Configurar senhas
 
 Os usuários criados com `initialPassword = "nixos"` (padrão do skeleton) **serão solicitados a criar sua própria senha no primeiro login**. Não é necessário definir senhas manualmente.
 
-Se preferir definir senhas personalizadas durante a instalação, copie o shadow para `/persist` para que sobreviva ao rollback ZFS do primeiro boot:
+Se preferir definir senhas personalizadas durante a instalação, copie o shadow para `/persist` para que sobreviva ao próximo boot (a raiz tmpfs é reiniciada a cada boot; `/persist` é preservado via Btrfs):
 
 ```bash
 # Entrar no sistema recém-instalado
@@ -336,9 +323,9 @@ sudo cp -p /mnt/etc/shadow /mnt/persist/etc/shadow
 sudo touch /mnt/persist/.password-change-required-<seu-usuario>
 ```
 
-> **Nota:** Se as senhas forem definidas via `nixos-enter` sem copiar o shadow para `/persist`, elas serão perdidas após o primeiro reboot (o sistema ZFS reverte `/` para o snapshot `@blank`). Os usuários receberão a senha temporária `nixos` e serão solicitados a trocá-la.
+> **Nota:** Se as senhas forem definidas via `nixos-enter` sem copiar o shadow para `/persist`, elas serão perdidas após o primeiro reboot — a raiz tmpfs é sempre reiniciada com estado vazio. Os usuários receberão a senha temporária `nixos` e serão solicitados a trocá-la.
 
-### 11. Finalizar instalação
+### 10. Finalizar instalação
 
 ```bash
 # Desmontar e reiniciar
@@ -494,8 +481,12 @@ sudo nixos-rebuild switch --flake /etc/nixos#barbudus  # ou bigodon
 ### Verificar o sistema
 
 ```bash
-# Ver datasets ZFS e uso de disco
-zfs list
+# Ver subvolumes Btrfs e uso de disco
+sudo btrfs subvolume list /nix
+sudo btrfs filesystem usage /nix
+
+# Ver uso da raiz tmpfs
+df -h /
 
 # Ver swap ativo
 swapon --show
@@ -507,6 +498,28 @@ flatpak list --system
 # Ver containers Podman
 podman system info
 ```
+
+### Snapshots Btrfs manuais
+
+```bash
+# Snapshot do subvolume home
+sudo btrfs subvolume snapshot /home /.snapshots/home-$(date +%Y%m%d-%H%M%S)
+
+# Snapshot do persist (dados críticos)
+sudo btrfs subvolume snapshot /persist /.snapshots/persist-$(date +%Y%m%d-%H%M%S)
+
+# Snapshot do nix (opcional, grande)
+sudo btrfs subvolume snapshot /nix /.snapshots/nix-$(date +%Y%m%d-%H%M%S)
+
+# Listar snapshots
+sudo btrfs subvolume list /.snapshots
+
+# Remover snapshot antigo
+sudo btrfs subvolume delete /.snapshots/home-20240101-120000
+```
+
+> **Nota:** Não é necessário fazer snapshot de `/` — a raiz é um tmpfs que é sempre
+> reiniciada limpa a cada boot. Apenas `/home`, `/persist` e `/nix` precisam de backup.
 
 ## 🔧 Solução de Problemas
 
@@ -522,55 +535,30 @@ sudo cryptsetup open /dev/nvme0n1p2 crypted
 # Ativar LVM
 sudo vgchange -ay
 
-# Importar pool ZFS
-sudo zpool import -f rpool
-
-# Montar datasets
-sudo mount -t zfs rpool/local/root /mnt
+# Montar subvolumes Btrfs manualmente
 sudo mount /dev/nvme0n1p1 /mnt/boot
-sudo mount -t zfs rpool/local/nix /mnt/nix
-sudo mount -t zfs rpool/safe/persist /mnt/persist
+sudo mount -t btrfs -o subvol=@nix /dev/root_vg/root /mnt/nix
+sudo mount -t btrfs -o subvol=@persist /dev/root_vg/root /mnt/persist
+sudo mount -t btrfs -o subvol=@home /dev/root_vg/root /mnt/home
 
 # Entrar no sistema
 sudo nixos-enter --root /mnt
 ```
 
-### Problemas com o rollback ZFS
-
-Se o sistema esquece configurações entre boots (impermanence funcionando):
+### Verificar Btrfs
 
 ```bash
-# Verificar snapshots existentes
-zfs list -t snapshot
+# Status do filesystem
+sudo btrfs filesystem show /
+sudo btrfs device stats /
 
-# Ver o snapshot blank (deve existir após instalação)
-zfs list -t snapshot rpool/local/root
+# Verificar integridade (scrub)
+sudo btrfs scrub start /
+sudo btrfs scrub status /
 
-# Criar o snapshot blank manualmente se não existir
-sudo zfs snapshot rpool/local/root@blank
-```
-
-### Verificar ZFS pool
-
-```bash
-# Status do pool
-sudo zpool status
-
-# Verificar integridade
-sudo zpool scrub rpool
-```
-
-### Erro de hostId ZFS
-
-```bash
-# Verificar hostId configurado
-cat /etc/machine-id  # Apenas referência
-
-# Ver hostId atual
-hostid
-
-# O hostId deve ser fixo e definido em hardware-configuration.nix
-# networking.hostId = "xxxxxxxx";
+# Estatísticas de compressão
+sudo compsize /
+sudo compsize /home
 ```
 
 ### Problemas com LUKS
@@ -590,5 +578,6 @@ sudo cryptsetup luksDump /dev/nvme0n1p2
 - [Impermanence](https://github.com/nix-community/impermanence)
 - [Home Manager](https://github.com/nix-community/home-manager)
 - [Lanzaboote (Secure Boot)](https://github.com/nix-community/lanzaboote)
-- [ZFS on NixOS](https://nixos.wiki/wiki/ZFS)
+- [Btrfs on NixOS](https://nixos.wiki/wiki/Btrfs)
+- [Arch Wiki — Btrfs](https://wiki.archlinux.org/title/Btrfs)
 - [Erase Your Darlings](https://grahamc.com/blog/erase-your-darlings/)

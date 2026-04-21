@@ -10,7 +10,7 @@ Propiciar uma experiência de uso similar à do Fedora Silverblue ou do projeto 
 - Uso massivo de Flatpaks para aplicações GUI
 - Aplicativos CLI instalados via Homebrew (Linuxbrew)
 - Sistema efêmero (impermanence) com raiz limpa a cada boot
-- Dados importantes preservados em datasets ZFS dedicados
+- Dados importantes preservados em subvolumes Btrfs dedicados
 
 ## Particionamento de Disco
 
@@ -19,7 +19,7 @@ Propiciar uma experiência de uso similar à do Fedora Silverblue ou do projeto 
 - Suporte a UEFI
 - Criptografia completa do disco via LUKS + LVM
 - Particionamento declarativo via nix-community/disko
-- Sistema de arquivos ZFS para a partição principal
+- Sistema de arquivos Btrfs para a partição principal
 - Swap híbrida: zram (performance) + swap em disco (hibernação)
 - Sistema efêmero via nix-community/impermanence
 
@@ -33,28 +33,41 @@ Disco (ex: /dev/nvme0n1)
     └── LVM VG: root_vg
         ├── LV swap: 20 GB
         │   └── Swap (para hibernação)
-        └── LV zpool: 100%FREE
-            └── ZFS Pool: rpool
+        └── LV root: 100%FREE
+            └── Btrfs
 ```
 
-### Datasets ZFS
+### Raiz efêmera (tmpfs)
 
-| Dataset | Mountpoint | Características |
-|---------|-----------|-----------------|
-| `rpool/local/root` | `/` | Efêmero - limpo a cada boot (rollback para @blank) |
-| `rpool/local/nix` | `/nix` | Preservado - Nix store (essencial) |
-| `rpool/local/log` | `/var/log` | Preservado - logs do sistema (compressão off) |
-| `rpool/local/containers` | `/var/lib/containers` | Preservado - dados de containers |
-| `rpool/safe/home` | `/home` | Preservado - diretórios de usuário |
-| `rpool/safe/persist` | `/persist` | Preservado - dados persistentes do sistema |
-| `rpool/safe/flatpak` | `/var/lib/flatpak` | Preservado - aplicações Flatpak |
+A raiz do sistema (`/`) é um **tmpfs** — filesystem inteiramente em RAM. Isso significa:
+- É sempre limpa a cada boot (sem dados acumulados, sem rollback necessário)
+- Qualquer arquivo gravado em `/` é perdido ao reiniciar (exceto os preservados em `/persist`)
+- Simples e confiável: não requer snapshot, rollback ou configuração de initrd
 
-**Configurações ZFS globais:**
-- `compression = zstd` (exceto log: off)
-- `atime = off` (equivalente a noatime)
-- `xattr = sa` (performance)
-- `dnodesize = auto` (performance)
-- `normalization = formD` (compatibilidade Unicode)
+**Opções de montagem:** `defaults,size=50%,mode=755`
+
+### Subvolumes Btrfs
+
+A convenção `@` é compatível com ferramentas como Timeshift e amplamente adotada pela comunidade.
+
+| Subvolume | Mountpoint | Características |
+|-----------|-----------|-----------------|
+| `@home` | `/home` | Preservado — diretórios de usuário |
+| `@nix` | `/nix` | Preservado — Nix store (essencial) |
+| `@persist` | `/persist` | Preservado — dados persistentes do sistema (impermanence) |
+| `@log` | `/var/log` | Preservado — logs do sistema (sem compressão) |
+| `@containers` | `/var/lib/containers` | Preservado — dados de containers |
+| `@flatpak` | `/var/lib/flatpak` | Preservado — aplicações Flatpak |
+| `@snapshots` | `/.snapshots` | Preservado — snapshots Btrfs para backup |
+
+**Opções de montagem globais:**
+- `compress=zstd` (exceto `@log`: sem compressão)
+- `noatime`
+
+**Impermanência — estratégia:**
+- A raiz tmpfs é sempre "limpa" ao boot — não requer snapshot ou rollback
+- Arquivos importantes são preservados em `/persist` via bind mounts (impermanence)
+- O `/persist` é um subvolume Btrfs persistente entre boots
 
 ### Swap Híbrida
 
@@ -195,10 +208,11 @@ flatpak install flathub io.github.bazaar_cabinet.Bazaar  # App store
 
 ### Como Funciona
 
-1. O dataset ZFS `rpool/local/root` contém a raiz do sistema
-2. No boot, antes de montar `/`, o initrd faz rollback para o snapshot `@blank`
-3. Isso garante que a raiz está sempre "limpa" (como na instalação inicial)
-4. Arquivos e diretórios importantes são preservados via bind mounts de `/persist`
+1. A raiz do sistema (`/`) é um **tmpfs** — filesystem em RAM, sempre vazio ao boot
+2. Não há rollback, snapshot ou serviço de initrd necessário
+3. Arquivos e diretórios importantes são preservados via bind mounts de `/persist`
+4. `/persist` é um subvolume Btrfs persistente (sobrevive a qualquer número de reboots)
+5. `/home`, `/nix`, `/var/log`, `/var/lib/containers` e `/var/lib/flatpak` também são subvolumes Btrfs persistentes
 
 ### Dados Preservados Automaticamente (Sistema)
 
@@ -263,6 +277,7 @@ flatpak install flathub io.github.bazaar_cabinet.Bazaar  # App store
 - [Erase Your Darlings](https://grahamc.com/blog/erase-your-darlings/)
 - [NixOS Impermanence](https://github.com/nix-community/impermanence)
 - [Disko](https://github.com/nix-community/disko)
-- [ZFS on NixOS](https://nixos.wiki/wiki/ZFS)
+- [Btrfs on NixOS](https://nixos.wiki/wiki/Btrfs)
+- [Arch Wiki — Btrfs](https://wiki.archlinux.org/title/Btrfs)
 - [Lanzaboote](https://github.com/nix-community/lanzaboote)
 - [Repositório antigo](https://github.com/lbssousa/nixos-config-old)

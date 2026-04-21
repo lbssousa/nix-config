@@ -5,12 +5,11 @@
 #   1. Habilita Flakes no ambiente live
 #   2. Seleciona o host e o disco de destino
 #   3. Particiona e formata o disco com disko
-#   4. Gera o hostId ZFS e atualiza hardware-configuration.nix
-#   5. Cria arquivos de usuário a partir do skeleton
-#   6. Adiciona os arquivos de usuário ao índice do git (git add --force)
-#   7. Atualiza configuration.nix com os imports dos usuários
-#   8. Instala o NixOS
-#   9. Define senhas via nixos-enter
+#   4. Cria arquivos de usuário a partir do skeleton
+#   5. Adiciona os arquivos de usuário ao índice do git (git add --force)
+#   6. Atualiza configuration.nix com os imports dos usuários
+#   7. Instala o NixOS
+#   8. Define senhas via nixos-enter
 #
 # Uso:
 #   bash scripts/install.sh [--host <hostname>] [--disk <device>]
@@ -158,12 +157,11 @@ Este script automatiza os passos descritos em INSTALLATION.md:
   1. Habilita Flakes no ambiente live
   2. Seleciona o host e o disco de destino
   3. Particiona e formata o disco com disko
-  4. Gera o hostId ZFS e atualiza hardware-configuration.nix
-  5. Cria arquivos de usuário a partir do skeleton
-  6. Adiciona os arquivos de usuário ao índice do git (git add --force)
-  7. Atualiza configuration.nix com os imports dos usuários
-  8. Instala o NixOS
-  9. Define senhas via nixos-enter
+  4. Cria arquivos de usuário a partir do skeleton
+  5. Adiciona os arquivos de usuário ao índice do git (git add --force)
+  6. Atualiza configuration.nix com os imports dos usuários
+  7. Instala o NixOS
+  8. Define senhas via nixos-enter
 EOF
       exit 0 ;;
     *) die "Opção desconhecida: $1. Use --help para ver as opções disponíveis." ;;
@@ -323,9 +321,6 @@ if ! confirm "Continuar com a formatação de $DISK?"; then
   die "Formatação cancelada pelo usuário."
 fi
 
-info "Carregando módulo ZFS..."
-modprobe zfs || die "Falha ao carregar o módulo ZFS. Verifique se o kernel suporta ZFS (ex: nixos-enter ou use um Live CD com suporte a ZFS)."
-
 info "Executando disko..."
 nix run github:nix-community/disko \
   --option extra-substituters "$NIX_COMMUNITY_SUBSTITUTER" \
@@ -334,42 +329,11 @@ nix run github:nix-community/disko \
 success "Disco particionado e formatado com sucesso."
 
 # ---------------------------------------------------------------------------
-# 4. Gerar hostId ZFS e atualizar hardware-configuration.nix
+# 4. Criar arquivos de usuário
 # ---------------------------------------------------------------------------
 
 echo
-info "==> Passo 4: Configurar hostId ZFS"
-
-HOST_ID=$(head -c 4 /dev/urandom | od -A n -t x1 | tr -d ' \n')
-info "hostId gerado: $HOST_ID"
-
-# Atualizar (ou inserir) networking.hostId em hardware-configuration.nix
-if grep -q 'networking\.hostId' "$HW_FILE"; then
-  sed -i "s|networking\.hostId = \"[^\"]*\"|networking.hostId = \"$HOST_ID\"|g" "$HW_FILE"
-  success "networking.hostId atualizado em $HW_FILE"
-else
-  # Inserir antes da linha nixpkgs.hostPlatform ou no final do bloco raiz
-  if grep -q 'nixpkgs\.hostPlatform' "$HW_FILE"; then
-    sed -i "s|nixpkgs\.hostPlatform|networking.hostId = \"$HOST_ID\"; # gerado por install.sh\n  nixpkgs.hostPlatform|" "$HW_FILE"
-  else
-    warn "Não foi possível localizar o ponto de inserção em $HW_FILE."
-    warn "Adicione manualmente: networking.hostId = \"$HOST_ID\";"
-  fi
-  success "networking.hostId inserido em $HW_FILE"
-fi
-
-# O arquivo hardware-configuration.nix do repositório é mantido como fonte da verdade.
-# Ele já contém todos os módulos, opções de swap, disko e sysctl corretos para o host.
-# Apenas o networking.hostId é atualizado acima com um valor gerado aleatoriamente.
-# Se necessário atualizar os módulos do kernel após a instalação, edite o arquivo
-# hosts/<host>/hardware-configuration.nix diretamente e reaplique com nixos-rebuild.
-
-# ---------------------------------------------------------------------------
-# 5. Criar arquivos de usuário
-# ---------------------------------------------------------------------------
-
-echo
-info "==> Passo 5: Criar contas de usuário"
+info "==> Passo 4: Criar contas de usuário"
 
 USERS_LOGIN=()
 USERS_FULLNAME=()
@@ -463,11 +427,11 @@ for _i in "${!USERS_LOGIN[@]}"; do
 done
 
 # ---------------------------------------------------------------------------
-# 6. Adicionar arquivos de usuário ao índice do git (ESSENCIAL)
+# 5. Adicionar arquivos de usuário ao índice do git (ESSENCIAL)
 # ---------------------------------------------------------------------------
 
 echo
-info "==> Passo 6: Registrar arquivos de usuário no índice do git"
+info "==> Passo 5: Registrar arquivos de usuário no índice do git"
 
 # O Nix avalia flakes a partir do índice do git.
 # Arquivos gitignored que não estejam no índice são invisíveis ao Nix,
@@ -480,11 +444,11 @@ for _i in "${!USERS_LOGIN[@]}"; do
 done
 
 # ---------------------------------------------------------------------------
-# 7. Atualizar configuration.nix com os imports dos usuários
+# 6. Atualizar configuration.nix com os imports dos usuários
 # ---------------------------------------------------------------------------
 
 echo
-info "==> Passo 7: Configurar importações dos usuários em $CFG_FILE"
+info "==> Passo 6: Configurar importações dos usuários em $CFG_FILE"
 
 for _i in "${!USERS_LOGIN[@]}"; do
   _user="${USERS_LOGIN[$_i]}"
@@ -509,16 +473,16 @@ for _i in "${!USERS_LOGIN[@]}"; do
   fi
 done
 
-# Garantir que configuration.nix também está no índice (pode ter sido editado)
-git add "$CFG_FILE" "$HW_FILE" "$DISKO_FILE"
+# Garantir que configuration.nix e disko.nix também estão no índice (podem ter sido editados)
+git add "$CFG_FILE" "$DISKO_FILE"
 success "Arquivos de configuração registrados no índice do git."
 
 # ---------------------------------------------------------------------------
-# 7a. Criar chaves Secure Boot (apenas para hosts com Lanzaboote)
+# 6a. Criar chaves Secure Boot (apenas para hosts com Lanzaboote)
 # ---------------------------------------------------------------------------
 
 echo
-info "==> Passo 7a: Verificar suporte a Secure Boot (Lanzaboote)"
+info "==> Passo 6a: Verificar suporte a Secure Boot (Lanzaboote)"
 
 if grep -q 'boot\.lanzaboote' "$CFG_FILE" 2>/dev/null; then
   # Extrair o caminho do pkiBundle da configuração (ou usar padrão)
@@ -565,11 +529,11 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 8. Instalar o NixOS
+# 7. Instalar o NixOS
 # ---------------------------------------------------------------------------
 
 echo
-info "==> Passo 8: Instalar o NixOS"
+info "==> Passo 7: Instalar o NixOS"
 
 # Copiar a configuração para /mnt (o nixos-install aceitará o caminho local,
 # mas é mais seguro copiar para garantir que /mnt/etc/nixos tenha os arquivos)
@@ -604,13 +568,13 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 9. Definir senhas
+# 8. Definir senhas
 # ---------------------------------------------------------------------------
 
 echo
-info "==> Passo 9: Definir senhas"
-info "Com impermanência (ZFS rollback), /etc/shadow precisa ser salvo em"
-info "/persist/etc/shadow para sobreviver ao rollback do primeiro boot."
+info "==> Passo 8: Definir senhas"
+info "Com impermanência (tmpfs na raiz), /etc/shadow precisa ser salvo em"
+info "/persist/etc/shadow para sobreviver ao próximo boot."
 
 _USERS_WITH_PASSWORD=()
 # Padrão de nome de usuário seguro para uso em nomes de arquivo
@@ -638,7 +602,7 @@ if confirm "Definir senha do root também?"; then
 fi
 
 # Copiar /etc/shadow para /persist/etc/shadow para que as senhas sobrevivam
-# ao rollback ZFS. Sem isso, as senhas são perdidas no primeiro reboot.
+# ao boot (a raiz tmpfs é reiniciada a cada boot, /persist é preservado via Btrfs).
 # Usar `install` para definir permissões 640 atomicamente (sem janela de acesso).
 if [ -s /mnt/etc/shadow ]; then
   mkdir -p /mnt/persist/etc
