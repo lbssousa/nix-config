@@ -11,11 +11,12 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 - ✅ **Impermanence**: Sistema efêmero com tmpfs na raiz — limpo a cada boot
 - ✅ **Swap híbrida**: zram + swap em disco para máxima performance
 - ✅ **GNOME**: Ambiente desktop moderno com suporte a Wayland
-- ✅ **Flatpak**: Aplicações instaladas system-wide sem senha (como Silverblue)
+- ✅ **Flatpak**: Aplicações instaladas system-wide automaticamente após o boot (como Silverblue)
 - ✅ **Podman + Distrobox**: Containers rootless (experiência Silverblue)
 - ✅ **Home Manager**: Gerenciamento de configurações de usuário
 - ✅ **Homebrew**: Ferramentas CLI via Linuxbrew
-- ✅ **Brave**: Navegador padrão instalado via Nix
+- ✅ **Brave**: Navegador padrão instalado via Flatpak
+- ✅ **Ptyxis**: Terminal moderno instalado via Flatpak (substitui GNOME Console)
 - ✅ **Multi-host**: Configurações específicas para cada máquina
 - ✅ **Modular**: Módulos compartilhados para fácil manutenção
 - ✅ **Secure Boot**: Suporte via lanzaboote (barbudus)
@@ -57,20 +58,39 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 │       ├── hardware-configuration.nix
 │       └── disko.nix
 ├── modules/                  # Módulos compartilhados
-│   ├── audio.nix             # PipeWire
-│   ├── boot.nix              # systemd-boot/lanzaboote + Plymouth (flicker-free)
-│   ├── common.nix            # Configurações básicas (locale, nix, Btrfs)
-│   ├── containers.nix        # Podman rootless + Distrobox
-│   ├── desktop.nix           # GNOME, Flatpak, Brave, fontes
-│   ├── homebrew.nix          # Suporte ao Linuxbrew/Homebrew
-│   ├── impermanence.nix      # Raiz tmpfs + diretórios persistentes (/persist)
-│   ├── packages.nix          # Pacotes essenciais (Neovim, Helix, etc.)
-│   ├── printing.nix          # Impressora Epson ESC-P/R + ecbd.service
-│   ├── shells.nix            # Bash, Fish, Zsh (padrão: Zsh)
-│   ├── ssh.nix               # Servidor SSH
-│   └── users.nix             # Configuração base de usuários
+│   ├── system/               # Módulos de sistema
+│   │   ├── audio/
+│   │   │   └── audio.nix     # PipeWire
+│   │   ├── boot/
+│   │   │   └── boot.nix      # systemd-boot/lanzaboote + Plymouth (flicker-free)
+│   │   ├── containers/
+│   │   │   └── containers.nix # Podman rootless + Distrobox
+│   │   ├── core/
+│   │   │   ├── common.nix    # Configurações básicas (locale, nix, Btrfs)
+│   │   │   └── impermanence.nix # Raiz tmpfs + diretórios persistentes (/persist)
+│   │   ├── desktop/
+│   │   │   └── desktop.nix   # GNOME, Flatpak, fontes, instalação automática de apps
+│   │   ├── hardware/
+│   │   │   └── printing.nix  # Impressora Epson ESC-P/R + ecbd.service
+│   │   ├── network/
+│   │   │   └── ssh.nix       # Servidor SSH
+│   │   ├── security/
+│   │   │   └── tpm2.nix      # TPM2 para desbloqueio automático do LUKS
+│   │   ├── shell/
+│   │   │   └── shells.nix    # Bash, Fish, Zsh (padrão: Zsh)
+│   │   ├── tools/
+│   │   │   ├── homebrew.nix  # Suporte ao Linuxbrew/Homebrew
+│   │   │   └── packages.nix  # Pacotes essenciais (Neovim, Helix, etc.)
+│   │   └── users/
+│   │       └── users.nix     # Configuração base de usuários
+│   └── user/                 # Módulos de usuário (Home Manager)
+│       └── apps/
+│           └── brave.nix     # Brave Browser via nixpkgs (alternativa ao Flatpak)
 ├── scripts/
-│   └── install.sh            # Script de instalação automatizada
+│   ├── install.sh            # Script de instalação automatizada
+│   ├── update.sh             # Atualizar flake inputs + nixos-rebuild switch
+│   ├── enroll-tpm2.sh        # Configurar desbloqueio LUKS via TPM2
+│   └── setup-secureboot.sh   # Configurar Secure Boot + assinar módulos (barbudus)
 ├── users/                    # Configurações de usuário (NÃO commitadas)
 │   └── skeleton.nix          # Template para criar novo usuário
 ├── .gitignore                # Ignorar arquivos sensíveis
@@ -157,11 +177,14 @@ sudo reboot
 ### Atualização
 
 ```bash
-# Atualizar flake inputs
-sudo nix flake update /etc/nixos
+# Atualizar flake inputs e rebuildar o sistema (recomendado):
+sudo bash scripts/update.sh
 
-# Rebuildar sistema
-sudo nixos-rebuild switch --flake /etc/nixos#barbudus
+# Apenas atualizar flake inputs (sem rebuild):
+sudo bash scripts/update.sh --update-only
+
+# Apenas rebuild (sem atualizar inputs):
+sudo bash scripts/update.sh --rebuild-only
 ```
 
 ### Rollback
@@ -198,16 +221,42 @@ sudo nixos-rebuild switch --rollback
 
 ## 📱 Instalando Flatpaks
 
-Com a configuração de polkit incluída, usuários do grupo `wheel` podem instalar Flatpaks system-wide sem senha:
+Os Flatpaks padrão do sistema são **instalados automaticamente** via um serviço
+systemd (`install-system-flatpaks`) na primeira inicialização, ou sempre que a
+lista de aplicativos for alterada. Não é necessária nenhuma ação manual.
+
+O repositório Flathub é configurado automaticamente. Os aplicativos instalados
+incluem: Brave Browser, Ptyxis (terminal), Bazaar (loja de apps), Papers (PDF),
+Mission Center (monitor), e muitos outros apps GNOME.
+
+Para instalar aplicativos adicionais manualmente:
 
 ```bash
-# Adicionar repositório Flathub
-flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+# Usuários do grupo 'wheel' podem instalar Flatpaks system-wide sem senha
+flatpak install flathub <app-id>
 
-# Instalar aplicativos recomendados
-flatpak install flathub org.gnome.Papers          # Visualizador de PDF
-flatpak install flathub app.devsuite.Ptyxis       # Terminal
-flatpak install flathub io.github.bazaar_cabinet.Bazaar  # Loja de apps
+# Exemplo:
+flatpak install flathub org.gimp.GIMP
+```
+
+## 🔒 Configuração Pós-Instalação
+
+### Secure Boot (apenas barbudus)
+
+Após o primeiro boot, com o Secure Boot **desativado** na UEFI (Setup Mode):
+
+```bash
+sudo bash scripts/setup-secureboot.sh
+```
+
+Em seguida, ative o Secure Boot na UEFI e reinicie.
+
+### Desbloqueio automático LUKS via TPM2
+
+Após o primeiro boot bem-sucedido:
+
+```bash
+sudo bash scripts/enroll-tpm2.sh
 ```
 
 ## 📚 Documentação

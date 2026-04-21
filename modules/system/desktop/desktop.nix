@@ -7,6 +7,7 @@ let
   # Ref: https://github.com/projectbluefin/common/blob/main/system_files/bluefin/usr/share/ublue-os/homebrew/system-flatpaks.Brewfile
   # Firefox e Thunderbird excluídos intencionalmente
   systemFlatpaks = [
+    "app.devsuite.Ptyxis" # Terminal — substitui GNOME Console (kgx)
     "com.brave.Browser"
     "com.github.PintaProject.Pinta"
     "com.github.tchx84.Flatseal"
@@ -74,17 +75,30 @@ in
   environment.gnome.excludePackages = with pkgs; [
     gnome-software # Substituído pelo Bazaar (Flatpak)
     gnome-tour
-    epiphany # Browser padrão do GNOME - usar Brave (Flatpak)
-    evince # PDF viewer - usar Papers (Flatpak)
-    gnome-terminal # Terminal - usar Ptyxis (Flatpak)
-    totem # Player de vídeo
-    cheese # Webcam app
+    epiphany # Browser padrão do GNOME — usar Brave (Flatpak)
+    evince # PDF viewer — usar Papers (Flatpak)
+    gnome-console # Terminal (kgx) — usar Ptyxis (Flatpak)
+    gnome-terminal # Terminal legado — usar Ptyxis (Flatpak)
+    totem # Player de vídeo — usar Showtime (Flatpak)
+    cheese # Webcam app — usar Snapshot (Flatpak)
+    snapshot # Câmera — usar Snapshot (Flatpak)
+    loupe # Visualizador de imagens — usar Loupe (Flatpak)
     gnome-music
-    gnome-maps
-    gnome-weather
-    gnome-contacts
-    gnome-calendar
-    gnome-clocks
+    gnome-maps # Substituído pelo Maps (Flatpak)
+    gnome-weather # Substituído pelo Weather (Flatpak)
+    gnome-contacts # Substituído pelo Contacts (Flatpak)
+    gnome-calendar # Substituído pelo Calendar (Flatpak)
+    gnome-clocks # Substituído pelo Clocks (Flatpak)
+    gnome-calculator # Substituído pelo Calculator (Flatpak)
+    gnome-characters # Substituído pelo Characters (Flatpak)
+    gnome-connections # Substituído pelo Connections (Flatpak)
+    gnome-logs # Substituído pelo Logs (Flatpak)
+    gnome-system-monitor # Substituído pelo Mission Center (Flatpak)
+    gnome-text-editor # Substituído pelo Text Editor (Flatpak)
+    gnome-font-viewer # Substituído pelo Font Viewer (Flatpak)
+    gnome-sound-recorder # Substituído pelo Sound Recorder (Flatpak)
+    simple-scan # Substituído pelo Simple Scan (Flatpak)
+    baobab # Analisador de disco — usar Baobab (Flatpak)
   ];
 
   # Regra Polkit para permitir instalação de Flatpaks system-wide sem senha
