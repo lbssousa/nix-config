@@ -226,8 +226,8 @@ systemd (`install-system-flatpaks`) na primeira inicialização, ou sempre que a
 lista de aplicativos for alterada. Não é necessária nenhuma ação manual.
 
 O repositório Flathub é configurado automaticamente. Os aplicativos instalados
-incluem: Brave Browser, Ptyxis (terminal), Bazaar (loja de apps), Papers (PDF),
-Mission Center (monitor), e muitos outros apps GNOME.
+incluem: Bazaar (loja de apps), Papers (PDF), Mission Center (monitor), e muitos
+outros apps GNOME. Brave Browser e Ptyxis são instalados via Nix.
 
 Para instalar aplicativos adicionais manualmente:
 
