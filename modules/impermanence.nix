@@ -1,25 +1,38 @@
-# Módulo de impermanência: Sistema efêmero com ZFS rollback
+# Módulo de impermanência: Sistema efêmero com Btrfs rollback
 # A raiz (/) é limpa a cada boot; dados importantes são preservados em /persist
 { pkgs, ... }:
 
 {
-  # Rollback do dataset raiz para o snapshot @blank a cada boot
+  # Rollback do subvolume raiz (@) para o snapshot @blank a cada boot
   # Executado no initrd, antes de montar /sysroot
-  # NOTA: O nome do pool ZFS está hardcoded como "rpool" para corresponder ao disko.nix
-  # Se alterar poolName em disko.nix, atualize também o nome aqui
+  # O rollback consiste em:
+  #   1. Montar o volume Btrfs bruto (sem subvolume) em /btrfs_tmp
+  #   2. Deletar o subvolume @ atual
+  #   3. Criar um novo @ a partir do snapshot somente-leitura @blank
+  #   4. Desmontar /btrfs_tmp
+  # O snapshot @blank é criado durante a instalação (ver scripts/install.sh, passo 4)
   boot.initrd.systemd.enable = true;
+  boot.initrd.supportedFilesystems = [ "btrfs" ];
   boot.initrd.systemd.services.rollback = {
-    description = "Rollback ZFS root dataset to blank snapshot";
+    description = "Rollback Btrfs root subvolume to blank snapshot";
     wantedBy = [ "initrd.target" ];
-    after = [ "zfs-import-rpool.service" ];
+    after = [ "systemd-cryptsetup@crypted.service" ];
     before = [ "sysroot.mount" ];
-    path = [ pkgs.zfs ];
+    path = [ pkgs.btrfs-progs ];
     unitConfig.DefaultDependencies = "no";
     serviceConfig = {
       Type = "oneshot";
     };
     script = ''
-      zfs rollback -r rpool/local/root@blank
+      mkdir -p /btrfs_tmp
+      mount -t btrfs -o subvol=/ /dev/root_vg/root /btrfs_tmp
+
+      if [[ -e /btrfs_tmp/@ ]]; then
+        btrfs subvolume delete /btrfs_tmp/@
+      fi
+      btrfs subvolume snapshot /btrfs_tmp/@blank /btrfs_tmp/@
+
+      umount /btrfs_tmp
     '';
   };
 

@@ -1,5 +1,5 @@
 {
-  description = "NixOS configuration with ZFS, impermanence, GNOME, and hybrid swap";
+  description = "NixOS configuration with Btrfs, impermanence, GNOME, and hybrid swap";
 
   # Cache binário da comunidade Nix — disponibiliza artefatos pré-compilados do lanzaboote
   # e outros pacotes da nix-community, evitando compilações do zero (e downloads de crates.io).

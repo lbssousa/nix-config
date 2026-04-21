@@ -10,7 +10,7 @@ Propiciar uma experiência de uso similar à do Fedora Silverblue ou do projeto 
 - Uso massivo de Flatpaks para aplicações GUI
 - Aplicativos CLI instalados via Homebrew (Linuxbrew)
 - Sistema efêmero (impermanence) com raiz limpa a cada boot
-- Dados importantes preservados em datasets ZFS dedicados
+- Dados importantes preservados em subvolumes Btrfs dedicados
 
 ## Particionamento de Disco
 
@@ -19,7 +19,7 @@ Propiciar uma experiência de uso similar à do Fedora Silverblue ou do projeto 
 - Suporte a UEFI
 - Criptografia completa do disco via LUKS + LVM
 - Particionamento declarativo via nix-community/disko
-- Sistema de arquivos ZFS para a partição principal
+- Sistema de arquivos Btrfs para a partição principal
 - Swap híbrida: zram (performance) + swap em disco (hibernação)
 - Sistema efêmero via nix-community/impermanence
 
@@ -33,28 +33,34 @@ Disco (ex: /dev/nvme0n1)
     └── LVM VG: root_vg
         ├── LV swap: 20 GB
         │   └── Swap (para hibernação)
-        └── LV zpool: 100%FREE
-            └── ZFS Pool: rpool
+        └── LV root: 100%FREE
+            └── Btrfs
 ```
 
-### Datasets ZFS
+### Subvolumes Btrfs
 
-| Dataset | Mountpoint | Características |
-|---------|-----------|-----------------|
-| `rpool/local/root` | `/` | Efêmero - limpo a cada boot (rollback para @blank) |
-| `rpool/local/nix` | `/nix` | Preservado - Nix store (essencial) |
-| `rpool/local/log` | `/var/log` | Preservado - logs do sistema (compressão off) |
-| `rpool/local/containers` | `/var/lib/containers` | Preservado - dados de containers |
-| `rpool/safe/home` | `/home` | Preservado - diretórios de usuário |
-| `rpool/safe/persist` | `/persist` | Preservado - dados persistentes do sistema |
-| `rpool/safe/flatpak` | `/var/lib/flatpak` | Preservado - aplicações Flatpak |
+A convenção `@` é compatível com ferramentas como Timeshift e amplamente adotada pela comunidade.
 
-**Configurações ZFS globais:**
-- `compression = zstd` (exceto log: off)
-- `atime = off` (equivalente a noatime)
-- `xattr = sa` (performance)
-- `dnodesize = auto` (performance)
-- `normalization = formD` (compatibilidade Unicode)
+| Subvolume | Mountpoint | Características |
+|-----------|-----------|-----------------|
+| `@` | `/` | Efêmero — limpo a cada boot (rollback para @blank) |
+| `@home` | `/home` | Preservado — diretórios de usuário |
+| `@nix` | `/nix` | Preservado — Nix store (essencial) |
+| `@persist` | `/persist` | Preservado — dados persistentes do sistema (impermanence) |
+| `@log` | `/var/log` | Preservado — logs do sistema (compressão off) |
+| `@containers` | `/var/lib/containers` | Preservado — dados de containers |
+| `@flatpak` | `/var/lib/flatpak` | Preservado — aplicações Flatpak |
+| `@snapshots` | `/.snapshots` | Preservado — snapshots Btrfs para backup |
+
+**Opções de montagem globais:**
+- `compress=zstd` (exceto `@log`: sem compressão)
+- `noatime` (equivalente a relatime desabilitado)
+
+**Impermanence — estratégia de rollback:**
+1. No boot, o initrd monta o volume Btrfs bruto em `/btrfs_tmp`
+2. Deleta o subvolume `@` atual
+3. Cria um novo `@` como cópia do snapshot somente-leitura `@blank`
+4. Desmonta `/btrfs_tmp` e o boot continua normalmente
 
 ### Swap Híbrida
 
@@ -195,10 +201,11 @@ flatpak install flathub io.github.bazaar_cabinet.Bazaar  # App store
 
 ### Como Funciona
 
-1. O dataset ZFS `rpool/local/root` contém a raiz do sistema
-2. No boot, antes de montar `/`, o initrd faz rollback para o snapshot `@blank`
-3. Isso garante que a raiz está sempre "limpa" (como na instalação inicial)
-4. Arquivos e diretórios importantes são preservados via bind mounts de `/persist`
+1. O subvolume Btrfs `@` contém a raiz do sistema
+2. No boot, antes de montar `/`, o initrd monta o volume Btrfs bruto
+3. Deleta o subvolume `@` e cria um novo a partir do snapshot `@blank`
+4. Isso garante que a raiz está sempre "limpa" (como na instalação inicial)
+5. Arquivos e diretórios importantes são preservados via bind mounts de `/persist`
 
 ### Dados Preservados Automaticamente (Sistema)
 
@@ -263,6 +270,7 @@ flatpak install flathub io.github.bazaar_cabinet.Bazaar  # App store
 - [Erase Your Darlings](https://grahamc.com/blog/erase-your-darlings/)
 - [NixOS Impermanence](https://github.com/nix-community/impermanence)
 - [Disko](https://github.com/nix-community/disko)
-- [ZFS on NixOS](https://nixos.wiki/wiki/ZFS)
+- [Btrfs on NixOS](https://nixos.wiki/wiki/Btrfs)
+- [Arch Wiki — Btrfs](https://wiki.archlinux.org/title/Btrfs)
 - [Lanzaboote](https://github.com/nix-community/lanzaboote)
 - [Repositório antigo](https://github.com/lbssousa/nixos-config-old)
