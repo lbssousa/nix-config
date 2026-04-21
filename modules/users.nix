@@ -50,7 +50,8 @@ in
       in
       ''
         if [ ! -f ${flagFile} ]; then
-          ${pkgs.shadow}/bin/chage -d 0 ${escapedUser} && touch ${flagFile} \
+          touch ${flagFile}
+          ${pkgs.shadow}/bin/chage -d 0 ${escapedUser} \
             || echo "forceInitialPasswordChange: chage failed for ${escapedUser}" >&2
         fi
       ''
