@@ -321,7 +321,7 @@ sudo cp -p /mnt/etc/shadow /mnt/persist/etc/shadow
 
 # Criar arquivos de flag para evitar a troca forçada no primeiro login
 # (apenas para usuários que já definiram sua senha acima)
-sudo touch /mnt/persist/.password-change-required-seu-usuario
+sudo touch /mnt/persist/.password-change-required-<seu-usuario>
 ```
 
 > **Nota:** Se as senhas forem definidas via `nixos-enter` sem copiar o shadow para `/persist`, elas serão perdidas após o primeiro reboot (o sistema ZFS reverte `/` para o snapshot `@blank`). Os usuários receberão a senha temporária `nixos` e serão solicitados a trocá-la.
