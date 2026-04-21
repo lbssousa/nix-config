@@ -114,9 +114,15 @@ loadkeys br-abnt2
 sudo systemctl start sshd
 passwd  # Definir senha temporária para o live environment
 
-# Habilitar Flakes temporariamente
+# Habilitar Flakes e o cache nix-community temporariamente.
+# O cache evita compilar dependências do zero (ex: Rust do lanzaboote)
+# e falhas de download do crates.io.
 mkdir -p ~/.config/nix
-echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
+cat >> ~/.config/nix/nix.conf <<EOF
+experimental-features = nix-command flakes
+extra-substituters = https://nix-community.cachix.org
+extra-trusted-public-keys = nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCUSeBs=
+EOF
 ```
 
 ### 2. Clonar o repositório
@@ -262,7 +268,12 @@ Descomente (ou adicione) as linhas de importação dos usuários em `hosts/$HOST
 sudo cp -r /tmp/nixos-config /mnt/etc/nixos
 
 # Instalar o sistema
-sudo nixos-install --flake /mnt/etc/nixos#$HOST
+# Os flags --option passam o cache nix-community explicitamente, tornando a
+# instalação resiliente a falhas de download do crates.io (ex: lanzaboote/Rust).
+sudo nixos-install \
+  --flake /mnt/etc/nixos#$HOST \
+  --option extra-substituters "https://nix-community.cachix.org" \
+  --option extra-trusted-public-keys "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCUSeBs="
 ```
 
 Durante a instalação será solicitado:
