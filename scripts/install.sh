@@ -68,7 +68,7 @@ require_cmd() {
 
 if [[ $EUID -ne 0 ]]; then
   info "Este script deve ser executado como root. Reexecutando com sudo..."
-  exec sudo bash "${BASH_SOURCE[0]}" "$@"
+  exec sudo -E bash "${BASH_SOURCE[0]}" "$@"
 fi
 
 # ---------------------------------------------------------------------------
@@ -244,7 +244,7 @@ _configure_nix_conf() {
 }
 
 if mkdir -p "$(dirname "$NIX_CONF_GLOBAL")" 2>/dev/null && \
-   touch "$NIX_CONF_GLOBAL" 2>/dev/null; then
+   { [[ -w "$NIX_CONF_GLOBAL" ]] || { [[ ! -e "$NIX_CONF_GLOBAL" ]] && [[ -w "$(dirname "$NIX_CONF_GLOBAL")" ]]; }; }; then
   _configure_nix_conf "$NIX_CONF_GLOBAL"
 else
   warn "/etc/nix é somente leitura (Live CD). Usando $NIX_CONF_USER como fallback."
