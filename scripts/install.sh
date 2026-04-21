@@ -534,6 +534,39 @@ git add "$CFG_FILE" "$HW_FILE" "$DISKO_FILE"
 success "Arquivos de configuração registrados no índice do git."
 
 # ---------------------------------------------------------------------------
+# 7a. Criar chaves Secure Boot (apenas para hosts com Lanzaboote)
+# ---------------------------------------------------------------------------
+
+echo
+info "==> Passo 7a: Verificar suporte a Secure Boot (Lanzaboote)"
+
+if grep -q 'boot\.lanzaboote' "$CFG_FILE" 2>/dev/null; then
+  # Extrair o caminho do pkiBundle da configuração (ou usar padrão)
+  _PKI_BUNDLE=$(sed -n 's/.*pkiBundle = "\([^"]*\)".*/\1/p' "$CFG_FILE" | head -1)
+  _PKI_BUNDLE="${_PKI_BUNDLE:-/persist/etc/secureboot}"
+  _SECUREBOOT_DIR="/mnt${_PKI_BUNDLE}"
+
+  info "Host '$HOST' usa Lanzaboote (Secure Boot). pkiBundle: $_PKI_BUNDLE"
+
+  if [ -f "${_SECUREBOOT_DIR}/GUID" ]; then
+    info "Chaves Secure Boot já existem em ${_SECUREBOOT_DIR}."
+  else
+    info "Criando chaves PKI para Secure Boot em ${_SECUREBOOT_DIR}..."
+    info "(Necessário para que o Lanzaboote instale o bootloader durante nixos-install)"
+    sudo mkdir -p "${_SECUREBOOT_DIR}"
+    sudo nix run \
+      --option extra-substituters "$NIX_COMMUNITY_SUBSTITUTER" \
+      --option extra-trusted-public-keys "$NIX_COMMUNITY_KEY" \
+      nixpkgs#sbctl -- create-keys --database-path "${_SECUREBOOT_DIR}"
+    success "Chaves Secure Boot criadas em ${_SECUREBOOT_DIR}."
+    warn "As chaves ainda precisam ser registradas no firmware após o primeiro boot."
+    warn "Consulte INSTALLATION.md → 'Configuração do Secure Boot' para os próximos passos."
+  fi
+else
+  info "Host '$HOST' não usa Lanzaboote. Pulando criação de chaves Secure Boot."
+fi
+
+# ---------------------------------------------------------------------------
 # 8. Instalar o NixOS
 # ---------------------------------------------------------------------------
 
@@ -578,20 +611,52 @@ fi
 
 echo
 info "==> Passo 9: Definir senhas"
+info "Com impermanência (ZFS rollback), /etc/shadow precisa ser salvo em"
+info "/persist/etc/shadow para sobreviver ao rollback do primeiro boot."
 
-if confirm "Definir senhas para os usuários criados agora (via nixos-enter)?"; then
+_USERS_WITH_PASSWORD=()
+# Padrão de nome de usuário seguro para uso em nomes de arquivo
+_SAFE_USERNAME='^[a-z_][a-z0-9_-]*$'
+
+if confirm "Definir senhas personalizadas para os usuários criados agora (via nixos-enter)?"; then
   for _i in "${!USERS_LOGIN[@]}"; do
     _user="${USERS_LOGIN[$_i]}"
     info "Definindo senha para '$_user'..."
     sudo nixos-enter --root /mnt -- passwd "$_user"
     success "Senha do usuário '$_user' definida."
+    # Registrar apenas nomes de usuário com caracteres seguros para nomes de arquivo
+    if [[ "$_user" =~ $_SAFE_USERNAME ]]; then
+      _USERS_WITH_PASSWORD+=("$_user")
+    fi
   done
+else
+  info "Senhas não definidas agora. No primeiro login, os usuários usarão a senha"
+  info "temporária 'nixos' (via initialPassword) e serão solicitados a trocá-la."
 fi
 
 if confirm "Definir senha do root também?"; then
   sudo nixos-enter --root /mnt -- passwd root
   success "Senha do root definida."
 fi
+
+# Copiar /etc/shadow para /persist/etc/shadow para que as senhas sobrevivam
+# ao rollback ZFS. Sem isso, as senhas são perdidas no primeiro reboot.
+# Usar `install` para definir permissões 640 atomicamente (sem janela de acesso).
+if [ -s /mnt/etc/shadow ]; then
+  sudo mkdir -p /mnt/persist/etc
+  sudo install -m 640 /mnt/etc/shadow /mnt/persist/etc/shadow
+  success "/etc/shadow copiado para /persist/etc/shadow (persiste entre boots)."
+else
+  warn "/mnt/etc/shadow não encontrado ou vazio; pulando cópia para /persist."
+fi
+
+# Criar arquivos de flag para usuários que já definiram senha durante a instalação.
+# Isso evita que o sistema force a troca de senha no primeiro login para esses usuários
+# (a troca forçada via chage é para usuários com a senha temporária 'nixos').
+for _user in "${_USERS_WITH_PASSWORD[@]}"; do
+  sudo touch "/mnt/persist/.password-change-required-${_user}"
+  info "Usuário '$_user': senha pré-definida — troca não será forçada no primeiro login."
+done
 
 # ---------------------------------------------------------------------------
 # 10. Finalizar
