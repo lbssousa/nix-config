@@ -5,13 +5,8 @@ _:
   # Permitir pacotes proprietários (necessário para drivers NVIDIA, etc.)
   nixpkgs.config.allowUnfree = true;
 
-  # Suporte ao ZFS
-  boot.supportedFilesystems = [ "zfs" ];
-  boot.zfs.forceImportRoot = false;
-
-  # ID único do host para ZFS (deve ser único na rede)
-  # Gere com: head -c 8 /dev/urandom | od -A n -t x1 | tr -d ' \n'
-  # networking.hostId é definido em cada host
+  # Suporte ao Btrfs (garante ferramentas e módulo de kernel disponíveis)
+  boot.supportedFilesystems = [ "btrfs" ];
 
   # Rede
   networking.networkmanager.enable = true;
@@ -63,13 +58,6 @@ _:
       dates = "weekly";
       options = "--delete-older-than 30d";
     };
-  };
-
-  # Serviços ZFS
-  services.zfs = {
-    autoScrub.enable = true;
-    autoScrub.interval = "monthly";
-    trim.enable = true;
   };
 
   # Versão do estado do sistema

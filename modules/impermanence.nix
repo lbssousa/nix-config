@@ -1,28 +1,10 @@
-# Módulo de impermanência: Sistema efêmero com ZFS rollback
-# A raiz (/) é limpa a cada boot; dados importantes são preservados em /persist
-{ pkgs, ... }:
+# Módulo de impermanência: Sistema efêmero com tmpfs na raiz
+# A raiz (/) é um tmpfs — limpa automaticamente a cada boot sem necessidade
+# de rollback ou snapshot. Dados importantes são preservados em /persist via
+# bind mounts gerenciados pelo módulo nix-community/impermanence.
+_:
 
 {
-  # Rollback do dataset raiz para o snapshot @blank a cada boot
-  # Executado no initrd, antes de montar /sysroot
-  # NOTA: O nome do pool ZFS está hardcoded como "rpool" para corresponder ao disko.nix
-  # Se alterar poolName em disko.nix, atualize também o nome aqui
-  boot.initrd.systemd.enable = true;
-  boot.initrd.systemd.services.rollback = {
-    description = "Rollback ZFS root dataset to blank snapshot";
-    wantedBy = [ "initrd.target" ];
-    after = [ "zfs-import-rpool.service" ];
-    before = [ "sysroot.mount" ];
-    path = [ pkgs.zfs ];
-    unitConfig.DefaultDependencies = "no";
-    serviceConfig = {
-      Type = "oneshot";
-    };
-    script = ''
-      zfs rollback -r rpool/local/root@blank
-    '';
-  };
-
   # Marcar /persist e /home como necessários no boot (impermanence depende disso)
   fileSystems = {
     "/persist".neededForBoot = true;

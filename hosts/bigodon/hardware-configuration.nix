@@ -30,9 +30,6 @@
     extraModulePackages = [ ];
   };
 
-  # ID único do host para ZFS (gerado com: head -c 8 /dev/urandom | od -A n -t x1 | tr -d ' \n')
-  networking.hostId = "b9c4d5e6"; # ALTERE para um valor único gerado no seu sistema
-
   # Microcode Intel
   hardware.cpu.intel.updateMicrocode = true;
 

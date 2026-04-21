@@ -1,9 +1,10 @@
-# Template base de particionamento para ZFS com LUKS + LVM
+# Template base de particionamento para Btrfs com LUKS + LVM
+# A raiz (/) usa tmpfs (sempre limpa a cada boot — sem necessidade de snapshot/rollback)
+# Os demais filesystems usam subvolumes Btrfs (dados persistentes)
 # Utilizado pelos hosts via: import ../../disko.nix { inherit lib; device = "..."; swapSize = "..."; }
 {
   device ? throw "Defina o dispositivo de disco, ex: /dev/nvme0n1",
   swapSize ? "20G",
-  poolName ? "rpool",
   lib,
   ...
 }:
@@ -12,6 +13,17 @@ let
 in
 {
   disko.devices = {
+    # Raiz efêmera: tmpfs — limpa automaticamente a cada boot, sem rollback necessário
+    # O impermanence preserva arquivos importantes via bind mounts de /persist
+    nodev."/" = {
+      fsType = "tmpfs";
+      mountOptions = [
+        "defaults"
+        "size=50%" # 50% da RAM; ajuste conforme necessário
+        "mode=755"
+      ];
+    };
+
     disk.main = {
       inherit device;
       type = "disk";
@@ -43,7 +55,7 @@ in
               settings = {
                 allowDiscards = true;
               };
-              # Dentro do LUKS, usa LVM para swap + pool ZFS
+              # Dentro do LUKS, usa LVM para swap + volume Btrfs
               content = {
                 type = "lvm_pv";
                 vg = "root_vg";
@@ -68,107 +80,79 @@ in
             };
           };
         })
-        # Volume lógico para o pool ZFS
+        # Volume lógico para o sistema de arquivos Btrfs
         {
-          zpool = {
+          root = {
             size = "100%FREE";
             content = {
-              type = "zfs";
-              pool = poolName;
+              type = "btrfs";
+              extraArgs = [ "-f" ]; # Forçar criação (sobrescreve fs existente se necessário)
+
+              subvolumes = {
+                # Diretórios de usuário — preservados entre boots
+                "@home" = {
+                  mountpoint = "/home";
+                  mountOptions = [
+                    "compress=zstd"
+                    "noatime"
+                  ];
+                };
+
+                # Nix store — preservado (essencial para o sistema funcionar)
+                "@nix" = {
+                  mountpoint = "/nix";
+                  mountOptions = [
+                    "compress=zstd"
+                    "noatime"
+                  ];
+                };
+
+                # Dados persistentes do sistema — usados pelo módulo impermanence
+                "@persist" = {
+                  mountpoint = "/persist";
+                  mountOptions = [
+                    "compress=zstd"
+                    "noatime"
+                  ];
+                };
+
+                # Logs do sistema — sem compressão (logs já são comprimidos internamente)
+                "@log" = {
+                  mountpoint = "/var/log";
+                  mountOptions = [ "noatime" ];
+                };
+
+                # Dados de containers (Podman, Docker, etc.) — preservados
+                "@containers" = {
+                  mountpoint = "/var/lib/containers";
+                  mountOptions = [
+                    "compress=zstd"
+                    "noatime"
+                  ];
+                };
+
+                # Aplicações Flatpak — preservadas entre boots
+                "@flatpak" = {
+                  mountpoint = "/var/lib/flatpak";
+                  mountOptions = [
+                    "compress=zstd"
+                    "noatime"
+                  ];
+                };
+
+                # Snapshots Btrfs — para backups futuros (snapper, timeshift, etc.)
+                "@snapshots" = {
+                  mountpoint = "/.snapshots";
+                  mountOptions = [
+                    "compress=zstd"
+                    "noatime"
+                  ];
+                };
+              };
             };
           };
         }
       ];
-    };
-
-    # Pool ZFS com datasets organizados em local (reconstruível) e safe (preservado)
-    zpool.${poolName} = {
-      type = "zpool";
-      rootFsOptions = {
-        compression = "zstd";
-        atime = "off";
-        xattr = "sa";
-        dnodesize = "auto";
-        normalization = "formD";
-        "com.sun:auto-snapshot" = "false";
-      };
-      options = {
-        ashift = "12";
-        autotrim = "on";
-      };
-
-      datasets = {
-        # --- Datasets locais (podem ser reconstruídos) ---
-
-        "local" = {
-          type = "zfs_fs";
-          options.mountpoint = "none";
-        };
-
-        # Raiz efêmera - limpa a cada boot via rollback para @blank snapshot
-        "local/root" = {
-          type = "zfs_fs";
-          mountpoint = "/";
-          options.mountpoint = "legacy";
-          # Cria snapshot vazio imediatamente após a criação do dataset
-          postCreateHook = "zfs snapshot ${poolName}/local/root@blank";
-        };
-
-        # Nix store - preservado (essencial para o sistema funcionar)
-        "local/nix" = {
-          type = "zfs_fs";
-          mountpoint = "/nix";
-          options.mountpoint = "legacy";
-        };
-
-        # Logs do sistema - preservados, compressão desabilitada (logs já são comprimidos)
-        "local/log" = {
-          type = "zfs_fs";
-          mountpoint = "/var/log";
-          options = {
-            mountpoint = "legacy";
-            compression = "off";
-          };
-        };
-
-        # Dados de containers (Podman, Docker, etc.) - preservados
-        "local/containers" = {
-          type = "zfs_fs";
-          mountpoint = "/var/lib/containers";
-          options.mountpoint = "legacy";
-        };
-
-        # --- Datasets seguros (devem ser preservados/backupeados) ---
-
-        "safe" = {
-          type = "zfs_fs";
-          options = {
-            mountpoint = "none";
-            "com.sun:auto-snapshot" = "true";
-          };
-        };
-
-        # Diretórios de usuário - preservados entre boots
-        "safe/home" = {
-          type = "zfs_fs";
-          mountpoint = "/home";
-          options.mountpoint = "legacy";
-        };
-
-        # Dados persistentes do sistema - usados pelo módulo impermanence
-        "safe/persist" = {
-          type = "zfs_fs";
-          mountpoint = "/persist";
-          options.mountpoint = "legacy";
-        };
-
-        # Aplicações Flatpak - preservadas entre boots
-        "safe/flatpak" = {
-          type = "zfs_fs";
-          mountpoint = "/var/lib/flatpak";
-          options.mountpoint = "legacy";
-        };
-      };
     };
   };
 }
