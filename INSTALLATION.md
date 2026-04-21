@@ -96,8 +96,9 @@ bash scripts/install.sh --host bigodon --disk /dev/sda
 6. Cria arquivos de usuário a partir do skeleton
 7. Adiciona os arquivos de usuário ao índice do git (`git add --force`)
 8. Atualiza `configuration.nix` com os imports dos usuários
-9. Copia a configuração para `/mnt/etc/nixos` e executa `nixos-install`
-10. Define senhas via `nixos-enter`
+9. Cria chaves Secure Boot em `/persist/etc/secureboot` (apenas hosts com Lanzaboote)
+10. Copia a configuração para `/mnt/etc/nixos` e executa `nixos-install`
+11. Define senhas via `nixos-enter` e copia `/etc/shadow` para `/persist`
 
 ### Instalação Manual (passo a passo)
 
@@ -266,6 +267,16 @@ Descomente (ou adicione) as linhas de importação dos usuários em `hosts/$HOST
 
 ### 9. Instalar o NixOS
 
+> **Apenas para `barbudus` (usa Lanzaboote):** crie as chaves Secure Boot *antes* do `nixos-install`. Sem isso, o instalador falha com `Failed to install bootloader`.
+>
+> ```bash
+> sudo mkdir -p /mnt/persist/etc/secureboot
+> sudo nix run \
+>   --option extra-substituters "https://nix-community.cachix.org" \
+>   --option extra-trusted-public-keys "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCUSeBs=" \
+>   nixpkgs#sbctl -- create-keys --database-path /mnt/persist/etc/secureboot
+> ```
+
 ```bash
 # Copiar a configuração para /mnt
 sudo cp -r /tmp/nixos-config /mnt/etc/nixos
@@ -287,6 +298,10 @@ Durante a instalação será solicitado:
 
 ### 10. Configurar senhas
 
+Os usuários criados com `initialPassword = "nixos"` (padrão do skeleton) **serão solicitados a criar sua própria senha no primeiro login**. Não é necessário definir senhas manualmente.
+
+Se preferir definir senhas personalizadas durante a instalação, copie o shadow para `/persist` para que sobreviva ao rollback ZFS do primeiro boot:
+
 ```bash
 # Entrar no sistema recém-instalado
 sudo nixos-enter --root /mnt
@@ -299,7 +314,17 @@ passwd outro-usuario  # se houver mais de um
 passwd root
 
 exit
+
+# IMPORTANTE: copiar shadow para /persist (persiste entre boots via impermanência)
+sudo mkdir -p /mnt/persist/etc
+sudo cp -p /mnt/etc/shadow /mnt/persist/etc/shadow
+
+# Criar arquivos de flag para evitar a troca forçada no primeiro login
+# (apenas para usuários que já definiram sua senha acima)
+sudo touch /mnt/persist/.password-change-required-<seu-usuario>
 ```
+
+> **Nota:** Se as senhas forem definidas via `nixos-enter` sem copiar o shadow para `/persist`, elas serão perdidas após o primeiro reboot (o sistema ZFS reverte `/` para o snapshot `@blank`). Os usuários receberão a senha temporária `nixos` e serão solicitados a trocá-la.
 
 ### 11. Finalizar instalação
 
@@ -312,7 +337,8 @@ sudo reboot
 ## 🔐 Primeiro Boot
 
 1. **Desbloqueio LUKS**: Digite a senha de criptografia definida durante o disko
-2. **Login**: Use o usuário criado e a senha definida com `passwd`
+2. **Login**: Use o usuário criado com a senha definida durante a instalação.
+   Se nenhuma senha foi definida, use a senha temporária **`nixos`** — o sistema solicitará que você a troque imediatamente.
 3. **Configurar Flatpaks**:
    ```bash
    flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
@@ -328,29 +354,31 @@ sudo reboot
 
 ## 🔒 Configuração do Secure Boot (apenas barbudus)
 
-Para habilitar o Secure Boot com NVIDIA no barbudus, siga estes passos **antes** de habilitar o Secure Boot na BIOS:
+As chaves PKI do Lanzaboote são criadas automaticamente durante a instalação (passo 9 do script ou manualmente antes do `nixos-install`). O que resta fazer após o primeiro boot é **registrar as chaves no firmware UEFI**:
 
 ```bash
-# 1. Entrar no sistema normalmente (Secure Boot desabilitado)
+# 1. Entrar no sistema normalmente (Secure Boot desabilitado na BIOS)
 
-# 2. Inicializar o bundle PKI do lanzaboote
-sudo sbctl create-keys
+# 2. Verificar as chaves geradas durante a instalação
+sudo sbctl status
 
-# 3. Verificar o status
+# 3. Registrar as chaves no firmware UEFI
+# --microsoft inclui as chaves de terceiros Microsoft (necessário para NVIDIA e outros drivers)
+sudo sbctl enroll-keys --microsoft
+
+# 4. Verificar quais binários precisam ser assinados
 sudo sbctl verify
 
-# 4. Assinar os binários do boot
+# 5. Assinar os binários não assinados
 sudo sbctl sign-all
 
-# 5. Verificar a assinatura
-sudo sbctl verify
-
-# 6. Habilitar Secure Boot na BIOS/UEFI
-# Entre na BIOS, habilite o Secure Boot e adicione suas chaves
-
-# 7. Rebuildar o sistema
+# 6. Rebuildar para garantir que os binários mais recentes estão assinados
 sudo nixos-rebuild switch --flake /etc/nixos#barbudus
+
+# 7. Habilitar Secure Boot na BIOS/UEFI e reiniciar
 ```
+
+> **Nota:** Se as chaves não existirem em `/persist/etc/secureboot` (instalação manual sem o passo de sbctl), crie-as com `sudo sbctl create-keys` antes de prosseguir.
 
 ## 🔑 Desbloqueio Automático LUKS via TPM2
 

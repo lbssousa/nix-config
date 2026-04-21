@@ -1,8 +1,17 @@
 # Módulo de usuários: Esqueleto para definição de usuários
 # Os arquivos reais de usuário ficam em users/ e são ignorados pelo git
 # Consulte users/skeleton.nix para criar seu arquivo de usuário
-_:
+{ config, lib, pkgs, ... }:
 
+let
+  # Usuários normais com senha inicial declarada (initialPassword ou initialHashedPassword).
+  # Para esses usuários o sistema força a troca de senha no primeiro login,
+  # usando um arquivo de flag em /persist para que a exigência ocorra apenas uma vez.
+  usersWithInitialPassword = lib.filterAttrs (
+    _name: user:
+    user.isNormalUser && (user.initialPassword != null || user.initialHashedPassword != null)
+  ) config.users.users;
+in
 {
   # Habilitar Zsh globalmente (necessário para usar como shell de usuário)
   programs.zsh.enable = true;
@@ -26,5 +35,26 @@ _:
     video = { }; # Acesso à GPU
     audio = { }; # Acesso ao áudio
     docker = { }; # Compatibilidade com Docker (Podman)
+  };
+
+  # Força a troca de senha no primeiro login para usuários com initialPassword/initialHashedPassword.
+  # Usa um arquivo de flag em /persist para que a troca seja exigida apenas uma vez.
+  # Para redefinir: apague /persist/.password-change-required-<usuario>.
+  system.activationScripts.forceInitialPasswordChange = {
+    deps = [ "users" ];
+    text = lib.concatMapStrings (
+      username:
+      let
+        flagFile = lib.escapeShellArg "/persist/.password-change-required-${username}";
+        escapedUser = lib.escapeShellArg username;
+      in
+      ''
+        if [ ! -f ${flagFile} ]; then
+          touch ${flagFile}
+          ${pkgs.shadow}/bin/chage -d 0 ${escapedUser} \
+            || echo "forceInitialPasswordChange: chage failed for ${escapedUser}" >&2
+        fi
+      ''
+    ) (lib.attrNames usersWithInitialPassword);
   };
 }
