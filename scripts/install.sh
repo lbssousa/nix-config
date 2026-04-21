@@ -63,6 +63,15 @@ require_cmd() {
 }
 
 # ---------------------------------------------------------------------------
+# Garantir execução como root
+# ---------------------------------------------------------------------------
+
+if [[ $EUID -ne 0 ]]; then
+  info "Este script deve ser executado como root. Reexecutando com sudo..."
+  exec sudo -E bash "${BASH_SOURCE[0]}" "$@"
+fi
+
+# ---------------------------------------------------------------------------
 # Constantes de cache binário
 # ---------------------------------------------------------------------------
 # O cache da nix-community disponibiliza artefatos pré-compilados do lanzaboote
@@ -204,72 +213,43 @@ require_cmd nix
 require_cmd lsblk
 require_cmd sed
 
-# Habilitar Flakes no ambiente live (idempotente)
-# Escreve na configuração do usuário atual
-NIX_CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/nix"
-mkdir -p "$NIX_CONF_DIR"
-if ! grep -q "experimental-features" "$NIX_CONF_DIR/nix.conf" 2>/dev/null; then
-  echo "experimental-features = nix-command flakes" >> "$NIX_CONF_DIR/nix.conf"
-  success "Flakes habilitados em $NIX_CONF_DIR/nix.conf"
-else
-  info "Flakes já estão habilitados (usuário atual)."
-fi
-# Adicionar o cache nix-community ao nix.conf do usuário atual (idempotente)
-if ! grep -qF "$NIX_COMMUNITY_KEY" "$NIX_CONF_DIR/nix.conf" 2>/dev/null; then
-  {
-    echo "extra-substituters = $NIX_COMMUNITY_SUBSTITUTER"
-    echo "extra-trusted-public-keys = $NIX_COMMUNITY_KEY"
-  } >> "$NIX_CONF_DIR/nix.conf"
-  success "Cache nix-community adicionado em $NIX_CONF_DIR/nix.conf"
-fi
+# Habilitar Flakes e cache nix-community para o root (idempotente).
+# O script já roda como root; tentamos /etc/nix/nix.conf (global) e usamos
+# /root/.config/nix/nix.conf como fallback quando /etc/nix é somente leitura
+# (caso típico do Live CD do NixOS).
+NIX_CONF_GLOBAL="/etc/nix/nix.conf"
+NIX_CONF_USER="/root/.config/nix/nix.conf"
 
-# Garantir que o root também leia as features experimentais e o cache binário.
-# Comandos executados com sudo (ex: nixos-install, nix run) usam o ambiente
-# do root e não herdam o nix.conf do usuário atual.
-# Tentamos /etc/nix/nix.conf primeiro (lido globalmente), mas no Live CD do NixOS
-# esse diretório é somente leitura. Nesse caso, usamos /root/.config/nix/nix.conf.
-ROOT_NIX_CONF="/etc/nix/nix.conf"
-ROOT_USER_NIX_CONF="/root/.config/nix/nix.conf"
+_nix_community_block() {
+  printf 'extra-substituters = %s\nextra-trusted-public-keys = %s\n' \
+    "$NIX_COMMUNITY_SUBSTITUTER" "$NIX_COMMUNITY_KEY"
+}
 
-if sudo grep -q "experimental-features" "$ROOT_NIX_CONF" 2>/dev/null || \
-   sudo grep -q "experimental-features" "$ROOT_USER_NIX_CONF" 2>/dev/null; then
-  info "Flakes já estão habilitados para o root."
-else
-  # Tentar /etc/nix/nix.conf (pode ser read-only no Live CD)
-  if sudo mkdir -p "$(dirname "$ROOT_NIX_CONF")" 2>/dev/null && \
-     echo "experimental-features = nix-command flakes" | sudo tee -a "$ROOT_NIX_CONF" > /dev/null 2>&1; then
-    success "Flakes habilitados em $ROOT_NIX_CONF (root/global)."
+_configure_nix_conf() {
+  local conf="$1"
+
+  if ! grep -q "experimental-features" "$conf" 2>/dev/null; then
+    echo "experimental-features = nix-command flakes" >> "$conf"
+    success "Flakes habilitados em $conf"
   else
-    # Fallback: usar ~/.config/nix/nix.conf do root (gravável no Live CD via tmpfs)
-    warn "/etc/nix é somente leitura (Live CD). Usando $ROOT_USER_NIX_CONF como fallback."
-    sudo mkdir -p "$(dirname "$ROOT_USER_NIX_CONF")"
-    echo "experimental-features = nix-command flakes" | sudo tee -a "$ROOT_USER_NIX_CONF" > /dev/null
-    success "Flakes habilitados em $ROOT_USER_NIX_CONF (root, user-level)."
+    info "Flakes já estão habilitados em $conf."
   fi
-fi
 
-# Adicionar o cache nix-community ao nix.conf do root (idempotente).
-# Isso garante que 'nix run' (disko) e 'nixos-install' utilizem o cache.
-# Tentamos primeiro /etc/nix/nix.conf; se somente leitura, usamos o user-level do root.
-if ! sudo grep -qF "$NIX_COMMUNITY_KEY" "$ROOT_NIX_CONF" 2>/dev/null; then
-  _nix_community_block() {
-    printf 'extra-substituters = %s\nextra-trusted-public-keys = %s\n' \
-      "$NIX_COMMUNITY_SUBSTITUTER" "$NIX_COMMUNITY_KEY"
-  }
-  if _nix_community_block | sudo tee -a "$ROOT_NIX_CONF" > /dev/null 2>&1; then
-    success "Cache nix-community adicionado em $ROOT_NIX_CONF."
+  if ! grep -qF "$NIX_COMMUNITY_KEY" "$conf" 2>/dev/null; then
+    _nix_community_block >> "$conf"
+    success "Cache nix-community adicionado em $conf."
   else
-    # /etc/nix/nix.conf é somente leitura — adicionar ao nix.conf user-level do root
-    if ! sudo grep -qF "$NIX_COMMUNITY_KEY" "$ROOT_USER_NIX_CONF" 2>/dev/null; then
-      sudo mkdir -p "$(dirname "$ROOT_USER_NIX_CONF")"
-      _nix_community_block | sudo tee -a "$ROOT_USER_NIX_CONF" > /dev/null
-      success "Cache nix-community adicionado em $ROOT_USER_NIX_CONF."
-    else
-      info "Cache nix-community já configurado em $ROOT_USER_NIX_CONF."
-    fi
+    info "Cache nix-community já configurado em $conf."
   fi
+}
+
+if mkdir -p "$(dirname "$NIX_CONF_GLOBAL")" 2>/dev/null && \
+   { [[ -w "$NIX_CONF_GLOBAL" ]] || { [[ ! -e "$NIX_CONF_GLOBAL" ]] && [[ -w "$(dirname "$NIX_CONF_GLOBAL")" ]]; }; }; then
+  _configure_nix_conf "$NIX_CONF_GLOBAL"
 else
-  info "Cache nix-community já configurado em $ROOT_NIX_CONF."
+  warn "/etc/nix é somente leitura (Live CD). Usando $NIX_CONF_USER como fallback."
+  mkdir -p "$(dirname "$NIX_CONF_USER")"
+  _configure_nix_conf "$NIX_CONF_USER"
 fi
 
 # ---------------------------------------------------------------------------
@@ -344,10 +324,10 @@ if ! confirm "Continuar com a formatação de $DISK?"; then
 fi
 
 info "Carregando módulo ZFS..."
-sudo modprobe zfs || die "Falha ao carregar o módulo ZFS. Verifique se o kernel suporta ZFS (ex: nixos-enter ou use um Live CD com suporte a ZFS)."
+modprobe zfs || die "Falha ao carregar o módulo ZFS. Verifique se o kernel suporta ZFS (ex: nixos-enter ou use um Live CD com suporte a ZFS)."
 
 info "Executando disko..."
-sudo nix run github:nix-community/disko \
+nix run github:nix-community/disko \
   --option extra-substituters "$NIX_COMMUNITY_SUBSTITUTER" \
   --option extra-trusted-public-keys "$NIX_COMMUNITY_KEY" \
   -- --mode disko "$DISKO_FILE"
@@ -553,12 +533,10 @@ if grep -q 'boot\.lanzaboote' "$CFG_FILE" 2>/dev/null; then
   else
     info "Criando chaves PKI para Secure Boot em ${_SECUREBOOT_DIR}..."
     info "(Necessário para que o Lanzaboote instale o bootloader durante nixos-install)"
-    # Usar `sudo nix run` para executar sbctl diretamente como root.
-    # O script já habilitou flakes e o cache nix-community no nix.conf do root
-    # (passo inicial), portanto `sudo nix run` encontra e executa sbctl com uid 0,
+    # O script já roda como root; nix run executa sbctl com uid 0,
     # satisfazendo a verificação de root do próprio sbctl.
-    sudo mkdir -p "${_SECUREBOOT_DIR}"
-    sudo nix run \
+    mkdir -p "${_SECUREBOOT_DIR}"
+    nix run \
       --option extra-substituters "$NIX_COMMUNITY_SUBSTITUTER" \
       --option extra-trusted-public-keys "$NIX_COMMUNITY_KEY" \
       nixpkgs#sbctl -- create-keys --database-path "${_SECUREBOOT_DIR}"
@@ -580,13 +558,13 @@ info "==> Passo 8: Instalar o NixOS"
 # Copiar a configuração para /mnt (o nixos-install aceitará o caminho local,
 # mas é mais seguro copiar para garantir que /mnt/etc/nixos tenha os arquivos)
 if confirm "Copiar configuração para /mnt/etc/nixos e executar nixos-install?"; then
-  sudo mkdir -p /mnt/etc
+  mkdir -p /mnt/etc
   # rsync é preferível mas pode não estar disponível; usar cp com fallback
   if command -v rsync >/dev/null 2>&1; then
-    sudo rsync -a --delete "$CONFIG_DIR/" /mnt/etc/nixos/
+    rsync -a --delete "$CONFIG_DIR/" /mnt/etc/nixos/
   else
     # Copiar o conteúdo do diretório (não o diretório em si) para /mnt/etc/nixos/
-    sudo cp -r "$CONFIG_DIR/." /mnt/etc/nixos/
+    cp -r "$CONFIG_DIR/." /mnt/etc/nixos/
   fi
   success "Configuração copiada para /mnt/etc/nixos."
 
@@ -594,7 +572,7 @@ if confirm "Copiar configuração para /mnt/etc/nixos e executar nixos-install?"
   # Passa os caches binários explicitamente para que o nixos-install os use mesmo
   # que o nix.conf do live CD não os contenha. Isso evita compilações do zero
   # (ex: dependências Rust do lanzaboote) e downloads frágeis do crates.io.
-  sudo nixos-install \
+  nixos-install \
     --flake "/mnt/etc/nixos#$HOST" \
     --option accept-flake-config true \
     --option extra-substituters "$NIX_COMMUNITY_SUBSTITUTER" \
@@ -602,8 +580,8 @@ if confirm "Copiar configuração para /mnt/etc/nixos e executar nixos-install?"
   success "NixOS instalado com sucesso!"
 else
   warn "Instalação pulada. Execute manualmente:"
-  echo "  sudo cp -r $CONFIG_DIR /mnt/etc/nixos"
-  echo "  sudo nixos-install --flake /mnt/etc/nixos#$HOST \\"
+  echo "  cp -r $CONFIG_DIR /mnt/etc/nixos"
+  echo "  nixos-install --flake /mnt/etc/nixos#$HOST \\"
   echo "    --option accept-flake-config true \\"
   echo "    --option extra-substituters \"$NIX_COMMUNITY_SUBSTITUTER\" \\"
   echo "    --option extra-trusted-public-keys \"$NIX_COMMUNITY_KEY\""
@@ -626,7 +604,7 @@ if confirm "Definir senhas personalizadas para os usuários criados agora (via n
   for _i in "${!USERS_LOGIN[@]}"; do
     _user="${USERS_LOGIN[$_i]}"
     info "Definindo senha para '$_user'..."
-    sudo nixos-enter --root /mnt -- passwd "$_user"
+    nixos-enter --root /mnt -- passwd "$_user"
     success "Senha do usuário '$_user' definida."
     # Registrar apenas nomes de usuário com caracteres seguros para nomes de arquivo
     if [[ "$_user" =~ $_SAFE_USERNAME ]]; then
@@ -639,7 +617,7 @@ else
 fi
 
 if confirm "Definir senha do root também?"; then
-  sudo nixos-enter --root /mnt -- passwd root
+  nixos-enter --root /mnt -- passwd root
   success "Senha do root definida."
 fi
 
@@ -647,8 +625,8 @@ fi
 # ao rollback ZFS. Sem isso, as senhas são perdidas no primeiro reboot.
 # Usar `install` para definir permissões 640 atomicamente (sem janela de acesso).
 if [ -s /mnt/etc/shadow ]; then
-  sudo mkdir -p /mnt/persist/etc
-  sudo install -m 640 /mnt/etc/shadow /mnt/persist/etc/shadow
+  mkdir -p /mnt/persist/etc
+  install -m 640 /mnt/etc/shadow /mnt/persist/etc/shadow
   success "/etc/shadow copiado para /persist/etc/shadow (persiste entre boots)."
 else
   warn "/mnt/etc/shadow não encontrado ou vazio; pulando cópia para /persist."
@@ -658,7 +636,7 @@ fi
 # Isso evita que o sistema force a troca de senha no primeiro login para esses usuários
 # (a troca forçada via chage é para usuários com a senha temporária 'nixos').
 for _user in "${_USERS_WITH_PASSWORD[@]}"; do
-  sudo touch "/mnt/persist/.password-change-required-${_user}"
+  touch "/mnt/persist/.password-change-required-${_user}"
   info "Usuário '$_user': senha pré-definida — troca não será forçada no primeiro login."
 done
 

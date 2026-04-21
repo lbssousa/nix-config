@@ -24,8 +24,8 @@ nix-shell -p git
 git clone https://github.com/lbssousa/nixos-config.git /tmp/nixos-config
 cd /tmp/nixos-config
 
-# 3. Executar o script (modo interativo — recomendado para a maioria dos casos)
-bash scripts/install.sh
+# 3. Executar o script como root (modo interativo — recomendado para a maioria dos casos)
+sudo bash scripts/install.sh
 ```
 
 O script irá guiar você por cada etapa, perguntando as informações necessárias.
@@ -58,7 +58,7 @@ Opções:
 Para ver a ajuda diretamente:
 
 ```bash
-bash scripts/install.sh --help
+sudo bash scripts/install.sh --help
 ```
 
 #### Exemplos
@@ -66,13 +66,13 @@ bash scripts/install.sh --help
 **Instalação totalmente interativa** (recomendado para iniciantes):
 
 ```bash
-bash scripts/install.sh
+sudo bash scripts/install.sh
 ```
 
 **Instalação não-interativa** (útil para automação ou reinstalações):
 
 ```bash
-bash scripts/install.sh \
+sudo bash scripts/install.sh \
   --host barbudus \
   --disk /dev/nvme0n1 \
   --user "joao:cavalo:sudo" \
@@ -83,12 +83,12 @@ bash scripts/install.sh \
 **Pré-selecionar host e disco, mas confirmar usuários interativamente:**
 
 ```bash
-bash scripts/install.sh --host bigodon --disk /dev/sda
+sudo bash scripts/install.sh --host bigodon --disk /dev/sda
 ```
 
 #### O que o script faz
 
-1. Habilita Flakes no ambiente live (usuário atual e root)
+1. Habilita Flakes e o cache nix-community para o root no ambiente live
 2. Lista hosts e discos disponíveis para seleção
 3. Atualiza o `disko.nix` do host com o disco escolhido
 4. Particiona e formata o disco com disko (⚠️ apaga todos os dados!)
