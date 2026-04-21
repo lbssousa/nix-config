@@ -7,8 +7,6 @@ let
   # Ref: https://github.com/projectbluefin/common/blob/main/system_files/bluefin/usr/share/ublue-os/homebrew/system-flatpaks.Brewfile
   # Firefox e Thunderbird excluídos intencionalmente
   systemFlatpaks = [
-    "app.devsuite.Ptyxis" # Terminal — substitui GNOME Console (kgx)
-    "com.brave.Browser"
     "com.github.PintaProject.Pinta"
     "com.github.tchx84.Flatseal"
     "com.mattjakeman.ExtensionManager"
@@ -71,14 +69,14 @@ in
     printing.enable = true;
   };
 
-  # Excluir pacotes padrão do GNOME que serão substituídos por Flatpaks
+  # Excluir pacotes padrão do GNOME que serão substituídos por Nix ou Flatpaks
   environment.gnome.excludePackages = with pkgs; [
     gnome-software # Substituído pelo Bazaar (Flatpak)
     gnome-tour
-    epiphany # Browser padrão do GNOME — usar Brave (Flatpak)
+    epiphany # Browser padrão do GNOME — usar Brave (Nix)
     evince # PDF viewer — usar Papers (Flatpak)
-    gnome-console # Terminal (kgx) — usar Ptyxis (Flatpak)
-    gnome-terminal # Terminal legado — usar Ptyxis (Flatpak)
+    gnome-console # Terminal (kgx) — usar Ptyxis (Nix)
+    gnome-terminal # Terminal legado — usar Ptyxis (Nix)
     totem # Player de vídeo — usar Showtime (Flatpak)
     cheese # Webcam app — usar Snapshot (Flatpak)
     snapshot # Câmera — usar Snapshot (Flatpak)
@@ -125,14 +123,20 @@ in
     powerOnBoot = true;
   };
 
-  # Brave browser instalado via Flatpak (ver serviço install-system-flatpaks)
+  # Brave e Ptyxis instalados via Nix
+  environment.systemPackages = with pkgs; [
+    brave # Navegador padrão
+    ptyxis # Terminal moderno (substitui GNOME Console)
+  ];
+
+  # Brave browser instalado via Nix
   # Definir Brave como browser padrão via xdg-mime
   xdg.mime.defaultApplications = {
-    "text/html" = "com.brave.Browser.desktop";
-    "x-scheme-handler/http" = "com.brave.Browser.desktop";
-    "x-scheme-handler/https" = "com.brave.Browser.desktop";
-    "x-scheme-handler/about" = "com.brave.Browser.desktop";
-    "x-scheme-handler/unknown" = "com.brave.Browser.desktop";
+    "text/html" = "brave-browser.desktop";
+    "x-scheme-handler/http" = "brave-browser.desktop";
+    "x-scheme-handler/https" = "brave-browser.desktop";
+    "x-scheme-handler/about" = "brave-browser.desktop";
+    "x-scheme-handler/unknown" = "brave-browser.desktop";
   };
 
   # Instalar Flatpaks padrão automaticamente via Flathub na primeira inicialização
