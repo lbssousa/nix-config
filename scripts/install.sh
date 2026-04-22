@@ -575,6 +575,28 @@ if [[ "$OPT_NON_INTERACTIVE" == "true" ]] || confirm "Copiar configuração para
     warn "Não foi possível pré-configurar o Flathub (sem internet?)."
     warn "O serviço install-system-flatpaks tentará novamente no primeiro boot."
   fi
+
+  # -----------------------------------------------------------------------
+  # 7c. Copiar conexões Wi-Fi do live CD para o sistema instalado
+  # -----------------------------------------------------------------------
+  # O diretório /etc/NetworkManager/system-connections já está declarado em
+  # modules/system/core/impermanence.nix para ser persistido via bind mount de
+  # /persist/etc/NetworkManager/system-connections. Ao copiar os perfis aqui,
+  # eles estarão disponíveis imediatamente no primeiro boot — sem precisar
+  # redigitar o SSID e a senha.
+  # Permissões 600 são obrigatórias: o NetworkManager ignora/recusa perfis com
+  # permissões mais abertas.
+  echo
+  info "==> Passo 7c: Copiar conexões Wi-Fi para o sistema instalado"
+  _NM_SRC="/etc/NetworkManager/system-connections"
+  _NM_DST="/mnt/persist/etc/NetworkManager/system-connections"
+  if [[ -d "$_NM_SRC" ]] && [[ -n "$(ls -A "$_NM_SRC" 2>/dev/null)" ]]; then
+    mkdir -p "$_NM_DST"
+    install -m 600 "$_NM_SRC"/* "$_NM_DST/"
+    success "Conexões Wi-Fi copiadas para $_NM_DST."
+  else
+    info "Nenhuma conexão Wi-Fi encontrada no live CD. Pulando."
+  fi
 else
   warn "Instalação pulada. Execute manualmente:"
   echo "  cp -r $CONFIG_DIR /mnt/etc/nixos"
