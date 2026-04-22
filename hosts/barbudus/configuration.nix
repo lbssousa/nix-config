@@ -127,6 +127,10 @@ in
         pillow
       ]
     ))
+    # sbctl é necessário para gerenciar chaves Secure Boot com lanzaboote.
+    # Adicionado explicitamente para garantir disponibilidade independente do que
+    # o módulo lanzaboote injeta em systemPackages.
+    pkgs.sbctl
   ];
 
   # Preservar configurações de Secure Boot em /persist
