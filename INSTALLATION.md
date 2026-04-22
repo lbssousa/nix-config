@@ -338,13 +338,19 @@ sudo reboot
 1. **Desbloqueio LUKS**: Digite a senha de criptografia definida durante o disko
 2. **Login**: Use o usuário criado com a senha definida durante a instalação.
    Se nenhuma senha foi definida, use a senha temporária **`nixos`** — o sistema solicitará que você a troque imediatamente.
-3. **Configurar Flatpaks**:
+3. **Flatpaks** (instalação automática):
+   Os Flatpaks da lista pré-definida (GNOME apps, Flatseal, MissionCenter, etc.) são instalados
+   automaticamente pelo serviço `install-system-flatpaks` na primeira vez que o sistema iniciar
+   com acesso à internet. Nenhuma ação manual é necessária.
+
+   Para acompanhar o status:
    ```bash
-   flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-   flatpak install flathub org.gnome.Papers
-   flatpak install flathub app.devsuite.Ptyxis
-   flatpak install flathub io.github.bazaar_cabinet.Bazaar
+   systemctl status install-system-flatpaks
+   journalctl -u install-system-flatpaks -f
    ```
+
+   > **Nota:** O repositório Flathub é pré-configurado pelo `install.sh` durante a instalação.
+   > Se o serviço falhar (sem internet no primeiro boot), ele tentará novamente automaticamente.
 
 4. **Instalar Homebrew** (opcional):
    ```bash
