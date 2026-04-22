@@ -71,13 +71,21 @@ in
         # Mescla as senhas persistidas com o shadow gerenciado pelo NixOS:
         # - Para usuários existentes em ambos: usa a entrada persistida
         #   (preserva senhas alteradas pelo usuário via 'passwd').
+        #   Valida o formato mínimo (9 campos separados por ':') antes de usar.
         # - Para usuários novos (ainda não em /persist): usa a entrada do NixOS
         #   (aplica initialPassword da configuração).
         _tmp=$(mktemp)
         while IFS= read -r _line || [ -n "$_line" ]; do
           _user="''${_line%%:*}"
           if _persisted=$(grep "^''${_user}:" "$_PERSIST" 2>/dev/null); then
-            printf '%s\n' "$_persisted"
+            # Valida que a entrada persistida tem pelo menos 9 campos (formato shadow)
+            _field_count=$(printf '%s' "$_persisted" | awk -F: '{print NF}')
+            if [ "''${_field_count:-0}" -ge 9 ]; then
+              printf '%s\n' "$_persisted"
+            else
+              # Formato inválido: usa a entrada gerenciada pelo NixOS como fallback
+              printf '%s\n' "$_line"
+            fi
           else
             printf '%s\n' "$_line"
           fi
@@ -92,11 +100,12 @@ in
       # Re-estabelece o bind mount /persist/etc/shadow → /etc/shadow.
       # O rename() do update-users-groups.pl pode ter desfeito um bind mount anterior
       # (em nixos-rebuild switch). Recria o mount se não estiver ativo.
-      # Usa /proc/mounts como fallback caso findmnt não esteja no PATH.
+      # Usa awk para verificar o segundo campo do /proc/mounts (mountpoint exato).
       _is_mounted=false
       if findmnt --target "$_SHADOW" > /dev/null 2>&1; then
         _is_mounted=true
-      elif grep -qF " $_SHADOW " /proc/mounts 2>/dev/null; then
+      elif awk -v mnt="$_SHADOW" '$2 == mnt { found=1; exit } END { exit !found }' \
+           /proc/mounts 2>/dev/null; then
         _is_mounted=true
       fi
       if [ "$_is_mounted" = "false" ]; then
