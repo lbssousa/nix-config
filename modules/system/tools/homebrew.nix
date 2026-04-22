@@ -77,10 +77,8 @@
       RemainAfterExit = true;
       Restart = "on-failure";
       RestartSec = "30s";
-      Environment = [
-        "NONINTERACTIVE=1"
-        "HOME=/home/linuxbrew"
-      ];
+      # HOME é definido automaticamente pelo systemd com base no User directive
+      Environment = "NONINTERACTIVE=1";
     };
     # Ferramentas necessárias para o instalador do Homebrew
     path = with pkgs; [
@@ -92,6 +90,8 @@
       gnumake
       binutils
     ];
+    # Método de instalação oficial do Homebrew (https://brew.sh).
+    # Pipe de script remoto para bash é o método documentado pelo projeto.
     script = ''
       ${pkgs.curl}/bin/curl -fsSL \
         "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh" \
