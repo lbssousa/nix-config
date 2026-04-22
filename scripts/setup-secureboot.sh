@@ -153,10 +153,10 @@ echo
 # O módulo lanzaboote cria um symlink /var/lib/sbctl → pkiBundle (ex: /persist/etc/secureboot)
 # via systemd-tmpfiles. Se as chaves não forem encontradas, o sbctl não consegue
 # assinar binários nem registrar chaves no firmware.
-_sbctl_status_output=$(sbctl status 2>&1)
-if ! echo "$_sbctl_status_output" | grep -qi "installed.*✓\|sbctl is installed"; then
-  # sbctl não encontrou sua instalação — banco de chaves ausente
-  error "Banco de chaves sbctl não encontrado."
+# Usa verificação via sistema de arquivos para robustez (independente de locale/encoding).
+_sbctl_db=/var/lib/sbctl
+if [[ ! -d "$_sbctl_db/keys" ]] && [[ ! -f "$_sbctl_db/GUID" ]]; then
+  error "Banco de chaves sbctl não encontrado em $_sbctl_db."
   warn "As chaves PKI devem estar em /var/lib/sbctl (→ /persist/etc/secureboot)."
   warn "Verifique se:"
   warn "  • A instalação foi concluída com sucesso (install.sh criou as chaves)"
@@ -164,6 +164,7 @@ if ! echo "$_sbctl_status_output" | grep -qi "installed.*✓\|sbctl is installed
   warn "  • O sistema foi reconstruído com 'nixos-rebuild switch'"
   die "Banco de chaves não encontrado. Verifique a instalação."
 fi
+_sbctl_status_output=$(sbctl status 2>&1)
 
 # ---------------------------------------------------------------------------
 # Passo 3: Assinar binários EFI ANTES do registro no firmware
@@ -211,7 +212,24 @@ if [[ "$OPT_SIGN_ONLY" != "true" && "$OPT_VERIFY_ONLY" != "true" ]]; then
   # Verificar se o firmware está em Setup Mode (pré-requisito para enroll-keys)
   # Com lanzaboote, NÃO existe senha de MOK nem tela do MOKmanager.
   # O lanzaboote usa suas próprias chaves PKI (PK/KEK/db) — não usa shim/MOK.
-  if ! echo "$_sbctl_status_output" | grep -qi "setup mode.*enabled\|setup mode.*✓"; then
+  # Usa verificação via EFI efivars para robustez (independente de locale/encoding do sbctl).
+  _in_setup_mode=false
+  # Tenta verificar pelo conteúdo da variável EFI SetupMode (1 = Setup Mode ativo)
+  if [[ -f /sys/firmware/efi/efivars/SetupMode-8be4df61-93ca-11d2-aa0d-00e098032b8c ]]; then
+    # O byte de atributo é os primeiros 4 bytes; o valor é o 5º byte (0x01 = Setup Mode)
+    _setup_byte=$(od -An -tx1 -j4 -N1 \
+      /sys/firmware/efi/efivars/SetupMode-8be4df61-93ca-11d2-aa0d-00e098032b8c 2>/dev/null \
+      | tr -d ' \n')
+    [[ "$_setup_byte" == "01" ]] && _in_setup_mode=true
+  fi
+  # Fallback: verificar saída do sbctl (padrões sem caracteres Unicode especiais)
+  if [[ "$_in_setup_mode" == "false" ]]; then
+    if echo "$_sbctl_status_output" | grep -qi "setup mode[[:space:]]*:.*enabled\|setup mode[[:space:]]*:.*yes"; then
+      _in_setup_mode=true
+    fi
+  fi
+
+  if [[ "$_in_setup_mode" == "false" ]]; then
     error "O firmware NÃO está em Setup Mode (Modo de Configuração)."
     echo
     warn "Para registrar as chaves PKI, o firmware precisa estar em Setup Mode."
