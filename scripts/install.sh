@@ -590,10 +590,16 @@ if [[ "$OPT_NON_INTERACTIVE" == "true" ]] || confirm "Copiar configuração para
   info "==> Passo 7c: Copiar conexões Wi-Fi para o sistema instalado"
   _NM_SRC="/etc/NetworkManager/system-connections"
   _NM_DST="/mnt/persist/etc/NetworkManager/system-connections"
-  if [[ -d "$_NM_SRC" ]] && [[ -n "$(ls -A "$_NM_SRC" 2>/dev/null)" ]]; then
-    mkdir -p "$_NM_DST"
-    install -m 600 "$_NM_SRC"/* "$_NM_DST/"
-    success "Conexões Wi-Fi copiadas para $_NM_DST."
+  _nm_copied=0
+  if [[ -d "$_NM_SRC" ]]; then
+    while IFS= read -r -d '' _profile; do
+      mkdir -p "$_NM_DST"
+      install -m 600 "$_profile" "$_NM_DST/"
+      ((_nm_copied++)) || true
+    done < <(find "$_NM_SRC" -maxdepth 1 -type f -print0)
+  fi
+  if ((_nm_copied > 0)); then
+    success "$_nm_copied conexão(ões) Wi-Fi copiada(s) para $_NM_DST."
   else
     info "Nenhuma conexão Wi-Fi encontrada no live CD. Pulando."
   fi
