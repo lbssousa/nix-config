@@ -78,11 +78,21 @@ Opções:
 
 Passos para configurar o Secure Boot:
   1. Inicialize o sistema com o Secure Boot DESATIVADO (Setup Mode na UEFI)
+     (para ativar o Setup Mode: BIOS → Secure Boot → apagar chaves existentes)
   2. Execute este script para registrar chaves e assinar binários:
        sudo bash scripts/setup-secureboot.sh
   3. Reinicie e ative o Secure Boot na UEFI/BIOS
   4. Verifique se tudo está correto:
        sudo bash scripts/setup-secureboot.sh --verify-only
+
+NOTA IMPORTANTE — Lanzaboote vs. MOK/shim:
+  Esta configuração usa lanzaboote, que NÃO utiliza shim nem MOK.
+  • Não haverá tela azul do MOKmanager durante o boot
+  • Não será solicitada nenhuma senha de MOK
+  • O lanzaboote assina os binários EFI (kernel + initrd) diretamente com
+    chaves PKI próprias (PK/KEK/db) registradas no firmware UEFI
+  • As chaves ficam em /persist/etc/secureboot (configurado via pkiBundle)
+  • A cada nixos-rebuild switch, o lanzaboote reassina os binários
 
 Notas:
   • As chaves PKI são criadas automaticamente durante a instalação (install.sh)
@@ -135,6 +145,33 @@ echo
 if [[ "$OPT_SIGN_ONLY" != "true" && "$OPT_VERIFY_ONLY" != "true" ]]; then
   info "==> Registrando chaves PKI no firmware UEFI..."
   echo
+
+  # Verificar se o firmware está em Setup Mode (pré-requisito para enroll-keys)
+  # Com lanzaboote, NÃO existe senha de MOK nem tela do MOKmanager.
+  # O lanzaboote usa suas próprias chaves PKI (PK/KEK/db) — não usa shim/MOK.
+  _setup_mode=$(sbctl status 2>&1)
+  if ! echo "$_setup_mode" | grep -qi "setup mode.*enabled\|setup mode.*✓"; then
+    error "O firmware NÃO está em Setup Mode (Modo de Configuração)."
+    echo
+    warn "Para registrar as chaves PKI, o firmware precisa estar em Setup Mode."
+    warn "Como habilitar o Setup Mode:"
+    warn "  1. Reinicie e acesse a BIOS/UEFI (F2, F12, Del ou Esc durante o boot)"
+    warn "  2. Na seção Secure Boot, procure 'Setup Mode', 'Clear Secure Boot Keys',"
+    warn "     'Delete All Secure Boot Keys' ou opção similar"
+    warn "  3. Apague as chaves existentes (isso habilita o Setup Mode)"
+    warn "  4. Salve as configurações e reinicie o sistema"
+    warn "  5. Execute este script novamente"
+    echo
+    warn "NOTA IMPORTANTE: Esta configuração usa lanzaboote — NÃO usa shim/MOK."
+    warn "Não haverá tela do MOKmanager nem solicitação de senha de MOK."
+    warn "O lanzaboote assina os binários EFI diretamente com chaves PKI próprias."
+    echo
+    die "Firmware não está em Setup Mode. Corrija e execute o script novamente."
+  fi
+
+  success "Firmware em Setup Mode. Prosseguindo com o registro de chaves."
+  echo
+
   warn "As chaves Microsoft são incluídas para garantir compatibilidade com"
   warn "drivers de firmware assinados pela Microsoft (ex: drivers de GPU)."
   echo
@@ -143,14 +180,12 @@ if [[ "$OPT_SIGN_ONLY" != "true" && "$OPT_VERIFY_ONLY" != "true" ]]; then
     success "Chaves PKI registradas no firmware UEFI."
   else
     _exit_code=$?
-    if [[ $_exit_code -eq 1 ]]; then
-      warn "Falha ao registrar chaves. Possíveis causas:"
-      warn "  • O firmware não está em modo Setup (Secure Boot já está ativo)"
-      warn "  • As chaves já foram registradas anteriormente"
-      warn "Tente: sbctl enroll-keys --yes-this-might-brick-my-machine"
-    else
-      die "Erro ao registrar chaves PKI (código: $_exit_code)"
-    fi
+    error "Falha ao registrar chaves PKI (código: $_exit_code)."
+    warn "Possíveis causas:"
+    warn "  • O firmware não aceitou as chaves (verifique o Setup Mode na UEFI)"
+    warn "  • As chaves já foram registradas anteriormente (execute --verify-only)"
+    warn "  • UEFI com restrição de escrita (tente sbctl enroll-keys --yes-this-might-brick-my-machine)"
+    die "Registro de chaves falhou. Corrija e tente novamente."
   fi
   echo
 fi

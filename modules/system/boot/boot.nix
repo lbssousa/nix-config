@@ -14,7 +14,12 @@
         consoleMode = lib.mkDefault "max";
       };
       efi.canTouchEfiVariables = true;
-      timeout = 3;
+      # timeout = 0: oculta o menu e inicia a entrada padrão imediatamente,
+      # evitando o flicker causado pela exibição do menu durante o boot.
+      # Para exibir o menu manualmente, mantenha pressionada a tecla Space (ou qualquer
+      # tecla) imediatamente após a tela do firmware UEFI, durante a janela de boot.
+      # Para alterar temporariamente via terminal: sudo bootctl set-timeout <segundos>
+      timeout = 0;
     };
 
     # Plymouth para splash screen durante o boot
