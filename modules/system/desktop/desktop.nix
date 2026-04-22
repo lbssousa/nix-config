@@ -47,7 +47,11 @@ let
   flatpaksListHash = builtins.substring 0 8 (
     builtins.hashString "sha256" (lib.concatStringsSep "\n" systemFlatpaks)
   );
-  flatpakDoneFile = "/var/lib/nixos-flatpak-setup/done-${flatpaksListHash}";
+  # O arquivo de controle fica em /var/lib/flatpak (subvolume Btrfs @flatpak, persistido),
+  # e não em /var/lib/nixos-flatpak-setup que ficaria em tmpfs (raiz efêmera).
+  # Isso garante que a lógica de hash funcione corretamente entre reboots:
+  # o serviço só reexecuta quando a lista de Flatpaks muda.
+  flatpakDoneFile = "/var/lib/flatpak/.nixos-setup-done-${flatpaksListHash}";
 in
 {
   services = {
@@ -144,31 +148,56 @@ in
   systemd.services.install-system-flatpaks = {
     description = "Instalar Flatpaks padrão do sistema";
     wantedBy = [ "multi-user.target" ];
-    after = [ "network-online.target" ];
+    after = [
+      "network-online.target"
+      "var-lib-flatpak.mount"
+    ];
     wants = [ "network-online.target" ];
-    unitConfig.ConditionPathExists = "!${flatpakDoneFile}";
+    requires = [ "var-lib-flatpak.mount" ];
+    unitConfig = {
+      ConditionPathExists = "!${flatpakDoneFile}";
+      # Após 5 falhas consecutivas em 5 minutos, desiste até o próximo boot.
+      # Evita loop infinito se houver problema persistente (ex: pacote inválido).
+      StartLimitBurst = 5;
+      StartLimitIntervalSec = "300";
+    };
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
-      StateDirectory = "nixos-flatpak-setup";
+      Restart = "on-failure";
+      RestartSec = "30s";
     };
-    script = ''
-      # Adicionar repositório Flathub se não existir
-      ${pkgs.flatpak}/bin/flatpak remote-add --system --if-not-exists flathub \
-        https://dl.flathub.org/repo/flathub.flatpakrepo
-      # Instalar Flatpaks do sistema (falhas individuais são registradas mas não interrompem)
-    ''
-    + lib.concatMapStrings (pkg: ''
-      if ! ${pkgs.flatpak}/bin/flatpak info --system ${lib.escapeShellArg pkg} \
-          >/dev/null 2>&1; then
-        if ! ${pkgs.flatpak}/bin/flatpak install --system --noninteractive flathub ${lib.escapeShellArg pkg}; then
-          echo "AVISO: Falha ao instalar ${lib.escapeShellArg pkg}" >&2
+    script =
+      ''
+        _failed=0
+
+        # Adicionar repositório Flathub se não existir
+        if ! ${pkgs.flatpak}/bin/flatpak remote-add --system --if-not-exists flathub \
+            https://dl.flathub.org/repo/flathub.flatpakrepo; then
+          echo "AVISO: Falha ao adicionar repositório Flathub — tentará novamente." >&2
+          exit 1
         fi
-      fi
-    '') systemFlatpaks
-    + ''
-      touch ${lib.escapeShellArg flatpakDoneFile}
-    '';
+
+        # Instalar Flatpaks do sistema (falhas individuais são registradas)
+      ''
+      + lib.concatMapStrings (pkg: ''
+        if ! ${pkgs.flatpak}/bin/flatpak info --system ${lib.escapeShellArg pkg} \
+            >/dev/null 2>&1; then
+          if ! ${pkgs.flatpak}/bin/flatpak install --system --noninteractive flathub \
+              ${lib.escapeShellArg pkg}; then
+            echo "AVISO: Falha ao instalar ${lib.escapeShellArg pkg}" >&2
+            _failed=1
+          fi
+        fi
+      '') systemFlatpaks
+      + ''
+        # Só marca como concluído se todos os pacotes foram instalados com sucesso.
+        # Caso contrário, Restart=on-failure reexecutará o serviço.
+        if [[ $_failed -ne 0 ]]; then
+          exit 1
+        fi
+        touch ${lib.escapeShellArg flatpakDoneFile}
+      '';
   };
 
   # Fontes essenciais para o desktop

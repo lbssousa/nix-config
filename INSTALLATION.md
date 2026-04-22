@@ -99,7 +99,9 @@ sudo bash scripts/install.sh --host bigodon --disk /dev/sda
 7. Atualiza `configuration.nix` com os imports dos usuários
 8. Cria chaves Secure Boot em `/persist/etc/secureboot` (apenas hosts com Lanzaboote)
 9. Copia a configuração para `/mnt/etc/nixos` e executa `nixos-install`
-10. Define senhas via `nixos-enter` e copia `/etc/shadow` para `/persist`
+10. Copia automaticamente as conexões Wi-Fi do live CD para `/persist/etc/NetworkManager/system-connections`
+    — o Wi-Fi já estará configurado no primeiro boot, sem precisar redigitar credenciais
+11. Define senhas via `nixos-enter` e copia `/etc/shadow` para `/persist`
 
 ### Instalação Manual (passo a passo)
 
@@ -338,13 +340,19 @@ sudo reboot
 1. **Desbloqueio LUKS**: Digite a senha de criptografia definida durante o disko
 2. **Login**: Use o usuário criado com a senha definida durante a instalação.
    Se nenhuma senha foi definida, use a senha temporária **`nixos`** — o sistema solicitará que você a troque imediatamente.
-3. **Configurar Flatpaks**:
+3. **Flatpaks** (instalação automática):
+   Os Flatpaks da lista pré-definida (GNOME apps, Flatseal, MissionCenter, etc.) são instalados
+   automaticamente pelo serviço `install-system-flatpaks` na primeira vez que o sistema iniciar
+   com acesso à internet. Nenhuma ação manual é necessária.
+
+   Para acompanhar o status:
    ```bash
-   flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-   flatpak install flathub org.gnome.Papers
-   flatpak install flathub app.devsuite.Ptyxis
-   flatpak install flathub io.github.bazaar_cabinet.Bazaar
+   systemctl status install-system-flatpaks
+   journalctl -u install-system-flatpaks -f
    ```
+
+   > **Nota:** O repositório Flathub é pré-configurado pelo `install.sh` durante a instalação.
+   > Se o serviço falhar (sem internet no primeiro boot), ele tentará novamente automaticamente.
 
 4. **Instalar Homebrew** (opcional):
    ```bash

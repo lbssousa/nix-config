@@ -317,7 +317,7 @@ echo
 info "==> Passo 3: Particionar e formatar o disco"
 
 warn "⚠️  ATENÇÃO: o comando abaixo IRÁ APAGAR TODOS OS DADOS DE $DISK!"
-if ! confirm "Continuar com a formatação de $DISK?"; then
+if [[ "$OPT_NON_INTERACTIVE" != "true" ]] && ! confirm "Continuar com a formatação de $DISK?"; then
   die "Formatação cancelada pelo usuário."
 fi
 
@@ -537,7 +537,7 @@ info "==> Passo 7: Instalar o NixOS"
 
 # Copiar a configuração para /mnt (o nixos-install aceitará o caminho local,
 # mas é mais seguro copiar para garantir que /mnt/etc/nixos tenha os arquivos)
-if confirm "Copiar configuração para /mnt/etc/nixos e executar nixos-install?"; then
+if [[ "$OPT_NON_INTERACTIVE" == "true" ]] || confirm "Copiar configuração para /mnt/etc/nixos e executar nixos-install?"; then
   mkdir -p /mnt/etc
   # rsync é preferível mas pode não estar disponível; usar cp com fallback
   if command -v rsync >/dev/null 2>&1; then
@@ -558,6 +558,51 @@ if confirm "Copiar configuração para /mnt/etc/nixos e executar nixos-install?"
     --option extra-substituters "$NIX_COMMUNITY_SUBSTITUTER" \
     --option extra-trusted-public-keys "$NIX_COMMUNITY_KEY"
   success "NixOS instalado com sucesso!"
+
+  # -----------------------------------------------------------------------
+  # 7b. Pré-configurar repositório Flathub no sistema instalado
+  # -----------------------------------------------------------------------
+  # Executado via nixos-enter para que o repositório Flathub já esteja
+  # disponível no primeiro boot, mesmo que a rede não esteja pronta antes
+  # do serviço install-system-flatpaks. Os Flatpaks em si são instalados
+  # automaticamente pelo serviço systemd install-system-flatpaks.
+  echo
+  info "==> Passo 7b: Pré-configurar repositório Flathub"
+  if nixos-enter --root /mnt -- flatpak remote-add --system --if-not-exists flathub \
+      https://dl.flathub.org/repo/flathub.flatpakrepo 2>/dev/null; then
+    success "Repositório Flathub configurado no sistema instalado."
+  else
+    warn "Não foi possível pré-configurar o Flathub (sem internet?)."
+    warn "O serviço install-system-flatpaks tentará novamente no primeiro boot."
+  fi
+
+  # -----------------------------------------------------------------------
+  # 7c. Copiar conexões Wi-Fi do live CD para o sistema instalado
+  # -----------------------------------------------------------------------
+  # O diretório /etc/NetworkManager/system-connections já está declarado em
+  # modules/system/core/impermanence.nix para ser persistido via bind mount de
+  # /persist/etc/NetworkManager/system-connections. Ao copiar os perfis aqui,
+  # eles estarão disponíveis imediatamente no primeiro boot — sem precisar
+  # redigitar o SSID e a senha.
+  # Permissões 600 são obrigatórias: o NetworkManager ignora/recusa perfis com
+  # permissões mais abertas.
+  echo
+  info "==> Passo 7c: Copiar conexões Wi-Fi para o sistema instalado"
+  _NM_SRC="/etc/NetworkManager/system-connections"
+  _NM_DST="/mnt/persist/etc/NetworkManager/system-connections"
+  _nm_copied=0
+  if [[ -d "$_NM_SRC" ]]; then
+    while IFS= read -r -d '' _profile; do
+      mkdir -p "$_NM_DST"
+      install -m 600 "$_profile" "$_NM_DST/"
+      ((_nm_copied++)) || true
+    done < <(find "$_NM_SRC" -maxdepth 1 -type f -print0)
+  fi
+  if ((_nm_copied > 0)); then
+    success "$_nm_copied conexão(ões) Wi-Fi copiada(s) para $_NM_DST."
+  else
+    info "Nenhuma conexão Wi-Fi encontrada no live CD. Pulando."
+  fi
 else
   warn "Instalação pulada. Execute manualmente:"
   echo "  cp -r $CONFIG_DIR /mnt/etc/nixos"
@@ -634,7 +679,8 @@ echo -e "    ${CYAN}sudo umount -R /mnt${RESET}"
 echo -e "    ${CYAN}sudo reboot${RESET}"
 echo
 echo -e "  Após o primeiro boot, consulte ${BOLD}INSTALLATION.md${RESET} para:"
-echo -e "    • Configurar Flatpaks"
+echo -e "    • Os Flatpaks são instalados automaticamente pelo serviço ${CYAN}install-system-flatpaks${RESET}"
+echo -e "      (requer conexão com a internet no primeiro boot)"
 echo -e "    • Instalar Homebrew (opcional)"
 echo -e "    • Configurar Secure Boot com lanzaboote (apenas barbudus)"
 echo -e "    • Configurar desbloqueio automático LUKS via TPM2"
