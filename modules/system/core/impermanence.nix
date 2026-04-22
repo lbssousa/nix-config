@@ -29,7 +29,12 @@ _:
     # Arquivos do sistema a preservar
     files = [
       "/etc/machine-id" # ID único da máquina
-      "/etc/shadow" # Hashes de senha dos usuários
+      # NOTA: /etc/shadow NÃO é gerenciado aqui.
+      # O módulo de usuários (users.nix) define um activation script 'restoreShadow'
+      # com deps = ["users"] que, após o script de ativação 'users' do NixOS
+      # (que faz rename atômico de /etc/shadow quebrando bind mounts anteriores),
+      # re-estabelece o bind mount /persist/etc/shadow → /etc/shadow. Isso garante que
+      # alterações de senha via 'passwd' sejam persistidas em /persist/etc/shadow.
     ];
   };
 
