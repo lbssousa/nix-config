@@ -354,35 +354,88 @@ sudo reboot
    > **Nota:** O repositório Flathub é pré-configurado pelo `install.sh` durante a instalação.
    > Se o serviço falhar (sem internet no primeiro boot), ele tentará novamente automaticamente.
 
-4. **Instalar Homebrew** (opcional):
+4. **Homebrew** (instalação automática):
+   O Homebrew (Linuxbrew) é instalado automaticamente pelo serviço `install-homebrew` na primeira
+   vez que o sistema iniciar com acesso à internet. Nenhuma ação manual é necessária.
+
+   Para acompanhar o status:
    ```bash
-   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+   systemctl status install-homebrew
+   journalctl -u install-homebrew -f
    ```
+
+   > **Nota:** O serviço roda como o usuário `linuxbrew`. Se falhar (sem internet), tentará
+   > novamente automaticamente. O Homebrew fica instalado em `/home/linuxbrew/.linuxbrew`.
+
+## 🥾 Menu de Boot (systemd-boot)
+
+O menu do systemd-boot está **oculto por padrão** (`timeout = 0`) para proporcionar um boot
+mais rápido e sem flickering.
+
+### Como exibir o menu de boot
+
+- **Durante o boot**: mantenha pressionada a tecla **Space** (ou qualquer tecla) imediatamente
+  após a tela do firmware UEFI aparecer. O menu do systemd-boot será exibido.
+
+- **Temporariamente via terminal** (define um timeout até o próximo rebuild):
+  ```bash
+  sudo bootctl set-timeout 5
+  ```
+
+- **Para reverter ao comportamento silencioso**:
+  ```bash
+  sudo bootctl set-timeout 0
+  ```
 
 ## 🔒 Configuração do Secure Boot (apenas barbudus)
 
-As chaves PKI do Lanzaboote são criadas automaticamente durante a instalação (passo 9 do script ou manualmente antes do `nixos-install`). O que resta fazer após o primeiro boot é **registrar as chaves no firmware UEFI**:
+As chaves PKI do Lanzaboote são criadas automaticamente durante a instalação (passo 9 do script ou manualmente antes do `nixos-install`). O que resta fazer após o primeiro boot é **registrar as chaves no firmware UEFI**.
+
+> ### ⚠️ Lanzaboote vs. MOK/shim — diferença importante
+>
+> Esta configuração usa **lanzaboote**, que **NÃO** utiliza shim nem MOK.
+> - **Não haverá** tela azul do MOKmanager durante o boot
+> - **Não será solicitada** nenhuma senha de MOK
+> - O lanzaboote assina os binários EFI (kernel + initrd) diretamente com chaves PKI
+>   próprias (PK/KEK/db) que são registradas no firmware UEFI
+> - As chaves ficam em `/persist/etc/secureboot` (configurado via `pkiBundle` no lanzaboote)
+>
+> A ausência de uma tela de MOK é **esperada e correta** nesta configuração.
+
+> ### ⚠️ Pré-requisito: Setup Mode ativo
+>
+> Para registrar as chaves PKI, o firmware precisa estar em **Setup Mode** (sem chaves de
+> Secure Boot cadastradas). Se o Setup Mode não estiver ativo, o registro falhará.
+>
+> **Como verificar/habilitar o Setup Mode:**
+> 1. Reinicie e acesse a BIOS/UEFI (F2, F12, Del ou Esc durante o boot)
+> 2. Na seção Secure Boot, procure **"Delete All Secure Boot Keys"**, **"Setup Mode"**,
+>    **"Clear Secure Boot Keys"** ou opção similar
+> 3. Apague as chaves existentes (isso habilita o Setup Mode)
+> 4. Salve e reinicie para o NixOS com Secure Boot **desabilitado**
+>
+> O script `setup-secureboot.sh` verifica automaticamente o Setup Mode e aborta com
+> instruções claras se o firmware não estiver em Setup Mode.
+
+### Passo a passo para configurar o Secure Boot
 
 ```bash
-# 1. Entrar no sistema normalmente (Secure Boot desabilitado na BIOS)
+# 1. Entrar no sistema normalmente (Secure Boot desabilitado na BIOS, Setup Mode ativo)
 
-# 2. Verificar as chaves geradas durante a instalação
+# 2. Verificar o estado atual das chaves e do Setup Mode
 sudo sbctl status
 
-# 3. Registrar as chaves no firmware UEFI
-# --microsoft inclui as chaves de terceiros Microsoft (necessário para NVIDIA e outros drivers)
-sudo sbctl enroll-keys --microsoft
+# 3. Executar o script de configuração (verifica Setup Mode, registra chaves e assina binários)
+sudo bash /etc/nixos/scripts/setup-secureboot.sh
 
-# 4. Verificar quais binários precisam ser assinados
-sudo sbctl verify
-
-# 5. Assinar os binários não assinados
-sudo sbctl sign-all
-
-# 6. Rebuildar para garantir que os binários mais recentes estão assinados
+# 4. Rebuildar para garantir que os binários mais recentes estão assinados
 sudo nixos-rebuild switch --flake /etc/nixos#barbudus
 
-# 7. Habilitar Secure Boot na BIOS/UEFI e reiniciar
+# 5. Habilitar Secure Boot na BIOS/UEFI e reiniciar
+
+# 6. Verificar se tudo está correto após o reboot
+sudo sbctl status
+sudo bash /etc/nixos/scripts/setup-secureboot.sh --verify-only
 ```
 
 > **Nota:** Se as chaves não existirem em `/persist/etc/secureboot` (instalação manual sem o passo de sbctl), crie-as com `sudo sbctl create-keys` antes de prosseguir.
