@@ -52,6 +52,15 @@
       ...
     }@inputs:
     let
+      # Optional private layer support.
+      # Clone lbssousa/nixos-config-private into ./private (gitignored), then run:
+      #   git add --force private/
+      # This makes the private files visible to Nix without committing them.
+      # The file must return a list of NixOS modules (attrsets or paths).
+      # See docs/private-layer.md for the full workflow and expected structure.
+      privateModules =
+        if builtins.pathExists ./private/modules.nix then import ./private/modules.nix else [ ];
+
       # Helper to build a NixOS configuration for a given host
       mkHost =
         hostname: system: extraModules:
@@ -81,10 +90,12 @@
                 # User-specific home-manager configs are loaded from ./users/
                 # See users/skeleton.nix for the template
                 # Real user configs are gitignored (see .gitignore)
+                # Private-layer users are loaded from ./private/ (see docs/private-layer.md)
               };
             }
           ]
-          ++ extraModules;
+          ++ extraModules
+          ++ privateModules;
         };
     in
     {
