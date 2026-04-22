@@ -32,9 +32,6 @@
     '';
   };
 
-  # Script de instalação do Homebrew (executar manualmente após instalação do NixOS):
-  # /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
   # Usuário dedicado para instalação system-wide do Homebrew
   users.users.linuxbrew = {
     isSystemUser = true;
@@ -45,6 +42,60 @@
   };
   users.groups.linuxbrew = { };
 
-  # Garantir que o diretório do Homebrew seja persistente entre boots
-  environment.persistence."/persist".directories = [ "/home/linuxbrew" ];
+  # Garantir que o diretório do Homebrew seja persistente entre boots.
+  # user/group explícitos para que /persist/home/linuxbrew seja criado com a
+  # propriedade correta, permitindo que o usuário linuxbrew escreva nele.
+  environment.persistence."/persist".directories = [
+    {
+      directory = "/home/linuxbrew";
+      user = "linuxbrew";
+      group = "linuxbrew";
+      mode = "0755";
+    }
+  ];
+
+  # Instalar Homebrew automaticamente na primeira inicialização com rede disponível.
+  # Comportamento idêntico ao serviço de Flatpaks: oneshot com Restart=on-failure,
+  # só executa enquanto o brew não estiver instalado (ConditionPathExists).
+  systemd.services.install-homebrew = {
+    description = "Instalar Homebrew (Linuxbrew) automaticamente";
+    wantedBy = [ "multi-user.target" ];
+    after = [
+      "network-online.target"
+      "local-fs.target"
+    ];
+    wants = [ "network-online.target" ];
+    unitConfig = {
+      # Pula se o brew já estiver instalado (idempotente)
+      ConditionPathExists = "!/home/linuxbrew/.linuxbrew/bin/brew";
+      StartLimitBurst = 5;
+      StartLimitIntervalSec = "300";
+    };
+    serviceConfig = {
+      Type = "oneshot";
+      User = "linuxbrew";
+      RemainAfterExit = true;
+      Restart = "on-failure";
+      RestartSec = "30s";
+      Environment = [
+        "NONINTERACTIVE=1"
+        "HOME=/home/linuxbrew"
+      ];
+    };
+    # Ferramentas necessárias para o instalador do Homebrew
+    path = with pkgs; [
+      bash
+      coreutils
+      git
+      curl
+      gcc
+      gnumake
+      binutils
+    ];
+    script = ''
+      ${pkgs.curl}/bin/curl -fsSL \
+        "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh" \
+        | ${pkgs.bash}/bin/bash
+    '';
+  };
 }
