@@ -67,8 +67,8 @@ in
 
   # Driver NVIDIA proprietary
   hardware.nvidia = {
-    # Usar driver estável (580.x para NixOS unstable)
-    package = config.boot.kernelPackages.nvidiaPackages.stable;
+    # Forçar versão 580.x (stable = 595.x é incompatível com GeForce MX230)
+    package = config.boot.kernelPackages.nvidiaPackages.legacy_580;
     modesetting.enable = true;
     open = false; # MX230 é GPU antiga, usar driver proprietário (não o open-source)
     powerManagement = {
