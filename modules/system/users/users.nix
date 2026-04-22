@@ -100,13 +100,20 @@ in
       # Re-estabelece o bind mount /persist/etc/shadow → /etc/shadow.
       # O rename() do update-users-groups.pl pode ter desfeito um bind mount anterior
       # (em nixos-rebuild switch). Recria o mount se não estiver ativo.
-      # Usa awk para verificar o segundo campo do /proc/mounts (mountpoint exato).
+      # Usa findmnt (util-linux); se não estiver no PATH, usa awk no /proc/mounts.
       _is_mounted=false
       if findmnt --target "$_SHADOW" > /dev/null 2>&1; then
+        # findmnt disponível e detectou mount ativo
         _is_mounted=true
-      elif awk -v mnt="$_SHADOW" '$2 == mnt { found=1; exit } END { exit !found }' \
-           /proc/mounts 2>/dev/null; then
-        _is_mounted=true
+      elif command -v findmnt > /dev/null 2>&1; then
+        # findmnt disponível mas não encontrou mount → não montado
+        _is_mounted=false
+      else
+        # findmnt não disponível: usa awk no /proc/mounts como fallback
+        if awk -v mnt="$_SHADOW" '$2 == mnt { found=1; exit } END { exit !found }' \
+             /proc/mounts 2>/dev/null; then
+          _is_mounted=true
+        fi
       fi
       if [ "$_is_mounted" = "false" ]; then
         mount --bind "$_PERSIST" "$_SHADOW"

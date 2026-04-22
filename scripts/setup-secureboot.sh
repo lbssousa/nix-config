@@ -214,11 +214,13 @@ if [[ "$OPT_SIGN_ONLY" != "true" && "$OPT_VERIFY_ONLY" != "true" ]]; then
   # O lanzaboote usa suas próprias chaves PKI (PK/KEK/db) — não usa shim/MOK.
   # Usa verificação via EFI efivars para robustez (independente de locale/encoding do sbctl).
   _in_setup_mode=false
+  # GUID da variável EFI global (EFI_GLOBAL_VARIABLE) — padrão UEFI Spec Apêndice B
+  _EFI_GLOBAL_GUID="8be4df61-93ca-11d2-aa0d-00e098032b8c"
   # Tenta verificar pelo conteúdo da variável EFI SetupMode (1 = Setup Mode ativo)
-  if [[ -f /sys/firmware/efi/efivars/SetupMode-8be4df61-93ca-11d2-aa0d-00e098032b8c ]]; then
+  if [[ -f /sys/firmware/efi/efivars/SetupMode-${_EFI_GLOBAL_GUID} ]]; then
     # O byte de atributo é os primeiros 4 bytes; o valor é o 5º byte (0x01 = Setup Mode)
     _setup_byte=$(od -An -tx1 -j4 -N1 \
-      /sys/firmware/efi/efivars/SetupMode-8be4df61-93ca-11d2-aa0d-00e098032b8c 2>/dev/null \
+      /sys/firmware/efi/efivars/SetupMode-${_EFI_GLOBAL_GUID} 2>/dev/null \
       | tr -d ' \n')
     [[ "$_setup_byte" == "01" ]] && _in_setup_mode=true
   fi
