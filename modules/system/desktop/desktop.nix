@@ -180,16 +180,18 @@ in
 
         # Instalar Flatpaks do sistema (falhas individuais são registradas)
       ''
-      + lib.concatMapStrings (pkg: ''
-        if ! ${pkgs.flatpak}/bin/flatpak info --system ${lib.escapeShellArg pkg} \
-            >/dev/null 2>&1; then
-          if ! ${pkgs.flatpak}/bin/flatpak install --system --noninteractive flathub \
-              ${lib.escapeShellArg pkg}; then
-            echo "AVISO: Falha ao instalar ${lib.escapeShellArg pkg}" >&2
-            _failed=1
-          fi
-        fi
-      '') systemFlatpaks
+      + lib.concatMapStrings
+          (pkg: ''
+            if ! ${pkgs.flatpak}/bin/flatpak info --system ${lib.escapeShellArg pkg} \
+                >/dev/null 2>&1; then
+              if ! ${pkgs.flatpak}/bin/flatpak install --system --noninteractive flathub \
+                  ${lib.escapeShellArg pkg}; then
+                echo "AVISO: Falha ao instalar ${lib.escapeShellArg pkg}" >&2
+                _failed=1
+              fi
+            fi
+          '')
+          systemFlatpaks
       + ''
         # Só marca como concluído se todos os pacotes foram instalados com sucesso.
         # Caso contrário, Restart=on-failure reexecutará o serviço.

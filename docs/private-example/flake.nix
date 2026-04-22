@@ -14,7 +14,7 @@
     # nixos-config.url = "github:lbssousa/nixos-config";
   };
 
-  outputs = { ... }: {
+  outputs = _: {
     # Este flake não exporta saídas — ele apenas existe para versionamento.
     # A integração real acontece pelo arquivo modules.nix importado diretamente
     # pelo flake público quando ./private está presente.
