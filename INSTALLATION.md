@@ -99,7 +99,9 @@ sudo bash scripts/install.sh --host bigodon --disk /dev/sda
 7. Atualiza `configuration.nix` com os imports dos usuários
 8. Cria chaves Secure Boot em `/persist/etc/secureboot` (apenas hosts com Lanzaboote)
 9. Copia a configuração para `/mnt/etc/nixos` e executa `nixos-install`
-10. Define senhas via `nixos-enter` e copia `/etc/shadow` para `/persist`
+10. Copia automaticamente as conexões Wi-Fi do live CD para `/persist/etc/NetworkManager/system-connections`
+    — o Wi-Fi já estará configurado no primeiro boot, sem precisar redigitar credenciais
+11. Define senhas via `nixos-enter` e copia `/etc/shadow` para `/persist`
 
 ### Instalação Manual (passo a passo)
 
