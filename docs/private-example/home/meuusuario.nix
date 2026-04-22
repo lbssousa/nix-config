@@ -1,6 +1,6 @@
 # Configuração Home Manager pessoal para "meuusuario".
 # Importe este arquivo em nixos/users.nix via home-manager.users.meuusuario.imports.
-{ ... }:
+_:
 
 {
   home = {

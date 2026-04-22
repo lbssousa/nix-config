@@ -180,8 +180,8 @@ in
 
         # Instalar Flatpaks do sistema (falhas individuais são registradas)
       ''
-      + lib.concatMapStrings
-          (pkg: ''
+      + lib.concatMapStrings (
+          pkg: ''
             if ! ${pkgs.flatpak}/bin/flatpak info --system ${lib.escapeShellArg pkg} \
                 >/dev/null 2>&1; then
               if ! ${pkgs.flatpak}/bin/flatpak install --system --noninteractive flathub \
@@ -190,8 +190,8 @@ in
                 _failed=1
               fi
             fi
-          '')
-          systemFlatpaks
+          ''
+        ) systemFlatpaks
       + ''
         # Só marca como concluído se todos os pacotes foram instalados com sucesso.
         # Caso contrário, Restart=on-failure reexecutará o serviço.
