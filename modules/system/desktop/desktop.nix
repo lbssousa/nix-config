@@ -52,6 +52,17 @@ let
   # Isso garante que a lógica de hash funcione corretamente entre reboots:
   # o serviço só reexecuta quando a lista de Flatpaks muda.
   flatpakDoneFile = "/var/lib/flatpak/.nixos-setup-done-${flatpaksListHash}";
+  # Script de instalação de cada Flatpak individualmente
+  mkFlatpakInstallScript = pkg: ''
+    if ! ${pkgs.flatpak}/bin/flatpak info --system ${lib.escapeShellArg pkg} \
+        >/dev/null 2>&1; then
+      if ! ${pkgs.flatpak}/bin/flatpak install --system --noninteractive flathub \
+          ${lib.escapeShellArg pkg}; then
+        echo "AVISO: Falha ao instalar ${lib.escapeShellArg pkg}" >&2
+        _failed=1
+      fi
+    fi
+  '';
 in
 {
   services = {
@@ -180,16 +191,7 @@ in
 
         # Instalar Flatpaks do sistema (falhas individuais são registradas)
       ''
-      + lib.concatMapStrings (pkg: ''
-        if ! ${pkgs.flatpak}/bin/flatpak info --system ${lib.escapeShellArg pkg} \
-            >/dev/null 2>&1; then
-          if ! ${pkgs.flatpak}/bin/flatpak install --system --noninteractive flathub \
-              ${lib.escapeShellArg pkg}; then
-            echo "AVISO: Falha ao instalar ${lib.escapeShellArg pkg}" >&2
-            _failed=1
-          fi
-        fi
-      '') systemFlatpaks
+      + lib.concatMapStrings mkFlatpakInstallScript systemFlatpaks
       + ''
         # Só marca como concluído se todos os pacotes foram instalados com sucesso.
         # Caso contrário, Restart=on-failure reexecutará o serviço.
