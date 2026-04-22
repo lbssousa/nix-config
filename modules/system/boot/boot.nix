@@ -10,6 +10,8 @@
         enable = lib.mkDefault true;
         configurationLimit = 10;
         editor = false; # Desabilita editor de boot (segurança)
+        # Mantém resolução máxima no menu de boot, evitando flickering
+        consoleMode = lib.mkDefault "max";
       };
       efi.canTouchEfiVariables = true;
       timeout = 3;
@@ -18,7 +20,9 @@
     # Plymouth para splash screen durante o boot
     plymouth = {
       enable = true;
-      theme = lib.mkDefault "spinner";
+      # bgrt: usa o logotipo OEM do firmware (ACPI BGRT) para transição suave
+      # firmware → bootloader → Plymouth sem flickering
+      theme = lib.mkDefault "bgrt";
     };
 
     # Parâmetros do kernel para boot silencioso/flicker-free
