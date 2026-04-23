@@ -693,22 +693,28 @@ if [[ "$OPT_NON_INTERACTIVE" == "true" ]] || confirm "Copiar configuração para
   # redigitar o SSID e a senha.
   # Permissões 600 são obrigatórias: o NetworkManager ignora/recusa perfis com
   # permissões mais abertas.
+  # Se a camada privada já provê configuração de Wi-Fi (private/nixos/wifi.nix),
+  # não há necessidade de copiar as conexões do live CD.
   echo
   info "==> Passo 7c: Copiar conexões Wi-Fi para o sistema instalado"
-  _NM_SRC="/etc/NetworkManager/system-connections"
-  _NM_DST="/mnt/persist/etc/NetworkManager/system-connections"
-  _nm_copied=0
-  if [[ -d "$_NM_SRC" ]]; then
-    while IFS= read -r -d '' _profile; do
-      mkdir -p "$_NM_DST"
-      install -m 600 "$_profile" "$_NM_DST/"
-      ((_nm_copied++)) || true
-    done < <(find "$_NM_SRC" -maxdepth 1 -type f -print0)
-  fi
-  if ((_nm_copied > 0)); then
-    success "$_nm_copied conexão(ões) Wi-Fi copiada(s) para $_NM_DST."
+  if [[ -f "$CONFIG_DIR/private/nixos/wifi.nix" ]]; then
+    info "Camada privada provê private/nixos/wifi.nix. Pulando cópia de conexões Wi-Fi do live CD."
   else
-    info "Nenhuma conexão Wi-Fi encontrada no live CD. Pulando."
+    _NM_SRC="/etc/NetworkManager/system-connections"
+    _NM_DST="/mnt/persist/etc/NetworkManager/system-connections"
+    _nm_copied=0
+    if [[ -d "$_NM_SRC" ]]; then
+      while IFS= read -r -d '' _profile; do
+        mkdir -p "$_NM_DST"
+        install -m 600 "$_profile" "$_NM_DST/"
+        ((_nm_copied++)) || true
+      done < <(find "$_NM_SRC" -maxdepth 1 -type f -print0)
+    fi
+    if ((_nm_copied > 0)); then
+      success "$_nm_copied conexão(ões) Wi-Fi copiada(s) para $_NM_DST."
+    else
+      info "Nenhuma conexão Wi-Fi encontrada no live CD. Pulando."
+    fi
   fi
 else
   warn "Instalação pulada. Execute manualmente:"
