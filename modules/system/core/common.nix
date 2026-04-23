@@ -30,9 +30,14 @@ _:
   };
 
   # Configuração do teclado X11
+  # variant = "nodeadkeys": o til (~) é produzido diretamente (sem modo dead key),
+  # corrigindo o uso de ~ como atalho para o diretório pessoal em terminais.
+  # options = "compose:ralt": Alt direito vira tecla Compose, permitindo digitar
+  # caracteres acentuados (ã, õ, â, etc.) via sequência Compose + ~ + letra.
   services.xserver.xkb = {
     layout = "br";
-    variant = "";
+    variant = "nodeadkeys";
+    options = "compose:ralt";
   };
 
   # Configurações do Nix
