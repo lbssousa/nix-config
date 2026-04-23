@@ -11,7 +11,7 @@
 #   6a. Cria chaves Secure Boot (apenas hosts com Lanzaboote)
 #   6b. Restaura chave age do sops-nix (opcional)
 #   7. Instala o NixOS
-#   8. Define senhas via nixos-enter
+#   8. Define senhas via passwd --root
 #
 # Uso:
 #   bash scripts/install.sh [--host <hostname>] [--disk <device>]
@@ -175,7 +175,7 @@ Este script automatiza os passos descritos em INSTALLATION.md:
   6a. Cria chaves Secure Boot (apenas hosts com Lanzaboote)
   6b. Restaura chave age do sops-nix (opcional)
   7. Instala o NixOS
-  8. Define senhas via nixos-enter
+  8. Define senhas via passwd --root
 EOF
       exit 0 ;;
     *) die "Opção desconhecida: $1. Use --help para ver as opções disponíveis." ;;
@@ -733,11 +733,31 @@ if [[ "$OPT_NON_INTERACTIVE" == "true" ]] || confirm "Copiar configuração para
   fi
   success "Configuração copiada para /mnt/etc/nixos."
 
-  # Re-indexar a camada privada em /mnt/etc/nixos para garantir que o Nix
-  # a enxergue ao avaliar o flake copiado.
-  # O rsync já copiou os arquivos e o .git/ (incluindo o índice), mas fazemos
-  # git add --force de novo para cobrir o caso em que o usuário não tinha
-  # rodado esse comando no repo de origem antes de iniciar o install.sh.
+  # Re-indexar arquivos de usuário, configuração e camada privada em /mnt/etc/nixos
+  # para garantir que o Nix os enxergue ao avaliar o flake copiado.
+  #
+  # Por que isso é necessário:
+  #   O rsync copia o .git/ (incluindo o índice) do repo de origem, mas o índice
+  #   git copiado pode conter entradas com hashes de objetos que apontam para o
+  #   store local do live CD — não para os arquivos em /mnt/etc/nixos. Refazer o
+  #   git add --force no destino garante que o índice em /mnt/etc/nixos reflete
+  #   os arquivos LOCAIS, tornando-os visíveis ao avaliador de flakes do Nix
+  #   (que usa o índice git para determinar quais arquivos incluir no flake source).
+  for _i in "${!USERS_LOGIN[@]}"; do
+    _ufile_rel="users/${USERS_LOGIN[$_i]}.nix"
+    if [[ -f "/mnt/etc/nixos/$_ufile_rel" ]]; then
+      git -C /mnt/etc/nixos add --force "$_ufile_rel" 2>/dev/null || true
+      success "Arquivo $_ufile_rel re-indexado em /mnt/etc/nixos."
+    else
+      warn "Arquivo $_ufile_rel não encontrado em /mnt/etc/nixos após rsync!"
+    fi
+  done
+
+  # Re-indexar configuration.nix e disko.nix do host (modificados pelos passos 2 e 6)
+  git -C /mnt/etc/nixos add \
+    "hosts/$HOST/configuration.nix" \
+    "hosts/$HOST/disko.nix" 2>/dev/null || true
+
   if [[ -d /mnt/etc/nixos/private ]]; then
     git -C /mnt/etc/nixos add --force private/ 2>/dev/null || true
     success "Camada privada re-indexada em /mnt/etc/nixos (visível ao nixos-install)."
@@ -832,17 +852,32 @@ _USERS_WITH_PASSWORD=()
 # Padrão de nome de usuário seguro para uso em nomes de arquivo
 _SAFE_USERNAME='^[a-z_][a-z0-9_-]*$'
 
-if confirm "Definir senhas personalizadas para os usuários (via nixos-enter)?"; then
-  # Incluir usuários do private layer e usuários criados agora
-  _all_users_for_passwd=("${PRIVATE_LAYER_USERS[@]}" "${USERS_LOGIN[@]}")
+if confirm "Definir senhas personalizadas para os usuários?"; then
+  # Incluir usuários do private layer e usuários criados agora.
+  # "root" é excluído aqui — a senha do root é configurada no bloco seguinte.
+  # (Isso evita que o root seja solicitado duas vezes quando o private layer
+  #  define configurações para users.users.root, ex: chaves SSH autorizadas.)
+  _all_users_for_passwd=()
+  for _u in "${PRIVATE_LAYER_USERS[@]}" "${USERS_LOGIN[@]}"; do
+    [[ "$_u" == "root" ]] && continue
+    _all_users_for_passwd+=("$_u")
+  done
+
   for _user in "${_all_users_for_passwd[@]}"; do
     info "Definindo senha para '$_user'..."
-    if ! nixos-enter --root /mnt -- id "$_user" &>/dev/null; then
-      warn "Usuário '$_user' não encontrado no sistema instalado."
-      warn "Verifique se a camada privada foi carregada corretamente pelo nixos-install."
+    # Verifica a existência do usuário diretamente em /mnt/etc/passwd, sem precisar
+    # de nixos-enter (que executaria scripts de ativação e poderia interferir com
+    # o bind mount do /etc/shadow criado pelo restoreShadow).
+    if ! grep -q "^${_user}:" /mnt/etc/passwd 2>/dev/null; then
+      warn "Usuário '$_user' não encontrado em /mnt/etc/passwd."
+      warn "Verifique se o import de users/$_user.nix está em hosts/$HOST/configuration.nix"
+      warn "e se o nixos-install foi concluído com sucesso."
       continue
     fi
-    if nixos-enter --root /mnt -- passwd "$_user"; then
+    # passwd --root /mnt escreve diretamente em /mnt/etc/shadow no host (sem chroot),
+    # evitando interferências com o bind mount de /etc/shadow que o restoreShadow
+    # pode ter criado dentro do namespace de montagem do nixos-install ou nixos-enter.
+    if passwd --root /mnt "$_user"; then
       success "Senha do usuário '$_user' definida."
       # Registrar apenas nomes de usuário com caracteres seguros para nomes de arquivo
       if [[ "$_user" =~ $_SAFE_USERNAME ]]; then
@@ -858,7 +893,7 @@ else
 fi
 
 if confirm "Definir senha do root?"; then
-  if nixos-enter --root /mnt -- passwd root; then
+  if passwd --root /mnt root; then
     success "Senha do root definida."
   else
     warn "Não foi possível definir senha do root."
@@ -867,9 +902,17 @@ fi
 
 # Copiar /etc/shadow para /persist/etc/shadow para que as senhas sobrevivam
 # ao boot (a raiz tmpfs é reiniciada a cada boot, /persist é preservado via Btrfs).
-# Usar `install` para definir permissões 640 atomicamente (sem janela de acesso).
+#
+# Nota: passwd --root /mnt escreve as senhas diretamente em /mnt/etc/shadow.
+# Se o script de ativação restoreShadow (users.nix) criou um bind mount de
+# /mnt/persist/etc/shadow → /mnt/etc/shadow dentro do namespace do nixos-install
+# e esse bind mount propagou ao host, /mnt/etc/shadow e /mnt/persist/etc/shadow
+# apontam para o mesmo arquivo. Usar `install` para a cópia é seguro nesse caso
+# (lê o conteúdo atual, grava em inode novo, substitui atomicamente).
+# Se o bind mount NÃO propagou, /mnt/etc/shadow é o shadow modificado por passwd
+# e a cópia garante sua persistência.
+mkdir -p /mnt/persist/etc
 if [ -s /mnt/etc/shadow ]; then
-  mkdir -p /mnt/persist/etc
   install -m 640 /mnt/etc/shadow /mnt/persist/etc/shadow
   success "/etc/shadow copiado para /persist/etc/shadow (persiste entre boots)."
 else
