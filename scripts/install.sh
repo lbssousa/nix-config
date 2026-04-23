@@ -588,6 +588,15 @@ for _i in "${!USERS_LOGIN[@]}"; do
   success "Arquivo $_ufile adicionado ao índice do git (sem commit)."
 done
 
+# Se a camada privada existe, garantir que está no índice do git.
+# O diretório private/ é gitignored no repo público; sem git add --force
+# o Nix ignora esses arquivos ao avaliar o flake, resultando em
+# privateModules = [] mesmo que os arquivos existam no disco.
+if [[ -f "$CONFIG_DIR/private/modules.nix" ]]; then
+  git -C "$CONFIG_DIR" add --force private/
+  success "Camada privada (private/) adicionada ao índice do git."
+fi
+
 # ---------------------------------------------------------------------------
 # 6. Atualizar configuration.nix com os imports dos usuários
 # ---------------------------------------------------------------------------
@@ -724,12 +733,27 @@ if [[ "$OPT_NON_INTERACTIVE" == "true" ]] || confirm "Copiar configuração para
   fi
   success "Configuração copiada para /mnt/etc/nixos."
 
+  # Re-indexar a camada privada em /mnt/etc/nixos para garantir que o Nix
+  # a enxergue ao avaliar o flake copiado.
+  # O rsync já copiou os arquivos e o .git/ (incluindo o índice), mas fazemos
+  # git add --force de novo para cobrir o caso em que o usuário não tinha
+  # rodado esse comando no repo de origem antes de iniciar o install.sh.
+  if [[ -d /mnt/etc/nixos/private ]]; then
+    git -C /mnt/etc/nixos add --force private/ 2>/dev/null || true
+    success "Camada privada re-indexada em /mnt/etc/nixos (visível ao nixos-install)."
+  fi
+
   info "Executando nixos-install..."
   # Passa os caches binários explicitamente para que o nixos-install os use mesmo
   # que o nix.conf do live CD não os contenha. Isso evita compilações do zero
   # (ex: dependências Rust do lanzaboote) e downloads frágeis do crates.io.
+  # --no-root-password: a senha do root é definida exclusivamente no passo 8,
+  # onde a cópia para /persist/etc/shadow é garantida. Sem essa flag o
+  # nixos-install também pede uma senha de root, mas essa senha nunca chega ao
+  # /persist/etc/shadow (a cópia acontece no passo 8, após nixos-install).
   nixos-install \
     --flake "/mnt/etc/nixos#$HOST" \
+    --no-root-password \
     --option accept-flake-config true \
     --option extra-substituters "$NIX_COMMUNITY_SUBSTITUTER" \
     --option extra-trusted-public-keys "$NIX_COMMUNITY_KEY"
@@ -813,11 +837,19 @@ if confirm "Definir senhas personalizadas para os usuários (via nixos-enter)?";
   _all_users_for_passwd=("${PRIVATE_LAYER_USERS[@]}" "${USERS_LOGIN[@]}")
   for _user in "${_all_users_for_passwd[@]}"; do
     info "Definindo senha para '$_user'..."
-    nixos-enter --root /mnt -- passwd "$_user"
-    success "Senha do usuário '$_user' definida."
-    # Registrar apenas nomes de usuário com caracteres seguros para nomes de arquivo
-    if [[ "$_user" =~ $_SAFE_USERNAME ]]; then
-      _USERS_WITH_PASSWORD+=("$_user")
+    if ! nixos-enter --root /mnt -- id "$_user" &>/dev/null; then
+      warn "Usuário '$_user' não encontrado no sistema instalado."
+      warn "Verifique se a camada privada foi carregada corretamente pelo nixos-install."
+      continue
+    fi
+    if nixos-enter --root /mnt -- passwd "$_user"; then
+      success "Senha do usuário '$_user' definida."
+      # Registrar apenas nomes de usuário com caracteres seguros para nomes de arquivo
+      if [[ "$_user" =~ $_SAFE_USERNAME ]]; then
+        _USERS_WITH_PASSWORD+=("$_user")
+      fi
+    else
+      warn "Não foi possível definir senha para '$_user'."
     fi
   done
 else
@@ -825,9 +857,12 @@ else
   info "temporária 'nixos' (via initialPassword) e serão solicitados a trocá-la."
 fi
 
-if confirm "Definir senha do root também?"; then
-  nixos-enter --root /mnt -- passwd root
-  success "Senha do root definida."
+if confirm "Definir senha do root?"; then
+  if nixos-enter --root /mnt -- passwd root; then
+    success "Senha do root definida."
+  else
+    warn "Não foi possível definir senha do root."
+  fi
 fi
 
 # Copiar /etc/shadow para /persist/etc/shadow para que as senhas sobrevivam
