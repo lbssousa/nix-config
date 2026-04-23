@@ -621,8 +621,8 @@ if [[ "$OPT_NON_INTERACTIVE" != "true" && -z "$OPT_AGE_KEYS_BACKUP" ]]; then
 fi
 
 if [[ -n "$OPT_AGE_KEYS_BACKUP" ]]; then
-  # Rejeitar caminhos com caracteres nulos ou quebras de linha
-  if [[ "$OPT_AGE_KEYS_BACKUP" == *$'\n'* || "$OPT_AGE_KEYS_BACKUP" == *$'\0'* ]]; then
+  # Rejeitar caminhos com quebras de linha
+  if [[ "$OPT_AGE_KEYS_BACKUP" == *$'\n'* ]]; then
     die "Caminho inválido para o backup de keys.txt."
   fi
   if [[ ! -f "$OPT_AGE_KEYS_BACKUP" ]]; then
