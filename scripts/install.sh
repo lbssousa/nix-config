@@ -395,10 +395,14 @@ _scan_private_layer_users() {
 }
 
 # Conta redes Wi-Fi definidas em private/nixos/wifi.nix.
-# Suporta as duas notações Nix:
-#   - Pontilhada:  networking.wireless.networks."SSID" = { ... }
-#   - Atributo:    networking.wireless.networks = { "SSID" = { ... }; }
-# Retorna (via stdout) o número de SSIDs encontrados (0 se nenhum).
+# Suporta as seguintes notações Nix:
+#   - Pontilhada (wpa_supplicant):
+#       networking.wireless.networks."SSID" = { ... }
+#   - Atributo (wpa_supplicant):
+#       networking.wireless.networks = { "SSID" = { ... }; }
+#   - Perfis sops-nix (NetworkManager):
+#       sops.templates."Nome da Conexão.nmconnection" = { ... }
+# Retorna (via stdout) o número de definições encontradas (0 se nenhuma).
 _private_layer_wifi_network_count() {
   local wifi_file="$CONFIG_DIR/private/nixos/wifi.nix"
   [[ -f "$wifi_file" ]] || { echo 0; return; }
@@ -430,6 +434,31 @@ _private_layer_wifi_network_count() {
     END { print found }
   ' "$wifi_file" 2>/dev/null || echo 0)
   count=$((count + block))
+
+  # Perfis sops-nix para NetworkManager:
+  #   Notação pontilhada:  sops.templates."Nome.nmconnection" = { ... }
+  local sops_dotted
+  sops_dotted=$(grep -cE '^\s*sops\.templates\."[^"]+\.nmconnection"\s*=' \
+    "$wifi_file" 2>/dev/null || true)
+  count=$((count + sops_dotted))
+
+  #   Notação de atributo:  sops.templates = { "Nome.nmconnection" = { ... }; }
+  local sops_block
+  sops_block=$(awk '
+    FNR == 1 { in_tmpl = 0; depth = 0; found = 0 }
+    /sops\.templates[[:space:]]*=[[:space:]]*\{/ { in_tmpl = 1; depth = 1; next }
+    in_tmpl {
+      start_depth = depth
+      for (i = 1; i <= length($0); i++) {
+        char = substr($0, i, 1)
+        if (char == "{") depth++
+        else if (char == "}") { depth--; if (depth == 0) in_tmpl = 0 }
+      }
+      if (start_depth == 1 && $0 ~ /^[[:space:]]*"[^"]+\.nmconnection"[[:space:]]*=/) found++
+    }
+    END { print found }
+  ' "$wifi_file" 2>/dev/null || echo 0)
+  count=$((count + sops_block))
 
   echo "$count"
 }
