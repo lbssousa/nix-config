@@ -169,6 +169,43 @@ Recursos para começar:
 - [sops-nix README](https://github.com/Mic92/sops-nix)
 - [age key generation](https://age-encryption.org/)
 
+### Restaurar a chave age durante a instalação
+
+Se você usa sops-nix com secrets necessários **logo após o primeiro boot**
+(por exemplo, senhas de Wi-Fi declaradas em `private/nixos/wifi.nix`), a chave
+age precisa estar presente em `$HOME/.config/sops/age/keys.txt` antes que o
+sistema seja iniciado.
+
+O diretório `/home` é um subvolume Btrfs persistente (`@home`), portanto o
+arquivo sobrevive entre boots — mas precisa ser colocado lá **durante a
+instalação**, enquanto os filesystems estão montados em `/mnt`.
+
+Após particionar e montar os filesystems (e antes de executar `nixos-install`),
+restaure o backup da chave para cada usuário que precisa dela:
+
+```bash
+# Substitua <usuario> pelo nome do usuário correspondente
+install -d -m 700 /mnt/home/<usuario>/.config/sops/age
+install -m 600 /caminho/para/backup/keys.txt \
+  /mnt/home/<usuario>/.config/sops/age/keys.txt
+```
+
+> **Nota:** O `install -d -m 700` cria o diretório com permissões corretas.
+> O `install -m 600` copia o arquivo garantindo que apenas o dono possa lê-lo,
+> o que é exigido pelo sops-nix.
+
+Se o backup estiver em mídia removível (pen drive, disco externo), monte-a
+primeiro:
+
+```bash
+mkdir -p /mnt/backup
+mount /dev/sdX1 /mnt/backup   # Ajuste o dispositivo conforme necessário
+
+install -d -m 700 /mnt/home/<usuario>/.config/sops/age
+install -m 600 /mnt/backup/keys.txt \
+  /mnt/home/<usuario>/.config/sops/age/keys.txt
+```
+
 ---
 
 ## Resumo do workflow diário
