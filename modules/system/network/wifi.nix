@@ -35,4 +35,7 @@
 #   nix-shell -p wpa_supplicant --run "wpa_passphrase MinhaRede SenhaAqui"
 #
 # O valor do campo "psk=" (sem aspas) na saída do wpa_passphrase é o hash a usar.
-_: { }
+_: {
+  # Adicione os perfis Wi-Fi abaixo via networking.networkmanager.ensureProfiles.profiles.
+  # Consulte os comentários no início deste arquivo para exemplos e instruções.
+}
