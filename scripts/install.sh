@@ -373,16 +373,16 @@ _scan_private_layer_users() {
     # os nomes de usuário no nível direto do bloco users.users = { }.
     find "$private_dir" -name '*.nix' -print0 2>/dev/null \
       | xargs -r -0 awk '
-          FNR == 1 { in_u = 0; depth = 0 }
-          /users\.users[[:space:]]*=[[:space:]]*\{/ { in_u = 1; depth = 1; next }
-          in_u {
-            sd = depth
+          FNR == 1 { in_users_block = 0; depth = 0 }
+          /users\.users[[:space:]]*=[[:space:]]*\{/ { in_users_block = 1; depth = 1; next }
+          in_users_block {
+            start_depth = depth
             for (i = 1; i <= length($0); i++) {
-              c = substr($0, i, 1)
-              if (c == "{") depth++
-              else if (c == "}") { depth--; if (depth == 0) in_u = 0 }
+              char = substr($0, i, 1)
+              if (char == "{") depth++
+              else if (char == "}") { depth--; if (depth == 0) in_users_block = 0 }
             }
-            if (sd == 1 && $0 ~ /^[[:space:]]+[a-z_][a-z0-9_-]*[[:space:]]*=/) {
+            if (start_depth == 1 && $0 ~ /^[[:space:]]+[a-z_][a-z0-9_-]*[[:space:]]*=/) {
               line = $0
               gsub(/^[[:space:]]+/, "", line)
               sub(/[[:space:]]*=.*$/, "", line)
