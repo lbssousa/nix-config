@@ -394,6 +394,75 @@ _scan_private_layer_users() {
   } | sort -u
 }
 
+# Conta redes Wi-Fi definidas em private/nixos/wifi.nix.
+# Suporta as seguintes notações Nix:
+#   - Pontilhada (wpa_supplicant):
+#       networking.wireless.networks."SSID" = { ... }
+#   - Atributo (wpa_supplicant):
+#       networking.wireless.networks = { "SSID" = { ... }; }
+#   - Perfis sops-nix (NetworkManager):
+#       sops.templates."Nome da Conexão.nmconnection" = { ... }
+# Retorna (via stdout) o número de definições encontradas (0 se nenhuma).
+_private_layer_wifi_network_count() {
+  local wifi_file="$CONFIG_DIR/private/nixos/wifi.nix"
+  [[ -f "$wifi_file" ]] || { echo 0; return; }
+
+  local count=0
+
+  # Notação pontilhada: networking.wireless.networks."SSID" = ...
+  local dotted
+  dotted=$(grep -cE '^\s*networking\.wireless\.networks\."[^"]+"\s*=' \
+    "$wifi_file" 2>/dev/null || true)
+  count=$((count + dotted))
+
+  # Notação de conjunto de atributos: networking.wireless.networks = { "SSID" = ...; }
+  # Usa awk com rastreamento de profundidade de chaves para encontrar entradas
+  # no nível direto do bloco networking.wireless.networks = { }.
+  local block
+  block=$(awk '
+    FNR == 1 { in_networks = 0; depth = 0; found = 0 }
+    /networking\.wireless\.networks[[:space:]]*=[[:space:]]*\{/ { in_networks = 1; depth = 1; next }
+    in_networks {
+      start_depth = depth
+      for (i = 1; i <= length($0); i++) {
+        char = substr($0, i, 1)
+        if (char == "{") depth++
+        else if (char == "}") { depth--; if (depth == 0) in_networks = 0 }
+      }
+      if (start_depth == 1 && $0 ~ /^[[:space:]]*"[^"]+"[[:space:]]*=/) found++
+    }
+    END { print found }
+  ' "$wifi_file" 2>/dev/null || echo 0)
+  count=$((count + block))
+
+  # Perfis sops-nix para NetworkManager:
+  #   Notação pontilhada:  sops.templates."Nome.nmconnection" = { ... }
+  local sops_dotted
+  sops_dotted=$(grep -cE '^\s*sops\.templates\."[^"]+\.nmconnection"\s*=' \
+    "$wifi_file" 2>/dev/null || true)
+  count=$((count + sops_dotted))
+
+  #   Notação de atributo:  sops.templates = { "Nome.nmconnection" = { ... }; }
+  local sops_block
+  sops_block=$(awk '
+    FNR == 1 { in_tmpl = 0; depth = 0; found = 0 }
+    /sops\.templates[[:space:]]*=[[:space:]]*\{/ { in_tmpl = 1; depth = 1; next }
+    in_tmpl {
+      start_depth = depth
+      for (i = 1; i <= length($0); i++) {
+        char = substr($0, i, 1)
+        if (char == "{") depth++
+        else if (char == "}") { depth--; if (depth == 0) in_tmpl = 0 }
+      }
+      if (start_depth == 1 && $0 ~ /^[[:space:]]*"[^"]+\.nmconnection"[[:space:]]*=/) found++
+    }
+    END { print found }
+  ' "$wifi_file" 2>/dev/null || echo 0)
+  count=$((count + sops_block))
+
+  echo "$count"
+}
+
 mapfile -t PRIVATE_LAYER_USERS < <(_scan_private_layer_users)
 
 if [[ ${#PRIVATE_LAYER_USERS[@]} -gt 0 ]]; then
@@ -693,22 +762,29 @@ if [[ "$OPT_NON_INTERACTIVE" == "true" ]] || confirm "Copiar configuração para
   # redigitar o SSID e a senha.
   # Permissões 600 são obrigatórias: o NetworkManager ignora/recusa perfis com
   # permissões mais abertas.
+  # Se a camada privada já provê pelo menos uma rede Wi-Fi em
+  # private/nixos/wifi.nix, não há necessidade de copiar as conexões do live CD.
   echo
   info "==> Passo 7c: Copiar conexões Wi-Fi para o sistema instalado"
-  _NM_SRC="/etc/NetworkManager/system-connections"
-  _NM_DST="/mnt/persist/etc/NetworkManager/system-connections"
-  _nm_copied=0
-  if [[ -d "$_NM_SRC" ]]; then
-    while IFS= read -r -d '' _profile; do
-      mkdir -p "$_NM_DST"
-      install -m 600 "$_profile" "$_NM_DST/"
-      ((_nm_copied++)) || true
-    done < <(find "$_NM_SRC" -maxdepth 1 -type f -print0)
-  fi
-  if ((_nm_copied > 0)); then
-    success "$_nm_copied conexão(ões) Wi-Fi copiada(s) para $_NM_DST."
+  _wifi_net_count=$(_private_layer_wifi_network_count)
+  if ((_wifi_net_count > 0)); then
+    info "Camada privada define $_wifi_net_count rede(s) Wi-Fi em private/nixos/wifi.nix. Pulando cópia de conexões do live CD."
   else
-    info "Nenhuma conexão Wi-Fi encontrada no live CD. Pulando."
+    _NM_SRC="/etc/NetworkManager/system-connections"
+    _NM_DST="/mnt/persist/etc/NetworkManager/system-connections"
+    _nm_copied=0
+    if [[ -d "$_NM_SRC" ]]; then
+      while IFS= read -r -d '' _profile; do
+        mkdir -p "$_NM_DST"
+        install -m 600 "$_profile" "$_NM_DST/"
+        ((_nm_copied++)) || true
+      done < <(find "$_NM_SRC" -maxdepth 1 -type f -print0)
+    fi
+    if ((_nm_copied > 0)); then
+      success "$_nm_copied conexão(ões) Wi-Fi copiada(s) para $_NM_DST."
+    else
+      info "Nenhuma conexão Wi-Fi encontrada no live CD. Pulando."
+    fi
   fi
 else
   warn "Instalação pulada. Execute manualmente:"
