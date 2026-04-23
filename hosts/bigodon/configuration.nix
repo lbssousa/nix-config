@@ -15,6 +15,7 @@
     ../../modules/system/security/tpm2.nix
     ../../modules/system/shell/shells.nix
     ../../modules/system/tools/homebrew.nix
+    ../../modules/system/tools/lbnix.nix
     ../../modules/system/tools/packages.nix
     ../../modules/system/users/users.nix
     # Carregar configurações de usuário (não commitadas - ver .gitignore)
