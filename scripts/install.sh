@@ -353,6 +353,32 @@ USERS_LOGIN=()
 USERS_FULLNAME=()
 USERS_SUDO=()
 
+# Usuários já definidos na camada privada (private/modules.nix e seus imports).
+# Não precisam de arquivo skeleton — suas definições NixOS já estão no private layer.
+PRIVATE_LAYER_USERS=()
+
+_scan_private_layer_users() {
+  local private_dir="$CONFIG_DIR/private"
+  [[ -f "$private_dir/modules.nix" ]] || return 0
+  # Grep recursivo em todos os .nix do private layer procurando atribuições
+  # do tipo `users.users.<nome> = {` e extrai o nome de usuário.
+  # Linhas comentadas (com #) são ignoradas para evitar falsos positivos.
+  grep -rh 'users\.users\.[a-z_][a-z0-9_-]*[[:space:]]*=' "$private_dir" --include='*.nix' 2>/dev/null \
+    | grep -v '[[:space:]]*#' \
+    | sed 's/.*users\.users\.\([a-z_][a-z0-9_-]*\)[[:space:]]*=.*/\1/' \
+    | sort -u
+}
+
+mapfile -t PRIVATE_LAYER_USERS < <(_scan_private_layer_users)
+
+if [[ ${#PRIVATE_LAYER_USERS[@]} -gt 0 ]]; then
+  echo
+  info "Usuários encontrados na camada privada (private layer):"
+  for _pu in "${PRIVATE_LAYER_USERS[@]}"; do
+    echo "  - $_pu"
+  done
+fi
+
 _create_user_file() {
   local user="$1" full_name="$2" sudo_flag="$3"
   local user_file="$CONFIG_DIR/users/$user.nix"
@@ -383,7 +409,9 @@ _create_user_file() {
 }
 
 if [[ "$OPT_NON_INTERACTIVE" == "true" ]]; then
-  [[ ${#OPT_USERS_LOGIN[@]} -gt 0 ]] || die "Modo não-interativo: nenhum usuário definido. Use --user 'login:Nome:sudo'."
+  if [[ ${#OPT_USERS_LOGIN[@]} -eq 0 && ${#PRIVATE_LAYER_USERS[@]} -eq 0 ]]; then
+    die "Modo não-interativo: nenhum usuário definido. Use --user 'login:Nome:sudo' ou ative o private layer."
+  fi
   USERS_LOGIN=("${OPT_USERS_LOGIN[@]}")
   USERS_FULLNAME=("${OPT_USERS_FULLNAME[@]}")
   USERS_SUDO=("${OPT_USERS_SUDO[@]}")
@@ -393,16 +421,23 @@ else
   USERS_FULLNAME=("${OPT_USERS_FULLNAME[@]}")
   USERS_SUDO=("${OPT_USERS_SUDO[@]}")
 
-  # Loop interativo para adicionar usuários
+  # Loop interativo para adicionar usuários.
+  # Se o private layer já definiu usuários, pergunta diretamente se deseja criar mais.
+  _has_any_users() {
+    [[ ${#USERS_LOGIN[@]} -gt 0 || ${#PRIVATE_LAYER_USERS[@]} -gt 0 ]]
+  }
+
   while true; do
-    if [[ ${#USERS_LOGIN[@]} -gt 0 ]]; then
+    if _has_any_users; then
       echo
-      echo "Usuários definidos:"
-      for _i in "${!USERS_LOGIN[@]}"; do
-        _sudo_label="com sudo"
-        [[ "${USERS_SUDO[$_i]}" == "false" ]] && _sudo_label="sem sudo"
-        echo "  $((_i + 1)). ${USERS_LOGIN[$_i]} (${USERS_FULLNAME[$_i]:-}) — $_sudo_label"
-      done
+      if [[ ${#USERS_LOGIN[@]} -gt 0 ]]; then
+        echo "Novos usuários a criar:"
+        for _i in "${!USERS_LOGIN[@]}"; do
+          _sudo_label="com sudo"
+          [[ "${USERS_SUDO[$_i]}" == "false" ]] && _sudo_label="sem sudo"
+          echo "  $((_i + 1)). ${USERS_LOGIN[$_i]} (${USERS_FULLNAME[$_i]:-}) — $_sudo_label"
+        done
+      fi
       if ! confirm "Adicionar outro usuário?"; then
         break
       fi
@@ -433,7 +468,9 @@ else
     USERS_SUDO+=("$_tmp_sudo")
   done
 
-  [[ ${#USERS_LOGIN[@]} -gt 0 ]] || die "Pelo menos um usuário deve ser definido."
+  if [[ ${#USERS_LOGIN[@]} -eq 0 && ${#PRIVATE_LAYER_USERS[@]} -eq 0 ]]; then
+    die "Pelo menos um usuário deve ser definido."
+  fi
 fi
 
 for _i in "${!USERS_LOGIN[@]}"; do
@@ -670,9 +707,10 @@ _USERS_WITH_PASSWORD=()
 # Padrão de nome de usuário seguro para uso em nomes de arquivo
 _SAFE_USERNAME='^[a-z_][a-z0-9_-]*$'
 
-if confirm "Definir senhas personalizadas para os usuários criados agora (via nixos-enter)?"; then
-  for _i in "${!USERS_LOGIN[@]}"; do
-    _user="${USERS_LOGIN[$_i]}"
+if confirm "Definir senhas personalizadas para os usuários (via nixos-enter)?"; then
+  # Incluir usuários do private layer e usuários criados agora
+  _all_users_for_passwd=("${PRIVATE_LAYER_USERS[@]}" "${USERS_LOGIN[@]}")
+  for _user in "${_all_users_for_passwd[@]}"; do
     info "Definindo senha para '$_user'..."
     nixos-enter --root /mnt -- passwd "$_user"
     success "Senha do usuário '$_user' definida."
