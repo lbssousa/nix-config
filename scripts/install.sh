@@ -360,13 +360,38 @@ PRIVATE_LAYER_USERS=()
 _scan_private_layer_users() {
   local private_dir="$CONFIG_DIR/private"
   [[ -f "$private_dir/modules.nix" ]] || return 0
-  # Grep recursivo em todos os .nix do private layer procurando atribuições
-  # do tipo `users.users.<nome> = {` e extrai o nome de usuário.
-  # Linhas comentadas (com #) são ignoradas para evitar falsos positivos.
-  grep -rh 'users\.users\.[a-z_][a-z0-9_-]*[[:space:]]*=' "$private_dir" --include='*.nix' 2>/dev/null \
-    | grep -v '[[:space:]]*#' \
-    | sed 's/.*users\.users\.\([a-z_][a-z0-9_-]*\)[[:space:]]*=.*/\1/' \
-    | sort -u
+  {
+    # Notação pontilhada: users.users.NOME = { ... }
+    grep -rh 'users\.users\.[a-z_][a-z0-9_-]*[[:space:]]*=' \
+      "$private_dir" --include='*.nix' 2>/dev/null \
+      | grep -v '^[[:space:]]*#' \
+      | sed 's/.*users\.users\.\([a-z_][a-z0-9_-]*\)[[:space:]]*=.*/\1/' \
+      || true
+
+    # Notação de conjunto de atributos: users.users = { NOME = ...; }
+    # Usa awk com rastreamento de profundidade de chaves para extrair apenas
+    # os nomes de usuário no nível direto do bloco users.users = { }.
+    find "$private_dir" -name '*.nix' -print0 2>/dev/null \
+      | xargs -r -0 awk '
+          FNR == 1 { in_users_block = 0; depth = 0 }
+          /users\.users[[:space:]]*=[[:space:]]*\{/ { in_users_block = 1; depth = 1; next }
+          in_users_block {
+            start_depth = depth
+            for (i = 1; i <= length($0); i++) {
+              char = substr($0, i, 1)
+              if (char == "{") depth++
+              else if (char == "}") { depth--; if (depth == 0) in_users_block = 0 }
+            }
+            if (start_depth == 1 && $0 ~ /^[[:space:]]+[a-z_][a-z0-9_-]*[[:space:]]*=/) {
+              line = $0
+              gsub(/^[[:space:]]+/, "", line)
+              sub(/[[:space:]]*=.*$/, "", line)
+              print line
+            }
+          }
+        ' 2>/dev/null \
+      || true
+  } | sort -u
 }
 
 mapfile -t PRIVATE_LAYER_USERS < <(_scan_private_layer_users)
