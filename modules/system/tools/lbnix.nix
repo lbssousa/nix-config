@@ -49,7 +49,11 @@ let
     _rebuild() {
       local subcmd="$1"
       local host="''${2:-$HOST}"
-      shift 2 || shift "$#"
+      if [ "$#" -ge 2 ]; then
+        shift 2
+      else
+        shift "$#"
+      fi
       nixos-rebuild "$subcmd" --flake "$FLAKE_DIR#$host" "$@"
     }
 
@@ -86,10 +90,10 @@ let
         popd > /dev/null
         ;;
       diff)
-        local_host="''${2:-$HOST}"
+        host="''${2:-$HOST}"
         new_drv="$(
           nix build \
-            "$FLAKE_DIR#nixosConfigurations.''${local_host}.config.system.build.toplevel" \
+            "$FLAKE_DIR#nixosConfigurations.''${host}.config.system.build.toplevel" \
             --no-link --print-out-paths 2>/dev/null
         )"
         ${pkgs.nvd}/bin/nvd diff /run/current-system "$new_drv"
