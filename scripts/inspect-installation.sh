@@ -125,9 +125,12 @@ if [[ "$DO_MOUNT" == "true" ]]; then
   if [[ -n "$_btrfs_dev" ]]; then
     info "Dispositivo Btrfs: $_btrfs_dev"
     mkdir -p "$ROOT"
-    mount -o subvol=@nix   "$_btrfs_dev" "$ROOT/nix"      2>/dev/null || true
-    mount -o subvol=@persist "$_btrfs_dev" "$ROOT/persist"  2>/dev/null || true
-    mount -o subvol=@home  "$_btrfs_dev" "$ROOT/home"      2>/dev/null || true
+    # A raiz é tmpfs no setup de impermanência; montar antes dos subvolumes
+    mount -t tmpfs tmpfs "$ROOT" 2>/dev/null || true
+    mkdir -p "$ROOT/nix" "$ROOT/persist" "$ROOT/home"
+    mount -o subvol=@nix     "$_btrfs_dev" "$ROOT/nix"     2>/dev/null || true
+    mount -o subvol=@persist "$_btrfs_dev" "$ROOT/persist" 2>/dev/null || true
+    mount -o subvol=@home    "$_btrfs_dev" "$ROOT/home"    2>/dev/null || true
     # Montar /boot/efi se disponível
     _efi_part=""
     for _p in "${DISK}p1" "${DISK}1"; do
@@ -301,7 +304,7 @@ if [[ -f "$ROOT/etc/shadow" ]]; then
   while IFS=: read -r _user _hash _rest; do
     case "$_user" in
       root|nobody|systemd-*|messagebus|polkituser) ;;  # skip system accounts
-      *) [[ -z "$_rest" ]] && continue ;;  # skip se linha malformada
+      *) [[ -z "$_rest" ]] && continue ;;  # pular se linha malformada
     esac
     # Mostrar root e usuários normais
     _uid=$(grep "^${_user}:" "$ROOT/etc/passwd" 2>/dev/null | cut -d: -f3 || echo "")
@@ -440,7 +443,7 @@ if [[ -n "$_user_files" ]]; then
     _username="${_fname%.nix}"
     # Verificar se está no índice git
     if [[ -d "$ROOT/etc/nixos/.git" ]]; then
-      if git -C "$ROOT/etc/nixos" ls-files --error-unmatch "users/$_fname" &>/dev/null 2>&1; then
+      if git -C "$ROOT/etc/nixos" ls-files --error-unmatch "users/$_fname" &>/dev/null; then
         info "  ✔ users/$_fname (indexado no git — visível ao Nix)"
       else
         fail "  ✖ users/$_fname (NÃO indexado no git — invisível ao Nix!)"
