@@ -27,18 +27,20 @@ _:
       LC_TELEPHONE = "pt_BR.UTF-8";
       LC_TIME = "pt_BR.UTF-8";
     };
+    # ibus como método de entrada: o daemon ibus intercepta as teclas mortas (dead_tilde,
+    # dead_acute, etc.) e entrega apenas o caractere composto final à aplicação.
+    # Isso corrige o bug do VTE/Ptyxis no Wayland, onde dead keys ficavam "penduradas"
+    # ao pressionar Enter (impedindo o uso de ~ como atalho de diretório), sem sacrificar
+    # a ergonomia: acentos continuam a funcionar com 2 teclas (´ + a = á, ~ + a = ã, etc.)
+    # e o AltGr continua funcional para [ ] { } | etc.
+    inputMethod = {
+      enable = true;
+      type = "ibus";
+    };
   };
 
-  # Configuração do teclado X11
-  # variant = "nodeadkeys": o til (~) é produzido diretamente (sem modo dead key),
-  # corrigindo o uso de ~ como atalho para o diretório pessoal em terminais.
-  # options = "compose:ralt": Alt direito vira tecla Compose, permitindo digitar
-  # caracteres acentuados (ã, õ, â, etc.) via sequência Compose + ~ + letra.
-  services.xserver.xkb = {
-    layout = "br";
-    variant = "nodeadkeys";
-    options = "compose:ralt";
-  };
+  # Configuração do teclado X11 — layout ABNT2 padrão com dead keys
+  services.xserver.xkb.layout = "br";
 
   # Configurações do Nix
   nix = {
