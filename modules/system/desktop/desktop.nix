@@ -210,8 +210,15 @@ in
       noto-fonts-cjk-sans
       noto-fonts-color-emoji
       liberation_ttf
+      nerd-fonts.adwaita-mono
       nerd-fonts.fira-code
+      nerd-fonts.fira-mono
+      nerd-fonts.hack
+      nerd-fonts.inconsolata
       nerd-fonts.jetbrains-mono
+      nerd-fonts.meslo-lg
+      nerd-fonts.ubuntu-mono
+      nerd-fonts.zed-mono
     ];
     fontconfig = {
       defaultFonts = {
