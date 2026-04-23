@@ -394,6 +394,46 @@ _scan_private_layer_users() {
   } | sort -u
 }
 
+# Conta redes Wi-Fi definidas em private/nixos/wifi.nix.
+# Suporta as duas notações Nix:
+#   - Pontilhada:  networking.wireless.networks."SSID" = { ... }
+#   - Atributo:    networking.wireless.networks = { "SSID" = { ... }; }
+# Retorna (via stdout) o número de SSIDs encontrados (0 se nenhum).
+_private_layer_wifi_network_count() {
+  local wifi_file="$CONFIG_DIR/private/nixos/wifi.nix"
+  [[ -f "$wifi_file" ]] || { echo 0; return; }
+
+  local count=0
+
+  # Notação pontilhada: networking.wireless.networks."SSID" = ...
+  local dotted
+  dotted=$(grep -cE '^\s*networking\.wireless\.networks\."[^"]+"\s*=' \
+    "$wifi_file" 2>/dev/null || true)
+  count=$((count + dotted))
+
+  # Notação de conjunto de atributos: networking.wireless.networks = { "SSID" = ...; }
+  # Usa awk com rastreamento de profundidade de chaves para encontrar entradas
+  # no nível direto do bloco networking.wireless.networks = { }.
+  local block
+  block=$(awk '
+    FNR == 1 { in_networks = 0; depth = 0; found = 0 }
+    /networking\.wireless\.networks[[:space:]]*=[[:space:]]*\{/ { in_networks = 1; depth = 1; next }
+    in_networks {
+      start_depth = depth
+      for (i = 1; i <= length($0); i++) {
+        char = substr($0, i, 1)
+        if (char == "{") depth++
+        else if (char == "}") { depth--; if (depth == 0) in_networks = 0 }
+      }
+      if (start_depth == 1 && $0 ~ /^[[:space:]]*"[^"]+"[[:space:]]*=/) found++
+    }
+    END { print found }
+  ' "$wifi_file" 2>/dev/null || echo 0)
+  count=$((count + block))
+
+  echo "$count"
+}
+
 mapfile -t PRIVATE_LAYER_USERS < <(_scan_private_layer_users)
 
 if [[ ${#PRIVATE_LAYER_USERS[@]} -gt 0 ]]; then
@@ -693,12 +733,13 @@ if [[ "$OPT_NON_INTERACTIVE" == "true" ]] || confirm "Copiar configuração para
   # redigitar o SSID e a senha.
   # Permissões 600 são obrigatórias: o NetworkManager ignora/recusa perfis com
   # permissões mais abertas.
-  # Se a camada privada já provê configuração de Wi-Fi (private/nixos/wifi.nix),
-  # não há necessidade de copiar as conexões do live CD.
+  # Se a camada privada já provê pelo menos uma rede Wi-Fi em
+  # private/nixos/wifi.nix, não há necessidade de copiar as conexões do live CD.
   echo
   info "==> Passo 7c: Copiar conexões Wi-Fi para o sistema instalado"
-  if [[ -f "$CONFIG_DIR/private/nixos/wifi.nix" ]]; then
-    info "Camada privada provê private/nixos/wifi.nix. Pulando cópia de conexões Wi-Fi do live CD."
+  _wifi_net_count=$(_private_layer_wifi_network_count)
+  if ((_wifi_net_count > 0)); then
+    info "Camada privada define $_wifi_net_count rede(s) Wi-Fi em private/nixos/wifi.nix. Pulando cópia de conexões do live CD."
   else
     _NM_SRC="/etc/NetworkManager/system-connections"
     _NM_DST="/mnt/persist/etc/NetworkManager/system-connections"
