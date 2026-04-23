@@ -173,8 +173,46 @@ Recursos para começar:
 
 Se você usa sops-nix com secrets necessários **logo após o primeiro boot**
 (por exemplo, senhas de Wi-Fi declaradas em `private/nixos/wifi.nix`), a chave
-age precisa estar presente em `$HOME/.config/sops/age/keys.txt` antes que o
-sistema seja iniciado.
+age precisa estar presente **antes** que o sistema seja iniciado.
+
+O sops-nix suporta dois locais para a chave age — escolha conforme seu caso:
+
+#### Opção A — Chave de sistema (`/persist/etc/sops/age/keys.txt`)
+
+Use quando os secrets precisam estar disponíveis **no nível do sistema**
+(serviços, secrets montados em `/run/secrets`, etc.). O subvolume `@persist`
+é montado em `/persist`, portanto o arquivo sobrevive entre boots.
+
+Após particionar e montar os filesystems (e antes de executar `nixos-install`),
+copie o backup:
+
+```bash
+install -d -m 700 /mnt/persist/etc/sops/age
+install -m 600 /caminho/para/backup/keys.txt \
+  /mnt/persist/etc/sops/age/keys.txt
+```
+
+Se o backup estiver em mídia removível (pen drive, disco externo), monte-a
+primeiro:
+
+```bash
+mkdir -p /mnt/backup
+mount /dev/sdX1 /mnt/backup   # Ajuste o dispositivo conforme necessário
+
+install -d -m 700 /mnt/persist/etc/sops/age
+install -m 600 /mnt/backup/keys.txt \
+  /mnt/persist/etc/sops/age/keys.txt
+```
+
+> **Nota:** O script `scripts/install.sh` oferece um passo interativo (6b)
+> para restaurar a chave de sistema automaticamente durante a instalação.
+> Consulte a seção `--age-keys-backup` na ajuda do script:
+> `bash scripts/install.sh --help`
+
+#### Opção B — Chave de usuário (`~/.config/sops/age/keys.txt`)
+
+Use quando a chave pertence a um usuário específico e os secrets são
+decriptografados no contexto do home-manager desse usuário.
 
 O diretório `/home` é um subvolume Btrfs persistente (`@home`), portanto o
 arquivo sobrevive entre boots — mas precisa ser colocado lá **durante a

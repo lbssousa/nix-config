@@ -8,6 +8,8 @@
 #   4. Cria arquivos de usuário a partir do skeleton
 #   5. Adiciona os arquivos de usuário ao índice do git (git add --force)
 #   6. Atualiza configuration.nix com os imports dos usuários
+#   6a. Cria chaves Secure Boot (apenas hosts com Lanzaboote)
+#   6b. Restaura chave age do sops-nix (opcional)
 #   7. Instala o NixOS
 #   8. Define senhas via nixos-enter
 #
@@ -25,6 +27,10 @@
 #                     Pode ser repetido para criar múltiplos usuários.
 #                     "sudo" (padrão) inclui o usuário no grupo wheel (sudo).
 #                     "nosudo" cria o usuário sem permissão de sudo.
+#   --age-keys-backup Caminho para o backup do arquivo keys.txt da chave age
+#                     (sops-nix). Copiado para /persist/etc/sops/age/keys.txt
+#                     no sistema instalado. Se omitido, é perguntado
+#                     interativamente (pode ser deixado vazio para pular).
 #   --non-interactive Não faz perguntas; falha se informações obrigatórias
 #                     não forem fornecidas via flags
 #   --help, -h        Exibe ajuda e sai
@@ -88,12 +94,14 @@ OPT_DISK=""
 OPT_USERS_LOGIN=()
 OPT_USERS_FULLNAME=()
 OPT_USERS_SUDO=()
+OPT_AGE_KEYS_BACKUP=""
 OPT_NON_INTERACTIVE=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --host)           OPT_HOST="$2";          shift 2 ;;
     --disk)           OPT_DISK="$2";          shift 2 ;;
+    --age-keys-backup) OPT_AGE_KEYS_BACKUP="$2"; shift 2 ;;
     --user)
       # Formato: "login:Nome Completo:sudo|nosudo"
       # O terceiro campo é opcional (padrão: sudo).
@@ -137,6 +145,10 @@ Opções:
                     "sudo" (padrão) inclui o usuário no grupo wheel (sudo).
                     "nosudo" cria o usuário sem permissão de sudo.
                     Se omitido, é perguntado interativamente.
+  --age-keys-backup Caminho para o backup do arquivo keys.txt da chave age
+                    (sops-nix). Copiado para /persist/etc/sops/age/keys.txt
+                    no sistema instalado. Se omitido, é perguntado
+                    interativamente (pode ser deixado vazio para pular).
   --non-interactive Não faz perguntas; falha se informações obrigatórias
                     não forem fornecidas via flags.
   --help, -h        Exibe esta ajuda e sai.
@@ -160,6 +172,8 @@ Este script automatiza os passos descritos em INSTALLATION.md:
   4. Cria arquivos de usuário a partir do skeleton
   5. Adiciona os arquivos de usuário ao índice do git (git add --force)
   6. Atualiza configuration.nix com os imports dos usuários
+  6a. Cria chaves Secure Boot (apenas hosts com Lanzaboote)
+  6b. Restaura chave age do sops-nix (opcional)
   7. Instala o NixOS
   8. Define senhas via nixos-enter
 EOF
@@ -526,6 +540,33 @@ if grep -q 'boot\.lanzaboote' "$CFG_FILE" 2>/dev/null; then
   fi
 else
   info "Host '$HOST' não usa Lanzaboote. Pulando criação de chaves Secure Boot."
+fi
+
+# ---------------------------------------------------------------------------
+# 6b. Restaurar chave age do sops-nix (opcional)
+# ---------------------------------------------------------------------------
+
+echo
+info "==> Passo 6b: Restaurar chave age do sops-nix"
+
+_AGE_KEYS_DST="/mnt/persist/etc/sops/age/keys.txt"
+
+if [[ "$OPT_NON_INTERACTIVE" != "true" && -z "$OPT_AGE_KEYS_BACKUP" ]]; then
+  info "Se você usa sops-nix com secrets de sistema, copie aqui o backup de"
+  info "keys.txt para /persist/etc/sops/age/keys.txt no sistema instalado."
+  echo -ne "${BOLD}Caminho para o backup de keys.txt (Enter para pular): ${RESET}"
+  read -r OPT_AGE_KEYS_BACKUP
+fi
+
+if [[ -n "$OPT_AGE_KEYS_BACKUP" ]]; then
+  if [[ ! -f "$OPT_AGE_KEYS_BACKUP" ]]; then
+    die "Arquivo de backup '$OPT_AGE_KEYS_BACKUP' não encontrado."
+  fi
+  mkdir -p "$(dirname "$_AGE_KEYS_DST")"
+  install -m 600 "$OPT_AGE_KEYS_BACKUP" "$_AGE_KEYS_DST"
+  success "Chave age copiada para $_AGE_KEYS_DST."
+else
+  info "Nenhum backup de keys.txt fornecido. Pulando."
 fi
 
 # ---------------------------------------------------------------------------
