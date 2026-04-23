@@ -704,16 +704,13 @@ _USERS_WITH_PASSWORD=()
 # Padrão de nome de usuário seguro para uso em nomes de arquivo
 _SAFE_USERNAME='^[a-z_][a-z0-9_-]*$'
 
-if confirm "Definir senhas personalizadas para os usuários?"; then
-  # "root" é excluído aqui — a senha do root é configurada no bloco seguinte.
-  _all_users_for_passwd=()
-  for _u in "${USERS_LOGIN[@]}"; do
-    [[ "$_u" == "root" ]] && continue
-    _all_users_for_passwd+=("$_u")
-  done
+# Perguntar individualmente para cada usuário se deseja definir senha agora.
+# "root" é tratado separadamente no bloco seguinte.
+for _user in "${USERS_LOGIN[@]}"; do
+  [[ "$_user" == "root" ]] && continue
 
-  for _user in "${_all_users_for_passwd[@]}"; do
-    info "Definindo senha para '$_user'..."
+  echo
+  if confirm "Definir senha para o usuário '$_user' agora?"; then
     # Verifica a existência do usuário diretamente em /mnt/etc/passwd, sem precisar
     # de nixos-enter (que executaria scripts de ativação e poderia interferir com
     # o bind mount do /etc/shadow criado pelo restoreShadow).
@@ -735,11 +732,11 @@ if confirm "Definir senhas personalizadas para os usuários?"; then
     else
       warn "Não foi possível definir senha para '$_user'."
     fi
-  done
-else
-  info "Senhas não definidas agora. No primeiro login, os usuários usarão a senha"
-  info "temporária 'nixos' (via initialPassword) e serão solicitados a trocá-la."
-fi
+  else
+    info "Senha de '$_user' não definida agora. No primeiro login, a senha temporária"
+    info "'nixos' (via initialPassword) será usada e a troca será solicitada."
+  fi
+done
 
 if confirm "Definir senha do root?"; then
   if passwd --root /mnt root; then
