@@ -50,8 +50,13 @@ in
     ../../modules/system/tools/lbnix.nix
     ../../modules/system/tools/packages.nix
     ../../modules/system/users/users.nix
-    # Carregar configurações de usuário (ver users/skeleton.nix para o template):
-    # ./../../users/seu-usuario.nix
+    # Configurações de usuário
+    ./../../users/laercio.nix
+    ./../../users/roberta.nix
+    ./../../users/miguel.nix
+    ./../../users/jose.nix
+    ./../../users/joao.nix
+    ./../../users/maria.nix
   ];
 
   # Nome do host

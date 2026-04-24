@@ -192,7 +192,7 @@ flatpak install flathub io.github.bazaar_cabinet.Bazaar  # App store
 - Integrado como módulo NixOS
 - Usa pacotes globais do sistema (`useGlobalPkgs = true`)
 - Configuração base em `home.nix`
-- Configurações de usuário em `users/<usuario>.nix` (gitignored)
+- Configurações de usuário em `users/<usuario>.nix` (commitados)
 
 ## Homebrew (Linuxbrew)
 
