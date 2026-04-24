@@ -12,37 +12,15 @@
 # 5. Descomente a linha de importação em hosts/<host>/configuration.nix:
 #      ./../../users/<seu-usuario>.nix
 #
-{ pkgs, ... }:
-
-{
-  # Definição do usuário no sistema
-  users.users.skeleton = {
-    isNormalUser = true;
-    description = "Nome Completo do Usuário";
-    # Grupos essenciais para desktop com GNOME + containers
-    extraGroups = [
-      "networkmanager" # Gerenciar conexões de rede
-      # Remova "wheel" abaixo se o usuário NÃO deve ter permissão de sudo:
-      "wheel" # sudo
-      "video" # Acesso à GPU
-      "audio" # Acesso ao áudio
-      "plugdev" # Acesso a dispositivos USB
-      "dialout" # Portas seriais
-      "docker" # Compatibilidade com Docker (Podman)
-    ];
-    shell = pkgs.zsh; # Shell padrão (Zsh)
-    # Senha inicial: o usuário será solicitado a trocá-la no primeiro login.
-    # Se uma senha personalizada for definida durante a instalação (ver INSTALLATION.md),
-    # a troca não será exigida.
-    initialPassword = "nixos";
-  };
-
-  # Configuração Home Manager para este usuário
-  home-manager.users.skeleton = {
-    imports = [
-      ../home.nix
-      # Módulos de usuário opcionais (descomente conforme necessário):
-      # ../modules/user/apps/brave.nix   # Brave Browser via nixpkgs
-    ];
-  };
+{ pkgs, lib, ... }:
+import ./mkUser.nix { inherit pkgs lib; } {
+  username = "skeleton";
+  description = "Nome Completo do Usuário";
+  # Descomente se o usuário deve ter permissão de sudo:
+  # hasSudo = true;
+  # Módulos Home Manager adicionais (descomente conforme necessário):
+  # extraHomeImports = [
+  #   ./skeleton-home.nix
+  #   ../modules/user/apps/brave.nix  # Brave Browser via nixpkgs
+  # ];
 }
