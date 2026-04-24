@@ -49,6 +49,7 @@
         ".ssh"
         ".gnupg"
         ".local/share/keyrings" # GNOME Keyring
+        ".config/sops/age" # Chave age do usuário para uso do CLI sops
         ".config/gh" # GitHub CLI
         ".local/share/flatpak" # Dados de Flatpaks do usuário
         ".var/app" # Dados de Flatpaks (XDG)

@@ -36,6 +36,12 @@
     # Lanzaboote for Secure Boot (used on barbudus for NVIDIA module signing)
     lanzaboote.url = "github:nix-community/lanzaboote/v0.4.1";
 
+    # sops-nix for secret management (Wi-Fi passwords, etc.)
+    sops-nix = {
+      url = "github:mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # nix-homebrew for Linuxbrew/Homebrew support
     # NOTA: O suporte ao Homebrew é configurado diretamente em modules/homebrew.nix
     # sem dependência de um flake externo. Este input é mantido para uso futuro.
@@ -49,6 +55,7 @@
       disko,
       impermanence,
       lanzaboote,
+      sops-nix,
       ...
     }@inputs:
     let
@@ -73,6 +80,9 @@
 
             # Home Manager as NixOS module
             home-manager.nixosModules.home-manager
+
+            # sops-nix for secret management
+            sops-nix.nixosModules.sops
             {
               home-manager = {
                 useGlobalPkgs = true;

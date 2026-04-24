@@ -4,22 +4,16 @@
   # Definição do usuário no sistema
   users.users.joao = {
     isNormalUser = true;
-    description = "João";
-    # Grupos essenciais para desktop com GNOME + containers
+    description = "João Felipe";
     extraGroups = [
-      "networkmanager" # Gerenciar conexões de rede
-      # Remova "wheel" abaixo se o usuário NÃO deve ter permissão de sudo:
-      "wheel" # sudo
-      "video" # Acesso à GPU
-      "audio" # Acesso ao áudio
-      "plugdev" # Acesso a dispositivos USB
-      "dialout" # Portas seriais
-      "docker" # Compatibilidade com Docker (Podman)
+      "networkmanager"
+      "video"
+      "audio"
+      "plugdev"
+      "dialout"
+      "docker"
     ];
-    shell = pkgs.zsh; # Shell padrão (Zsh)
-    # Senha inicial: o usuário será solicitado a trocá-la no primeiro login.
-    # Se uma senha personalizada for definida durante a instalação (ver INSTALLATION.md),
-    # a troca não será exigida.
+    shell = pkgs.zsh;
     initialPassword = "nixos";
   };
 
@@ -35,12 +29,13 @@
         ".ssh"
         ".gnupg"
         ".local/share/keyrings" # GNOME Keyring
+        ".config/sops/age" # Chave age do usuário para uso do CLI sops
         ".config/gh" # GitHub CLI
-        ".local/share/flatpak" # Dados de Flatpaks do usuário
-        ".var/app" # Dados de Flatpaks (XDG)
+        ".local/share/flatpak"
+        ".var/app"
         ".local/share/containers" # Podman rootless
-        ".config/distrobox" # Distrobox
-        ".local/share/fish" # Histórico do Fish shell
+        ".config/distrobox"
+        ".local/share/fish"
       ];
       files = [
         ".bash_history"
@@ -51,10 +46,6 @@
 
   # Configuração Home Manager para este usuário
   home-manager.users.joao = {
-    imports = [
-      ../home.nix
-      # Módulos de usuário opcionais (descomente conforme necessário):
-      # ../modules/user/apps/brave.nix   # Brave Browser via nixpkgs
-    ];
+    imports = [ ../home.nix ];
   };
 }
