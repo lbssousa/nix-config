@@ -11,7 +11,7 @@
 #   6a. Cria chaves Secure Boot (apenas hosts com Lanzaboote)
 #   6b. Restaura chave age do sops-nix (opcional)
 #   7. Instala o NixOS
-#   8. Define senhas via passwd --root
+#   8. Pergunta por cada usuário se deve definir senha agora ou no primeiro login
 #
 # Uso:
 #   bash scripts/install.sh [--host <hostname>] [--disk <device>]
@@ -773,22 +773,31 @@ _USERS_WITH_PASSWORD=()
 # Padrão de nome de usuário seguro para uso em nomes de arquivo
 _SAFE_USERNAME='^[a-z_][a-z0-9_-]*$'
 
+# Combinar usuários já existentes nos módulos + criados nesta sessão, sem duplicatas.
+# Isso garante que todos os usuários do sistema instalado passem pelo prompt de senha.
+declare -A _passwd_users_seen=()
+_ALL_PASSWD_USERS=()
+for _u in "${_EXISTING_USERS[@]}" "${USERS_LOGIN[@]}"; do
+  if [[ -z "${_passwd_users_seen[$_u]+set}" ]]; then
+    _passwd_users_seen[$_u]=1
+    _ALL_PASSWD_USERS+=("$_u")
+  fi
+done
+
 # Perguntar individualmente para cada usuário se deseja definir senha agora.
 # "root" é tratado separadamente no bloco seguinte.
-for _user in "${USERS_LOGIN[@]}"; do
+for _user in "${_ALL_PASSWD_USERS[@]}"; do
   [[ "$_user" == "root" ]] && continue
+
+  # Verifica a existência do usuário no sistema instalado antes de perguntar.
+  # Isso filtra entradas não-usuário (ex: mkUser) e usuários não importados em
+  # configuration.nix. Requer que o nixos-install (passo 7) tenha sido concluído.
+  if ! grep -q "^${_user}:" /mnt/etc/passwd 2>/dev/null; then
+    continue
+  fi
 
   echo
   if confirm "Definir senha para o usuário '$_user' agora?"; then
-    # Verifica a existência do usuário diretamente em /mnt/etc/passwd, sem precisar
-    # de nixos-enter (que executaria scripts de ativação e poderia interferir com
-    # o bind mount do /etc/shadow criado pelo restoreShadow).
-    if ! grep -q "^${_user}:" /mnt/etc/passwd 2>/dev/null; then
-      warn "Usuário '$_user' não encontrado em /mnt/etc/passwd."
-      warn "Verifique se o import de users/$_user.nix está em hosts/$HOST/configuration.nix"
-      warn "e se o nixos-install foi concluído com sucesso."
-      continue
-    fi
     # passwd --root /mnt escreve diretamente em /mnt/etc/shadow no host (sem chroot),
     # evitando interferências com o bind mount de /etc/shadow que o restoreShadow
     # pode ter criado dentro do namespace de montagem do nixos-install ou nixos-enter.
@@ -802,8 +811,13 @@ for _user in "${USERS_LOGIN[@]}"; do
       warn "Não foi possível definir senha para '$_user'."
     fi
   else
-    info "Senha de '$_user' não definida agora. No primeiro login, a senha temporária"
-    info "'nixos' (via initialPassword) será usada e a troca será solicitada."
+    # Remove a senha temporária 'nixos' do shadow para que o usuário possa criar
+    # sua própria senha diretamente no primeiro login, sem precisar digitar 'nixos'.
+    # O serviço forceInitialPasswordChange executará chage -d 0 no primeiro boot,
+    # exigindo a criação de senha antes de prosseguir.
+    passwd --root /mnt -d "$_user" 2>/dev/null || true
+    info "Senha de '$_user' não definida. No primeiro login, o usuário será"
+    info "solicitado a criar uma nova senha."
   fi
 done
 
