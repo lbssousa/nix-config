@@ -6,7 +6,10 @@
 *.pem
 *.p12
 *.pfx
-secrets/
+# Arquivos de segredo em texto simples nunca devem ser commitados.
+# Arquivos sops-encrypted (*.yaml) são seguros para commitar.
+secrets/*
+!secrets/*.yaml
 .secrets
 
 # --- Hardware específico ---
