@@ -28,8 +28,8 @@ in
     wheelNeedsPassword = true;
   };
 
-  # Os usuários reais são definidos em arquivos separados (não commitados)
-  # Exemplo: users/joao.nix
+  # Os usuários reais são definidos em arquivos separados em users/
+  # Exemplo: users/abutre.nix
   # Para criar um usuário, copie users/skeleton.nix para users/<seu-usuario>.nix
   # e descomente/ajuste as configurações
 
