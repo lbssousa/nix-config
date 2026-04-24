@@ -26,19 +26,11 @@
       ''
       # Injetar SSH_AUTH_SOCK do agente SSH do Bitwarden, quando disponível
       ''
-        () {
-          local _runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-          local _bw_flatpak_sock="$_runtime_dir/app/com.bitwarden.desktop/bitwarden-ssh-agent.sock"
-          local _bw_nix_sock="$_runtime_dir/bitwarden-ssh-agent.sock"
-          local _bw_other_sock="$HOME/.bitwarden-ssh-agent.sock"
-          if [[ -S "$_bw_flatpak_sock" ]]; then
-            export SSH_AUTH_SOCK="$_bw_flatpak_sock"
-          elif [[ -S "$_bw_nix_sock" ]]; then
-            export SSH_AUTH_SOCK="$_bw_nix_sock"
-          elif [[ -S "$_bw_other_sock" ]]; then
-            export SSH_AUTH_SOCK="$_bw_other_sock"
-          fi
-        }
+        if [[ -S "$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock" ]]; then
+          export SSH_AUTH_SOCK="$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock"
+        elif [[ -S "$HOME/.bitwarden-ssh-agent.sock" ]]; then
+          export SSH_AUTH_SOCK="$HOME/.bitwarden-ssh-agent.sock"
+        fi
       ''
     ];
   };
