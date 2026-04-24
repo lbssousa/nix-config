@@ -14,7 +14,7 @@ Cada subpasta agrupa módulos por categoria funcional.
 | [core/](core/) | Configurações base do sistema e impermanência |
 | [desktop/](desktop/) | Ambiente GNOME + Flatpak (experiência tipo Silverblue/Bluefin) |
 | [hardware/](hardware/) | Impressão (CUPS + drivers Epson) e hardware específico |
-| [network/](network/) | Servidor SSH e configurações de rede |
+| [network/](network/) | Servidor SSH e redes Wi-Fi declarativas (NetworkManager) |
 | [security/](security/) | TPM2 para desbloqueio automático do LUKS |
 | [shell/](shell/) | Shells disponíveis no sistema (Bash, Fish, Zsh) |
 | [tools/](tools/) | Pacotes essenciais do sistema e suporte ao Homebrew |
@@ -35,6 +35,7 @@ imports = [
   ../../modules/system/desktop/desktop.nix
   ../../modules/system/hardware/printing.nix
   ../../modules/system/network/ssh.nix
+  ../../modules/system/network/wifi.nix
   ../../modules/system/security/tpm2.nix
   ../../modules/system/shell/shells.nix
   ../../modules/system/tools/homebrew.nix
