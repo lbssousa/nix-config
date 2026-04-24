@@ -73,7 +73,8 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 │   │   ├── hardware/
 │   │   │   └── printing.nix  # Impressora Epson ESC-P/R + ecbd.service
 │   │   ├── network/
-│   │   │   └── ssh.nix       # Servidor SSH
+│   │   │   ├── ssh.nix       # Servidor SSH
+│   │   │   └── wifi.nix      # Redes Wi-Fi declarativas (NetworkManager)
 │   │   ├── security/
 │   │   │   └── tpm2.nix      # TPM2 para desbloqueio automático do LUKS
 │   │   ├── shell/
@@ -91,18 +92,9 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 │   ├── update.sh             # Atualizar flake inputs + nixos-rebuild switch
 │   ├── enroll-tpm2.sh        # Configurar desbloqueio LUKS via TPM2
 │   └── setup-secureboot.sh   # Configurar Secure Boot + assinar módulos (barbudus)
-├── users/                    # Configurações de usuário (NÃO commitadas)
+├── users/                    # Configurações de usuário
 │   └── skeleton.nix          # Template para criar novo usuário
-├── docs/
-│   ├── private-layer.md      # Guia da camada privada (usuários, homes, segredos)
-│   └── private-example/      # Templates para o repositório privado
-│       ├── flake.nix         #   flake.nix opcional do repo privado
-│       ├── modules.nix       #   Ponto de entrada da camada privada
-│       ├── nixos/
-│       │   └── users.nix     #   Template de usuário NixOS + home-manager
-│       └── home/
-│           └── meuusuario.nix #  Template de configuração home-manager
-├── .gitignore                # Ignorar arquivos sensíveis (inclui ./private)
+├── .gitignore                # Ignorar arquivos temporários e chaves
 ├── INSTALLATION.md           # Guia de instalação detalhado
 ├── NIXOS_CONFIG_SPECS.md     # Especificações do projeto
 └── README.md                 # Este arquivo
@@ -215,7 +207,12 @@ sudo nixos-rebuild switch --rollback
 
 2. Edite `users/seu-usuario.nix` e substitua `skeleton` pelo nome do usuário.
 
-3. Importe o arquivo no `hosts/<host>/configuration.nix`:
+3. Adicione o arquivo ao índice do git:
+   ```bash
+   git add users/seu-usuario.nix
+   ```
+
+4. Importe o arquivo no `hosts/<host>/configuration.nix`:
    ```nix
    imports = [
      # ...outros módulos...
@@ -223,10 +220,21 @@ sudo nixos-rebuild switch --rollback
    ];
    ```
 
-4. Rebuilde o sistema:
+5. Rebuilde o sistema:
    ```bash
    sudo nixos-rebuild switch --flake /etc/nixos#barbudus
    ```
+
+## 📡 Configurando Redes Wi-Fi
+
+Edite `modules/system/network/wifi.nix` para declarar redes Wi-Fi via NetworkManager.
+O hash PBKDF2 da senha (mais seguro que texto simples) pode ser gerado com:
+
+```bash
+nix-shell -p wpa_supplicant --run "wpa_passphrase NomeDaRede SenhaAqui"
+```
+
+Use o valor do campo `psk=` (sem o `#`) como valor de `psk` no perfil da conexão.
 
 ## 📱 Instalando Flatpaks
 
@@ -268,37 +276,10 @@ Após o primeiro boot bem-sucedido:
 sudo bash scripts/enroll-tpm2.sh
 ```
 
-## 🔒 Camada Privada (usuários, homes e segredos)
-
-Este repositório suporta uma **camada privada opcional** via `./private` (gitignored).
-Ela permite manter usuários, configurações home-manager e segredos em um repositório
-privado separado (`nixos-config-private`), sem expô-los aqui.
-
-Quando `./private/modules.nix` **não está presente**, o flake funciona normalmente
-— sem usuários pessoais e sem segredos. Ideal para CI, testes e builds em máquinas
-sem acesso ao privado.
-
-**Configuração rápida:**
-
-```bash
-# Clonar o repo privado em ./private
-git clone git@github.com:lbssousa/nixos-config-private private
-
-# Tornar os arquivos visíveis ao Nix (sem commitar)
-git add --force private/
-
-# Rebuildar com a camada privada
-sudo nixos-rebuild switch --flake .#barbudus
-```
-
-Veja **[docs/private-layer.md](docs/private-layer.md)** para o guia completo e
-**[docs/private-example/](docs/private-example/)** para templates do repo privado.
-
 ## 📚 Documentação
 
 - **[INSTALLATION.md](INSTALLATION.md)**: Guia completo de instalação
 - **[NIXOS_CONFIG_SPECS.md](NIXOS_CONFIG_SPECS.md)**: Especificações e requisitos do projeto
-- **[docs/private-layer.md](docs/private-layer.md)**: Camada privada (usuários, homes, segredos)
 
 ## 🔗 Referências
 

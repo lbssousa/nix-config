@@ -4,17 +4,14 @@
 # 2. Substitua "skeleton" pelo nome do usuário desejado
 # 3. Ajuste as configurações conforme necessário
 # 4. Adicione o arquivo ao índice do git (OBRIGATÓRIO para nixos-install):
-#      git add --force users/<seu-usuario>.nix
+#      git add users/<seu-usuario>.nix
 #    ⚠️  O Nix avalia flakes a partir do índice git. Arquivos não rastreados
 #    (mesmo que existam no disco) são IGNORADOS pelo Nix e não chegam ao
 #    /nix/store — causando erros de "módulo não encontrado" no nixos-install.
-#    git add --force inclui o arquivo no índice sem fazer commit,
-#    tornando-o visível ao Nix sem expô-lo no histórico do repositório.
+#    git add inclui o arquivo no índice, tornando-o visível ao Nix.
 # 5. Descomente a linha de importação em hosts/<host>/configuration.nix:
 #      ./../../users/<seu-usuario>.nix
 #
-# NOTA: Os arquivos em users/ (exceto este skeleton) são ignorados pelo git.
-# Veja .gitignore para mais detalhes.
 { pkgs, ... }:
 
 {

@@ -1,20 +1,6 @@
 # Gitignore para o nixos-config
 # Arquivos e diretórios sensíveis que NÃO devem ser commitados
 
-# --- Camada privada ---
-# Clone lbssousa/nixos-config-private aqui e force-add ao índice git:
-#   git clone git@github.com:lbssousa/nixos-config-private private
-#   git add --force private/
-# Ver docs/private-layer.md para detalhes.
-/private
-
-# --- Configurações de usuário ---
-# Os arquivos de usuário real ficam em users/ mas NÃO são commitados
-# Use users/skeleton.nix como template para criar seu usuário
-/users/*.nix
-# Exceto o template skeleton (deve ser commitado como referência):
-!/users/skeleton.nix
-
 # --- Segredos e chaves ---
 *.key
 *.pem

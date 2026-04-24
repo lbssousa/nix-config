@@ -6,7 +6,7 @@
 #   2. Seleciona o host e o disco de destino
 #   3. Particiona e formata o disco com disko
 #   4. Cria arquivos de usuário a partir do skeleton
-#   5. Adiciona os arquivos de usuário ao índice do git (git add --force)
+#   5. Adiciona os arquivos de usuário ao índice do git (git add)
 #   6. Atualiza configuration.nix com os imports dos usuários
 #   6a. Cria chaves Secure Boot (apenas hosts com Lanzaboote)
 #   6b. Restaura chave age do sops-nix (opcional)
@@ -170,7 +170,7 @@ Este script automatiza os passos descritos em INSTALLATION.md:
   2. Seleciona o host e o disco de destino
   3. Particiona e formata o disco com disko
   4. Cria arquivos de usuário a partir do skeleton
-  5. Adiciona os arquivos de usuário ao índice do git (git add --force)
+  5. Adiciona os arquivos de usuário ao índice do git (git add)
   6. Atualiza configuration.nix com os imports dos usuários
   6a. Cria chaves Secure Boot (apenas hosts com Lanzaboote)
   6b. Restaura chave age do sops-nix (opcional)
@@ -353,126 +353,6 @@ USERS_LOGIN=()
 USERS_FULLNAME=()
 USERS_SUDO=()
 
-# Usuários já definidos na camada privada (private/modules.nix e seus imports).
-# Não precisam de arquivo skeleton — suas definições NixOS já estão no private layer.
-PRIVATE_LAYER_USERS=()
-
-_scan_private_layer_users() {
-  local private_dir="$CONFIG_DIR/private"
-  [[ -f "$private_dir/modules.nix" ]] || return 0
-  {
-    # Notação pontilhada: users.users.NOME = { ... }
-    grep -rh 'users\.users\.[a-z_][a-z0-9_-]*[[:space:]]*=' \
-      "$private_dir" --include='*.nix' 2>/dev/null \
-      | grep -v '^[[:space:]]*#' \
-      | sed 's/.*users\.users\.\([a-z_][a-z0-9_-]*\)[[:space:]]*=.*/\1/' \
-      || true
-
-    # Notação de conjunto de atributos: users.users = { NOME = ...; }
-    # Usa awk com rastreamento de profundidade de chaves para extrair apenas
-    # os nomes de usuário no nível direto do bloco users.users = { }.
-    find "$private_dir" -name '*.nix' -print0 2>/dev/null \
-      | xargs -r -0 awk '
-          FNR == 1 { in_users_block = 0; depth = 0 }
-          /users\.users[[:space:]]*=[[:space:]]*\{/ { in_users_block = 1; depth = 1; next }
-          in_users_block {
-            start_depth = depth
-            for (i = 1; i <= length($0); i++) {
-              char = substr($0, i, 1)
-              if (char == "{") depth++
-              else if (char == "}") { depth--; if (depth == 0) in_users_block = 0 }
-            }
-            if (start_depth == 1 && $0 ~ /^[[:space:]]+[a-z_][a-z0-9_-]*[[:space:]]*=/) {
-              line = $0
-              gsub(/^[[:space:]]+/, "", line)
-              sub(/[[:space:]]*=.*$/, "", line)
-              print line
-            }
-          }
-        ' 2>/dev/null \
-      || true
-  } | sort -u
-}
-
-# Conta redes Wi-Fi definidas em private/nixos/wifi.nix.
-# Suporta as seguintes notações Nix:
-#   - Pontilhada (wpa_supplicant):
-#       networking.wireless.networks."SSID" = { ... }
-#   - Atributo (wpa_supplicant):
-#       networking.wireless.networks = { "SSID" = { ... }; }
-#   - Perfis sops-nix (NetworkManager):
-#       sops.templates."Nome da Conexão.nmconnection" = { ... }
-# Retorna (via stdout) o número de definições encontradas (0 se nenhuma).
-_private_layer_wifi_network_count() {
-  local wifi_file="$CONFIG_DIR/private/nixos/wifi.nix"
-  [[ -f "$wifi_file" ]] || { echo 0; return; }
-
-  local count=0
-
-  # Notação pontilhada: networking.wireless.networks."SSID" = ...
-  local dotted
-  dotted=$(grep -cE '^\s*networking\.wireless\.networks\."[^"]+"\s*=' \
-    "$wifi_file" 2>/dev/null || true)
-  count=$((count + dotted))
-
-  # Notação de conjunto de atributos: networking.wireless.networks = { "SSID" = ...; }
-  # Usa awk com rastreamento de profundidade de chaves para encontrar entradas
-  # no nível direto do bloco networking.wireless.networks = { }.
-  local block
-  block=$(awk '
-    FNR == 1 { in_networks = 0; depth = 0; found = 0 }
-    /networking\.wireless\.networks[[:space:]]*=[[:space:]]*\{/ { in_networks = 1; depth = 1; next }
-    in_networks {
-      start_depth = depth
-      for (i = 1; i <= length($0); i++) {
-        char = substr($0, i, 1)
-        if (char == "{") depth++
-        else if (char == "}") { depth--; if (depth == 0) in_networks = 0 }
-      }
-      if (start_depth == 1 && $0 ~ /^[[:space:]]*"[^"]+"[[:space:]]*=/) found++
-    }
-    END { print found }
-  ' "$wifi_file" 2>/dev/null || echo 0)
-  count=$((count + block))
-
-  # Perfis sops-nix para NetworkManager:
-  #   Notação pontilhada:  sops.templates."Nome.nmconnection" = { ... }
-  local sops_dotted
-  sops_dotted=$(grep -cE '^\s*sops\.templates\."[^"]+\.nmconnection"\s*=' \
-    "$wifi_file" 2>/dev/null || true)
-  count=$((count + sops_dotted))
-
-  #   Notação de atributo:  sops.templates = { "Nome.nmconnection" = { ... }; }
-  local sops_block
-  sops_block=$(awk '
-    FNR == 1 { in_tmpl = 0; depth = 0; found = 0 }
-    /sops\.templates[[:space:]]*=[[:space:]]*\{/ { in_tmpl = 1; depth = 1; next }
-    in_tmpl {
-      start_depth = depth
-      for (i = 1; i <= length($0); i++) {
-        char = substr($0, i, 1)
-        if (char == "{") depth++
-        else if (char == "}") { depth--; if (depth == 0) in_tmpl = 0 }
-      }
-      if (start_depth == 1 && $0 ~ /^[[:space:]]*"[^"]+\.nmconnection"[[:space:]]*=/) found++
-    }
-    END { print found }
-  ' "$wifi_file" 2>/dev/null || echo 0)
-  count=$((count + sops_block))
-
-  echo "$count"
-}
-
-mapfile -t PRIVATE_LAYER_USERS < <(_scan_private_layer_users)
-
-if [[ ${#PRIVATE_LAYER_USERS[@]} -gt 0 ]]; then
-  echo
-  info "Usuários encontrados na camada privada (private layer):"
-  for _pu in "${PRIVATE_LAYER_USERS[@]}"; do
-    echo "  - $_pu"
-  done
-fi
-
 _create_user_file() {
   local user="$1" full_name="$2" sudo_flag="$3"
   local user_file="$CONFIG_DIR/users/$user.nix"
@@ -503,8 +383,8 @@ _create_user_file() {
 }
 
 if [[ "$OPT_NON_INTERACTIVE" == "true" ]]; then
-  if [[ ${#OPT_USERS_LOGIN[@]} -eq 0 && ${#PRIVATE_LAYER_USERS[@]} -eq 0 ]]; then
-    die "Modo não-interativo: nenhum usuário definido. Use --user 'login:Nome:sudo' ou ative o private layer."
+  if [[ ${#OPT_USERS_LOGIN[@]} -eq 0 ]]; then
+    die "Modo não-interativo: nenhum usuário definido. Use --user 'login:Nome:sudo'."
   fi
   USERS_LOGIN=("${OPT_USERS_LOGIN[@]}")
   USERS_FULLNAME=("${OPT_USERS_FULLNAME[@]}")
@@ -515,23 +395,15 @@ else
   USERS_FULLNAME=("${OPT_USERS_FULLNAME[@]}")
   USERS_SUDO=("${OPT_USERS_SUDO[@]}")
 
-  # Loop interativo para adicionar usuários.
-  # Se o private layer já definiu usuários, pergunta diretamente se deseja criar mais.
-  _has_any_users() {
-    [[ ${#USERS_LOGIN[@]} -gt 0 || ${#PRIVATE_LAYER_USERS[@]} -gt 0 ]]
-  }
-
   while true; do
-    if _has_any_users; then
+    if [[ ${#USERS_LOGIN[@]} -gt 0 ]]; then
       echo
-      if [[ ${#USERS_LOGIN[@]} -gt 0 ]]; then
-        echo "Novos usuários a criar:"
-        for _i in "${!USERS_LOGIN[@]}"; do
-          _sudo_label="com sudo"
-          [[ "${USERS_SUDO[$_i]}" == "false" ]] && _sudo_label="sem sudo"
-          echo "  $((_i + 1)). ${USERS_LOGIN[$_i]} (${USERS_FULLNAME[$_i]:-}) — $_sudo_label"
-        done
-      fi
+      echo "Usuários a criar:"
+      for _i in "${!USERS_LOGIN[@]}"; do
+        _sudo_label="com sudo"
+        [[ "${USERS_SUDO[$_i]}" == "false" ]] && _sudo_label="sem sudo"
+        echo "  $((_i + 1)). ${USERS_LOGIN[$_i]} (${USERS_FULLNAME[$_i]:-}) — $_sudo_label"
+      done
       if ! confirm "Adicionar outro usuário?"; then
         break
       fi
@@ -562,7 +434,7 @@ else
     USERS_SUDO+=("$_tmp_sudo")
   done
 
-  if [[ ${#USERS_LOGIN[@]} -eq 0 && ${#PRIVATE_LAYER_USERS[@]} -eq 0 ]]; then
+  if [[ ${#USERS_LOGIN[@]} -eq 0 ]]; then
     die "Pelo menos um usuário deve ser definido."
   fi
 fi
@@ -579,23 +451,14 @@ echo
 info "==> Passo 5: Registrar arquivos de usuário no índice do git"
 
 # O Nix avalia flakes a partir do índice do git.
-# Arquivos gitignored que não estejam no índice são invisíveis ao Nix,
+# Arquivos não rastreados (mesmo que existam no disco) são invisíveis ao Nix,
 # causando erros "module not found" no nixos-install.
-# git add --force adiciona ao índice sem fazer commit.
+# git add garante que o arquivo está no índice e visível ao Nix.
 for _i in "${!USERS_LOGIN[@]}"; do
   _ufile="$CONFIG_DIR/users/${USERS_LOGIN[$_i]}.nix"
-  git add --force "$_ufile"
-  success "Arquivo $_ufile adicionado ao índice do git (sem commit)."
+  git add "$_ufile"
+  success "Arquivo $_ufile adicionado ao índice do git."
 done
-
-# Se a camada privada existe, garantir que está no índice do git.
-# O diretório private/ é gitignored no repo público; sem git add --force
-# o Nix ignora esses arquivos ao avaliar o flake, resultando em
-# privateModules = [] mesmo que os arquivos existam no disco.
-if [[ -f "$CONFIG_DIR/private/modules.nix" ]]; then
-  git -C "$CONFIG_DIR" add --force private/
-  success "Camada privada (private/) adicionada ao índice do git."
-fi
 
 # ---------------------------------------------------------------------------
 # 6. Atualizar configuration.nix com os imports dos usuários
@@ -740,13 +603,13 @@ if [[ "$OPT_NON_INTERACTIVE" == "true" ]] || confirm "Copiar configuração para
   #   O rsync copia o .git/ (incluindo o índice) do repo de origem, mas o índice
   #   git copiado pode conter entradas com hashes de objetos que apontam para o
   #   store local do live CD — não para os arquivos em /mnt/etc/nixos. Refazer o
-  #   git add --force no destino garante que o índice em /mnt/etc/nixos reflete
+  #   git add no destino garante que o índice em /mnt/etc/nixos reflete
   #   os arquivos LOCAIS, tornando-os visíveis ao avaliador de flakes do Nix
   #   (que usa o índice git para determinar quais arquivos incluir no flake source).
   for _i in "${!USERS_LOGIN[@]}"; do
     _ufile_rel="users/${USERS_LOGIN[$_i]}.nix"
     if [[ -f "/mnt/etc/nixos/$_ufile_rel" ]]; then
-      git -C /mnt/etc/nixos add --force "$_ufile_rel" 2>/dev/null || true
+      git -C /mnt/etc/nixos add "$_ufile_rel" 2>/dev/null || true
       success "Arquivo $_ufile_rel re-indexado em /mnt/etc/nixos."
     else
       warn "Arquivo $_ufile_rel não encontrado em /mnt/etc/nixos após rsync!"
@@ -757,11 +620,6 @@ if [[ "$OPT_NON_INTERACTIVE" == "true" ]] || confirm "Copiar configuração para
   git -C /mnt/etc/nixos add \
     "hosts/$HOST/configuration.nix" \
     "hosts/$HOST/disko.nix" 2>/dev/null || true
-
-  if [[ -d /mnt/etc/nixos/private ]]; then
-    git -C /mnt/etc/nixos add --force private/ 2>/dev/null || true
-    success "Camada privada re-indexada em /mnt/etc/nixos (visível ao nixos-install)."
-  fi
 
   info "Executando nixos-install..."
   # Passa os caches binários explicitamente para que o nixos-install os use mesmo
@@ -803,32 +661,26 @@ if [[ "$OPT_NON_INTERACTIVE" == "true" ]] || confirm "Copiar configuração para
   # modules/system/core/impermanence.nix para ser persistido via bind mount de
   # /persist/etc/NetworkManager/system-connections. Ao copiar os perfis aqui,
   # eles estarão disponíveis imediatamente no primeiro boot — sem precisar
-  # redigitar o SSID e a senha.
+  # redigitar o SSID e a senha. As redes declarativas (modules/system/network/wifi.nix)
+  # são criadas pelo NixOS na ativação, complementando os perfis copiados.
   # Permissões 600 são obrigatórias: o NetworkManager ignora/recusa perfis com
   # permissões mais abertas.
-  # Se a camada privada já provê pelo menos uma rede Wi-Fi em
-  # private/nixos/wifi.nix, não há necessidade de copiar as conexões do live CD.
   echo
   info "==> Passo 7c: Copiar conexões Wi-Fi para o sistema instalado"
-  _wifi_net_count=$(_private_layer_wifi_network_count)
-  if ((_wifi_net_count > 0)); then
-    info "Camada privada define $_wifi_net_count rede(s) Wi-Fi em private/nixos/wifi.nix. Pulando cópia de conexões do live CD."
+  _NM_SRC="/etc/NetworkManager/system-connections"
+  _NM_DST="/mnt/persist/etc/NetworkManager/system-connections"
+  _nm_copied=0
+  if [[ -d "$_NM_SRC" ]]; then
+    while IFS= read -r -d '' _profile; do
+      mkdir -p "$_NM_DST"
+      install -m 600 "$_profile" "$_NM_DST/"
+      ((_nm_copied++)) || true
+    done < <(find "$_NM_SRC" -maxdepth 1 -type f -print0)
+  fi
+  if ((_nm_copied > 0)); then
+    success "$_nm_copied conexão(ões) Wi-Fi copiada(s) para $_NM_DST."
   else
-    _NM_SRC="/etc/NetworkManager/system-connections"
-    _NM_DST="/mnt/persist/etc/NetworkManager/system-connections"
-    _nm_copied=0
-    if [[ -d "$_NM_SRC" ]]; then
-      while IFS= read -r -d '' _profile; do
-        mkdir -p "$_NM_DST"
-        install -m 600 "$_profile" "$_NM_DST/"
-        ((_nm_copied++)) || true
-      done < <(find "$_NM_SRC" -maxdepth 1 -type f -print0)
-    fi
-    if ((_nm_copied > 0)); then
-      success "$_nm_copied conexão(ões) Wi-Fi copiada(s) para $_NM_DST."
-    else
-      info "Nenhuma conexão Wi-Fi encontrada no live CD. Pulando."
-    fi
+    info "Nenhuma conexão Wi-Fi encontrada no live CD. Pulando."
   fi
 else
   warn "Instalação pulada. Execute manualmente:"
@@ -852,19 +704,13 @@ _USERS_WITH_PASSWORD=()
 # Padrão de nome de usuário seguro para uso em nomes de arquivo
 _SAFE_USERNAME='^[a-z_][a-z0-9_-]*$'
 
-if confirm "Definir senhas personalizadas para os usuários?"; then
-  # Incluir usuários do private layer e usuários criados agora.
-  # "root" é excluído aqui — a senha do root é configurada no bloco seguinte.
-  # (Isso evita que o root seja solicitado duas vezes quando o private layer
-  #  define configurações para users.users.root, ex: chaves SSH autorizadas.)
-  _all_users_for_passwd=()
-  for _u in "${PRIVATE_LAYER_USERS[@]}" "${USERS_LOGIN[@]}"; do
-    [[ "$_u" == "root" ]] && continue
-    _all_users_for_passwd+=("$_u")
-  done
+# Perguntar individualmente para cada usuário se deseja definir senha agora.
+# "root" é tratado separadamente no bloco seguinte.
+for _user in "${USERS_LOGIN[@]}"; do
+  [[ "$_user" == "root" ]] && continue
 
-  for _user in "${_all_users_for_passwd[@]}"; do
-    info "Definindo senha para '$_user'..."
+  echo
+  if confirm "Definir senha para o usuário '$_user' agora?"; then
     # Verifica a existência do usuário diretamente em /mnt/etc/passwd, sem precisar
     # de nixos-enter (que executaria scripts de ativação e poderia interferir com
     # o bind mount do /etc/shadow criado pelo restoreShadow).
@@ -886,11 +732,11 @@ if confirm "Definir senhas personalizadas para os usuários?"; then
     else
       warn "Não foi possível definir senha para '$_user'."
     fi
-  done
-else
-  info "Senhas não definidas agora. No primeiro login, os usuários usarão a senha"
-  info "temporária 'nixos' (via initialPassword) e serão solicitados a trocá-la."
-fi
+  else
+    info "Senha de '$_user' não definida agora. No primeiro login, a senha temporária"
+    info "'nixos' (via initialPassword) será usada e a troca será solicitada."
+  fi
+done
 
 if confirm "Definir senha do root?"; then
   if passwd --root /mnt root; then

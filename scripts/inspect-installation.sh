@@ -399,7 +399,7 @@ if [[ -d "$ROOT/etc/nixos" ]]; then
       || info "    (não foi possível obter status)"
     # Listar arquivos staged (no índice)
     info "Arquivos no índice git (staged):"
-    git -C "$ROOT/etc/nixos" ls-files 2>/dev/null | grep -E '^(users/|hosts/|private/)' \
+    git -C "$ROOT/etc/nixos" ls-files 2>/dev/null | grep -E '^(users/|hosts/)' \
       | sed 's/^/    /' \
       || info "    (não foi possível listar)"
   else
@@ -493,23 +493,6 @@ for _host in "${_hosts[@]}"; do
   fi
 done
 
-# Camada privada
-echo
-if [[ -f "$ROOT/etc/nixos/private/modules.nix" ]]; then
-  ok "Camada privada encontrada em /etc/nixos/private/"
-  if [[ -d "$ROOT/etc/nixos/.git" ]]; then
-    if git -C "$ROOT/etc/nixos" ls-files "private/" 2>/dev/null | grep -q .; then
-      ok "Camada privada indexada no git (visível ao Nix)"
-    else
-      fail "Camada privada NÃO indexada no git!"
-      warn "Execute: git -C $ROOT/etc/nixos add --force private/"
-      ((_issues++)) || true
-    fi
-  fi
-else
-  info "Camada privada não encontrada (normal se não usada)"
-fi
-
 # ---------------------------------------------------------------------------
 # 7. Bind mounts ativos em /etc/shadow
 # ---------------------------------------------------------------------------
@@ -554,7 +537,7 @@ echo "      passwd --root /mnt <usuario>"
 echo "      passwd --root /mnt root"
 echo "      install -m 640 /mnt/etc/shadow /mnt/persist/etc/shadow"
 echo "  • Se arquivos de usuário não estão indexados:"
-echo "      git -C /mnt/etc/nixos add --force users/<usuario>.nix"
+echo "      git -C /mnt/etc/nixos add users/<usuario>.nix"
 echo "      nixos-install --flake /mnt/etc/nixos#<host>"
 echo "  • Se o sistema ainda não foi instalado:"
 echo "      bash scripts/install.sh"

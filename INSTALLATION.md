@@ -95,7 +95,7 @@ sudo bash scripts/install.sh --host bigodon --disk /dev/sda
    - A raiz (`/`) é configurada como tmpfs — limpa automaticamente a cada boot
    - Os dados persistentes ficam em subvolumes Btrfs dedicados
 5. Cria arquivos de usuário a partir do skeleton
-6. Adiciona os arquivos de usuário ao índice do git (`git add --force`)
+6. Adiciona os arquivos de usuário ao índice do git (`git add`)
 7. Atualiza `configuration.nix` com os imports dos usuários
 8. Cria chaves Secure Boot em `/persist/etc/secureboot` (apenas hosts com Lanzaboote)
 9. Copia a configuração para `/mnt/etc/nixos` e executa `nixos-install`
@@ -242,17 +242,15 @@ Descomente (ou adicione) as linhas de importação dos usuários em `hosts/$HOST
 > ⚠️ **IMPORTANTE — adicionar o arquivo ao índice do git**
 >
 > O Nix avalia flakes a partir do **índice do git**, não do sistema de arquivos
-> diretamente. Arquivos git-ignorados que não estejam no índice são
+> diretamente. Arquivos não rastreados que não estejam no índice são
 > **invisíveis ao Nix** e não chegam ao `/nix/store`, causando erros do tipo
 > _"module not found"_ no `nixos-install`.
 >
-> Execute o comando abaixo para incluir o arquivo no índice **sem** fazer commit:
+> Execute o comando abaixo para incluir o arquivo no índice:
 >
 > ```bash
-> git add --force users/seu-usuario.nix
+> git add users/seu-usuario.nix
 > ```
->
-> Isso torna o arquivo visível ao Nix sem expô-lo no histórico do repositório.
 
 ### 8. Instalar o NixOS
 

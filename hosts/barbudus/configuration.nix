@@ -43,14 +43,14 @@ in
     ../../modules/system/desktop/desktop.nix
     ../../modules/system/hardware/printing.nix
     ../../modules/system/network/ssh.nix
+    ../../modules/system/network/wifi.nix
     ../../modules/system/security/tpm2.nix
     ../../modules/system/shell/shells.nix
     ../../modules/system/tools/homebrew.nix
     ../../modules/system/tools/lbnix.nix
     ../../modules/system/tools/packages.nix
     ../../modules/system/users/users.nix
-    # Carregar configurações de usuário (não commitadas - ver .gitignore)
-    # Descomente e ajuste conforme necessário:
+    # Carregar configurações de usuário (ver users/skeleton.nix para o template):
     # ./../../users/seu-usuario.nix
   ];
 
