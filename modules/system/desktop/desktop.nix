@@ -1,6 +1,6 @@
 # Módulo de ambiente gráfico: GNOME + Flatpak
 # Experiência similar ao Fedora Silverblue / Bluefin
-{ pkgs, lib, ... }:
+{ pkgs, ... }:
 
 let
   # Flatpaks padrão do sistema (baseado no projeto Bluefin)
@@ -43,26 +43,6 @@ let
     "org.gtk.Gtk3theme.adw-gtk3-dark"
     "page.tesk.Refine"
   ];
-  # Hash (8 hex chars, suficiente para detectar mudanças na lista) para reexecutar a instalação
-  flatpaksListHash = builtins.substring 0 8 (
-    builtins.hashString "sha256" (lib.concatStringsSep "\n" systemFlatpaks)
-  );
-  # O arquivo de controle fica em /var/lib/flatpak (subvolume Btrfs @flatpak, persistido),
-  # e não em /var/lib/nixos-flatpak-setup que ficaria em tmpfs (raiz efêmera).
-  # Isso garante que a lógica de hash funcione corretamente entre reboots:
-  # o serviço só reexecuta quando a lista de Flatpaks muda.
-  flatpakDoneFile = "/var/lib/flatpak/.nixos-setup-done-${flatpaksListHash}";
-  # Script de instalação de cada Flatpak individualmente
-  mkFlatpakInstallScript = pkg: ''
-    if ! ${pkgs.flatpak}/bin/flatpak info --system ${lib.escapeShellArg pkg} \
-        >/dev/null 2>&1; then
-      if ! ${pkgs.flatpak}/bin/flatpak install --system --noninteractive flathub \
-          ${lib.escapeShellArg pkg}; then
-        echo "AVISO: Falha ao instalar ${lib.escapeShellArg pkg}" >&2
-        _failed=1
-      fi
-    fi
-  '';
 in
 {
   services = {
@@ -74,8 +54,11 @@ in
 
     desktopManager.gnome.enable = true;
 
-    # Flatpak - instalação system-wide
-    flatpak.enable = true;
+    # Flatpak - instalação system-wide via nix-flatpak
+    flatpak = {
+      enable = true;
+      packages = systemFlatpaks;
+    };
 
     # Bluetooth
     blueman.enable = true;
@@ -152,54 +135,6 @@ in
     "x-scheme-handler/https" = "brave-browser.desktop";
     "x-scheme-handler/about" = "brave-browser.desktop";
     "x-scheme-handler/unknown" = "brave-browser.desktop";
-  };
-
-  # Instalar Flatpaks padrão automaticamente via Flathub na primeira inicialização
-  # O serviço reexecuta apenas quando a lista de Flatpaks muda (baseado no hash da lista)
-  systemd.services.install-system-flatpaks = {
-    description = "Instalar Flatpaks padrão do sistema";
-    wantedBy = [ "multi-user.target" ];
-    after = [
-      "network-online.target"
-      "var-lib-flatpak.mount"
-    ];
-    wants = [ "network-online.target" ];
-    requires = [ "var-lib-flatpak.mount" ];
-    unitConfig = {
-      ConditionPathExists = "!${flatpakDoneFile}";
-      # Após 5 falhas consecutivas em 5 minutos, desiste até o próximo boot.
-      # Evita loop infinito se houver problema persistente (ex: pacote inválido).
-      StartLimitBurst = 5;
-      StartLimitIntervalSec = "300";
-    };
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-      Restart = "on-failure";
-      RestartSec = "30s";
-    };
-    script =
-      ''
-        _failed=0
-
-        # Adicionar repositório Flathub se não existir
-        if ! ${pkgs.flatpak}/bin/flatpak remote-add --system --if-not-exists flathub \
-            https://dl.flathub.org/repo/flathub.flatpakrepo; then
-          echo "AVISO: Falha ao adicionar repositório Flathub — tentará novamente." >&2
-          exit 1
-        fi
-
-        # Instalar Flatpaks do sistema (falhas individuais são registradas)
-      ''
-      + lib.concatMapStrings mkFlatpakInstallScript systemFlatpaks
-      + ''
-        # Só marca como concluído se todos os pacotes foram instalados com sucesso.
-        # Caso contrário, Restart=on-failure reexecutará o serviço.
-        if [[ $_failed -ne 0 ]]; then
-          exit 1
-        fi
-        touch ${lib.escapeShellArg flatpakDoneFile}
-      '';
   };
 
   # Fontes essenciais para o desktop
