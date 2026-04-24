@@ -9,6 +9,7 @@
   # Módulos Home Manager adicionais para importar além de ../home.nix. Padrão: [].
   extraHomeImports ? [ ],
 }:
+
 {
   users.users.${username} = {
     isNormalUser = true;
