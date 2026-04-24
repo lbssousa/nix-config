@@ -145,9 +145,9 @@
     # Starship - prompt cross-shell moderno
     starship = {
       enable = true;
-      enableZshIntegration = true;
-      enableFishIntegration = true;
-      enableBashIntegration = true;
+      enableZshIntegration = lib.mkDefault true;
+      enableFishIntegration = lib.mkDefault true;
+      enableBashIntegration = lib.mkDefault true;
       settings = {
         add_newline = true;
         character = {
@@ -173,17 +173,17 @@
     # Zoxide - cd inteligente
     zoxide = {
       enable = true;
-      enableZshIntegration = true;
-      enableFishIntegration = true;
-      enableBashIntegration = true;
+      enableZshIntegration = lib.mkDefault true;
+      enableFishIntegration = lib.mkDefault true;
+      enableBashIntegration = lib.mkDefault true;
     };
 
     # fzf - fuzzy finder
     fzf = {
       enable = true;
-      enableZshIntegration = true;
-      enableFishIntegration = true;
-      enableBashIntegration = true;
+      enableZshIntegration = lib.mkDefault true;
+      enableFishIntegration = lib.mkDefault true;
+      enableBashIntegration = lib.mkDefault true;
     };
 
     # Configuração do Neovim básica
