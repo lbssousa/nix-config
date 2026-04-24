@@ -150,9 +150,9 @@ echo
 # ---------------------------------------------------------------------------
 
 # Verificar se o banco de chaves sbctl está acessível.
-# O módulo lanzaboote cria um symlink /var/lib/sbctl → pkiBundle (ex: /persist/etc/secureboot)
-# via systemd-tmpfiles. Se as chaves não forem encontradas, o sbctl não consegue
-# assinar binários nem registrar chaves no firmware.
+# A configuração do host cria um symlink /var/lib/sbctl → pkiBundle (ex: /persist/etc/secureboot)
+# via systemd-tmpfiles (regra "L+ /var/lib/sbctl"). Se as chaves não forem encontradas,
+# o sbctl não consegue assinar binários nem registrar chaves no firmware.
 # Usa verificação via sistema de arquivos para robustez (independente de locale/encoding).
 _sbctl_db=/var/lib/sbctl
 if [[ ! -d "$_sbctl_db/keys" ]] && [[ ! -f "$_sbctl_db/GUID" ]]; then

@@ -139,6 +139,13 @@ in
     pkgs.sbctl
   ];
 
-  # Preservar configurações de Secure Boot em /persist
-  environment.persistence."/persist".directories = [ "/etc/secureboot" ];
+  # Criar symlink /var/lib/sbctl → /persist/etc/secureboot a cada boot.
+  # Necessário porque a raiz (/) é tmpfs e é apagada a cada reinicialização.
+  # O módulo lanzaboote (v0.4.1) NÃO cria este symlink automaticamente;
+  # é responsabilidade da configuração do host criá-lo via systemd-tmpfiles.
+  # Sem este symlink, o sbctl não consegue localizar o banco de chaves PKI
+  # e o setup-secureboot.sh falha na verificação do banco de chaves.
+  systemd.tmpfiles.rules = [
+    "L+ /var/lib/sbctl - - - - /persist/etc/secureboot"
+  ];
 }
