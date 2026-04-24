@@ -382,9 +382,30 @@ _create_user_file() {
   success "Arquivo de usuário $user_file criado (sudo: $sudo_flag)."
 }
 
+# Detectar arquivos de usuário já existentes (excluindo skeleton.nix)
+_EXISTING_USERS=()
+for _f in "$CONFIG_DIR/users/"*.nix; do
+  _bname="$(basename "$_f" .nix)"
+  [[ "$_bname" == "skeleton" ]] && continue
+  [[ "$_bname" == *"-home" ]] && continue
+  _EXISTING_USERS+=("$_bname")
+done
+
+if [[ ${#_EXISTING_USERS[@]} -gt 0 ]]; then
+  echo
+  info "Usuários já definidos nos módulos:"
+  for _eu in "${_EXISTING_USERS[@]}"; do
+    echo "  • $_eu"
+  done
+fi
+
 if [[ "$OPT_NON_INTERACTIVE" == "true" ]]; then
   if [[ ${#OPT_USERS_LOGIN[@]} -eq 0 ]]; then
-    die "Modo não-interativo: nenhum usuário definido. Use --user 'login:Nome:sudo'."
+    if [[ ${#_EXISTING_USERS[@]} -gt 0 ]]; then
+      info "Nenhum usuário adicional especificado via --user. Usando apenas os usuários já definidos."
+    else
+      die "Modo não-interativo: nenhum usuário definido. Use --user 'login:Nome:sudo'."
+    fi
   fi
   USERS_LOGIN=("${OPT_USERS_LOGIN[@]}")
   USERS_FULLNAME=("${OPT_USERS_FULLNAME[@]}")
@@ -395,47 +416,95 @@ else
   USERS_FULLNAME=("${OPT_USERS_FULLNAME[@]}")
   USERS_SUDO=("${OPT_USERS_SUDO[@]}")
 
-  while true; do
-    if [[ ${#USERS_LOGIN[@]} -gt 0 ]]; then
-      echo
-      echo "Usuários a criar:"
-      for _i in "${!USERS_LOGIN[@]}"; do
-        _sudo_label="com sudo"
-        [[ "${USERS_SUDO[$_i]}" == "false" ]] && _sudo_label="sem sudo"
-        echo "  $((_i + 1)). ${USERS_LOGIN[$_i]} (${USERS_FULLNAME[$_i]:-}) — $_sudo_label"
+  # Se já existem usuários definidos, perguntar se deseja criar adicionais
+  if [[ ${#_EXISTING_USERS[@]} -gt 0 && ${#USERS_LOGIN[@]} -eq 0 ]]; then
+    if ! confirm "Deseja criar usuários adicionais além dos já definidos?"; then
+      # Nenhum usuário novo a criar; pular o loop
+      true
+    else
+      # Entrar no loop de criação de usuários adicionais
+      while true; do
+        if [[ ${#USERS_LOGIN[@]} -gt 0 ]]; then
+          echo
+          echo "Usuários a criar:"
+          for _i in "${!USERS_LOGIN[@]}"; do
+            _sudo_label="com sudo"
+            [[ "${USERS_SUDO[$_i]}" == "false" ]] && _sudo_label="sem sudo"
+            echo "  $((_i + 1)). ${USERS_LOGIN[$_i]} (${USERS_FULLNAME[$_i]:-}) — $_sudo_label"
+          done
+          if ! confirm "Adicionar outro usuário?"; then
+            break
+          fi
+        fi
+
+        echo -ne "${BOLD}Nome de usuário (login): ${RESET}"
+        read -r _tmp_login
+        if [[ -z "$_tmp_login" ]]; then
+          warn "Nome de usuário vazio, tente novamente."
+          continue
+        fi
+        if ! [[ "$_tmp_login" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
+          error "Nome de usuário inválido: '$_tmp_login'. Use apenas letras minúsculas, números, hifens e underscores."
+          continue
+        fi
+
+        echo -ne "${BOLD}Nome completo [$_tmp_login]: ${RESET}"
+        read -r _tmp_fname
+        [[ -z "$_tmp_fname" ]] && _tmp_fname="$_tmp_login"
+
+        echo -ne "${BOLD}Conceder permissão sudo (wheel)? [S/n]: ${RESET}"
+        read -r _tmp_sudo_resp
+        _tmp_sudo="true"
+        [[ "$_tmp_sudo_resp" =~ ^[nN]$ ]] && _tmp_sudo="false"
+
+        USERS_LOGIN+=("$_tmp_login")
+        USERS_FULLNAME+=("$_tmp_fname")
+        USERS_SUDO+=("$_tmp_sudo")
       done
-      if ! confirm "Adicionar outro usuário?"; then
-        break
+    fi
+  else
+    while true; do
+      if [[ ${#USERS_LOGIN[@]} -gt 0 ]]; then
+        echo
+        echo "Usuários a criar:"
+        for _i in "${!USERS_LOGIN[@]}"; do
+          _sudo_label="com sudo"
+          [[ "${USERS_SUDO[$_i]}" == "false" ]] && _sudo_label="sem sudo"
+          echo "  $((_i + 1)). ${USERS_LOGIN[$_i]} (${USERS_FULLNAME[$_i]:-}) — $_sudo_label"
+        done
+        if ! confirm "Adicionar outro usuário?"; then
+          break
+        fi
       fi
+
+      echo -ne "${BOLD}Nome de usuário (login): ${RESET}"
+      read -r _tmp_login
+      if [[ -z "$_tmp_login" ]]; then
+        warn "Nome de usuário vazio, tente novamente."
+        continue
+      fi
+      if ! [[ "$_tmp_login" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
+        error "Nome de usuário inválido: '$_tmp_login'. Use apenas letras minúsculas, números, hifens e underscores."
+        continue
+      fi
+
+      echo -ne "${BOLD}Nome completo [$_tmp_login]: ${RESET}"
+      read -r _tmp_fname
+      [[ -z "$_tmp_fname" ]] && _tmp_fname="$_tmp_login"
+
+      echo -ne "${BOLD}Conceder permissão sudo (wheel)? [S/n]: ${RESET}"
+      read -r _tmp_sudo_resp
+      _tmp_sudo="true"
+      [[ "$_tmp_sudo_resp" =~ ^[nN]$ ]] && _tmp_sudo="false"
+
+      USERS_LOGIN+=("$_tmp_login")
+      USERS_FULLNAME+=("$_tmp_fname")
+      USERS_SUDO+=("$_tmp_sudo")
+    done
+
+    if [[ ${#USERS_LOGIN[@]} -eq 0 ]]; then
+      die "Pelo menos um usuário deve ser definido."
     fi
-
-    echo -ne "${BOLD}Nome de usuário (login): ${RESET}"
-    read -r _tmp_login
-    if [[ -z "$_tmp_login" ]]; then
-      warn "Nome de usuário vazio, tente novamente."
-      continue
-    fi
-    if ! [[ "$_tmp_login" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
-      error "Nome de usuário inválido: '$_tmp_login'. Use apenas letras minúsculas, números, hifens e underscores."
-      continue
-    fi
-
-    echo -ne "${BOLD}Nome completo [$_tmp_login]: ${RESET}"
-    read -r _tmp_fname
-    [[ -z "$_tmp_fname" ]] && _tmp_fname="$_tmp_login"
-
-    echo -ne "${BOLD}Conceder permissão sudo (wheel)? [S/n]: ${RESET}"
-    read -r _tmp_sudo_resp
-    _tmp_sudo="true"
-    [[ "$_tmp_sudo_resp" =~ ^[nN]$ ]] && _tmp_sudo="false"
-
-    USERS_LOGIN+=("$_tmp_login")
-    USERS_FULLNAME+=("$_tmp_fname")
-    USERS_SUDO+=("$_tmp_sudo")
-  done
-
-  if [[ ${#USERS_LOGIN[@]} -eq 0 ]]; then
-    die "Pelo menos um usuário deve ser definido."
   fi
 fi
 
