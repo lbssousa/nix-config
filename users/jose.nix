@@ -1,24 +1,5 @@
-{ pkgs, ... }:
-
-{
-  # Definição do usuário no sistema
-  users.users.jose = {
-    isNormalUser = true;
-    description = "José Lucas";
-    extraGroups = [
-      "networkmanager"
-      "video"
-      "audio"
-      "plugdev"
-      "dialout"
-      "docker"
-    ];
-    shell = pkgs.zsh;
-    initialPassword = "nixos";
-  };
-
-  # Configuração Home Manager para este usuário
-  home-manager.users.camelo = {
-    imports = [ ../home.nix ];
-  };
+{ pkgs, lib, ... }:
+import ./mkUser.nix { inherit pkgs lib; } {
+  username = camelo;
+  description = "José Lucas";
 }

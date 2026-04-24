@@ -1,25 +1,6 @@
-{ pkgs, ... }:
-
-{
-  # Definição do usuário no sistema
-  users.users.roberta = {
-    isNormalUser = true;
-    description = "Roberta Priscila";
-    extraGroups = [
-      "networkmanager"
-      "wheel" # sudo
-      "video"
-      "audio"
-      "plugdev"
-      "dialout"
-      "docker"
-    ];
-    shell = pkgs.zsh;
-    initialPassword = "nixos";
-  };
-
-  # Configuração Home Manager para este usuário
-  home-manager.users.surubi = {
-    imports = [ ../home.nix ];
-  };
+{ pkgs, lib, ... }:
+import ./mkUser.nix { inherit pkgs lib; } {
+  username = surubi;
+  description = "Roberta Priscila";
+  hasSudo = true;
 }
