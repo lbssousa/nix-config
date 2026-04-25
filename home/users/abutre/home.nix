@@ -21,6 +21,11 @@
       { id = "nngceckbapebfimnlniiiahkandclblb"; } # Bitwarden Password Manager
     ];
 
+    vscode = {
+      enable = true;
+      package = pkgs.vscode.fhs;
+    };
+
     # Usar powerlevel10k como tema do Zsh em vez do Starship
     starship.enableZshIntegration = false;
 
