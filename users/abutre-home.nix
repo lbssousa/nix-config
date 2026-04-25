@@ -2,6 +2,8 @@
 { pkgs, lib, ... }:
 
 {
+  home.packages = [ pkgs.github-copilot-cli ];
+
   dconf.settings = {
     "org/gnome/Ptyxis" = {
       use-system-font = false;
