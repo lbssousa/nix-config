@@ -5,10 +5,7 @@
   home = {
     username = lib.mkDefault "laercio";
     homeDirectory = lib.mkDefault "/home/laercio";
-    packages = [
-      pkgs.github-copilot-cli
-      pkgs.vscode.fhs
-    ];
+    packages = [ pkgs.github-copilot-cli ];
   };
 
   dconf.settings = {
@@ -23,6 +20,11 @@
     brave.extensions = [
       { id = "nngceckbapebfimnlniiiahkandclblb"; } # Bitwarden Password Manager
     ];
+
+    vscode = {
+      enable = true;
+      package = pkgs.vscode.fhs;
+    };
 
     # Usar powerlevel10k como tema do Zsh em vez do Starship
     starship.enableZshIntegration = false;
