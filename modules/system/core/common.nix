@@ -39,8 +39,12 @@ _:
     };
   };
 
-  # Configuração do teclado X11 — layout ABNT2 padrão com dead keys
-  services.xserver.xkb.layout = "br";
+  # Configuração do teclado X11/Wayland — layout ABNT2 padrão com dead keys
+  services.xserver.xkb = {
+    layout = "br";
+    variant = "abnt2";
+    model = "abnt2";
+  };
 
   # Configurações do Nix
   nix = {
