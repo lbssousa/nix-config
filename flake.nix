@@ -117,10 +117,12 @@
       # Generate homeConfigurations entries for a user across all hosts
       mkHomeAllHosts =
         username: extraModules:
-        nixpkgs.lib.mapAttrs' (hostname: system: {
-          name = "${username}@${hostname}";
-          value = mkHome username system extraModules;
-        }) allHosts;
+        nixpkgs.lib.mapAttrs' (
+          hostname: system: {
+            name = "${username}@${hostname}";
+            value = mkHome username system extraModules;
+          }
+        ) allHosts;
     in
     {
       # NixOS configurations (system-level — run with: nixos-rebuild switch --flake .#<host>)
