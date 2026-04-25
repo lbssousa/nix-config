@@ -5,7 +5,10 @@
   home = {
     username = lib.mkDefault "laercio";
     homeDirectory = lib.mkDefault "/home/laercio";
-    packages = [ pkgs.github-copilot-cli ];
+    packages = [
+      pkgs.github-copilot-cli
+      pkgs.vscode.fhs
+    ];
   };
 
   dconf.settings = {
