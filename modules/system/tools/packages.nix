@@ -48,7 +48,7 @@
     ++ [
       # Home Manager (da mesma versão do flake) — CLI para switches independentes do sistema
       # Uso: home-manager switch --flake /etc/nixos#<usuario>@<host>
-      inputs.home-manager.packages.${pkgs.system}.default
+      inputs.home-manager.packages.${pkgs.stdenv.hostPlatform.system}.default
     ];
 
   # Definir Neovim como editor padrão do sistema
