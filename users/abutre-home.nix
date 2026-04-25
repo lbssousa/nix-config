@@ -10,6 +10,11 @@
   };
 
   programs = {
+    # Instalar extensão do Bitwarden no Brave por padrão via política gerenciada
+    brave.extensions = [
+      { id = "nngceckbapebfimnlniiiahkandclblb"; } # Bitwarden Password Manager
+    ];
+
     # Usar powerlevel10k como tema do Zsh em vez do Starship
     starship.enableZshIntegration = false;
 
