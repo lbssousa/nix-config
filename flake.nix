@@ -45,10 +45,6 @@
     # nix-flatpak for declarative Flatpak management
     nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=v0.7.0";
 
-    # nix-homebrew for Linuxbrew/Homebrew support
-    # NOTA: O suporte ao Homebrew é configurado diretamente em modules/homebrew.nix
-    # sem dependência de um flake externo. Este input é mantido para uso futuro.
-    # nix-homebrew.url = "github:zhaofengli-wip/nix-homebrew";
   };
 
   outputs =

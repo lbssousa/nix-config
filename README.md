@@ -14,7 +14,6 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 - ✅ **Flatpak**: Aplicações instaladas system-wide automaticamente após o boot (como Silverblue)
 - ✅ **Podman + Distrobox**: Containers rootless (experiência Silverblue)
 - ✅ **Home Manager**: Gerenciamento de configurações de usuário
-- ✅ **Homebrew**: Ferramentas CLI via Linuxbrew
 - ✅ **Brave**: Navegador padrão instalado via Nix
 - ✅ **Ptyxis**: Terminal moderno instalado via Nix (substitui GNOME Console)
 - ✅ **Multi-host**: Configurações específicas para cada máquina
@@ -87,7 +86,6 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 │       ├── shell/
 │       │   └── shells.nix    # Shells disponíveis no sistema (Bash, Fish, Zsh)
 │       ├── tools/
-│       │   ├── homebrew.nix  # Suporte ao Linuxbrew/Homebrew
 │       │   ├── lbnix.nix     # Wrapper lbnix (switch, home, update, gc, diff...)
 │       │   └── packages.nix  # Pacotes essenciais (Neovim, Helix, home-manager, etc.)
 │       └── users/
