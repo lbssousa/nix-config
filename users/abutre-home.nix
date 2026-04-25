@@ -44,14 +44,16 @@
     };
 
     git = {
-      userName = "abutre";
-      userEmail = "git@example.com";
       signing = {
         # O prefixo key:: é necessário para indicar que é uma chave inline (não um caminho de arquivo)
         key = "key::ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILc5RYDDiqlYAyO7xuDJPLFtx5cMEyN2io/qVsmv55N9 GitHub";
         signByDefault = true;
       };
-      extraConfig = {
+      settings = {
+        user = {
+          name = "abutre";
+          email = "git@example.com";
+        };
         gpg.format = "ssh";
         gpg.ssh.program = "/run/current-system/sw/bin/ssh-keygen";
         tag.gpgsign = true;
