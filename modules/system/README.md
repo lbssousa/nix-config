@@ -17,7 +17,7 @@ Cada subpasta agrupa módulos por categoria funcional.
 | [network/](network/) | Servidor SSH e redes Wi-Fi declarativas (NetworkManager) |
 | [security/](security/) | TPM2 para desbloqueio automático do LUKS |
 | [shell/](shell/) | Shells disponíveis no sistema (Bash, Fish, Zsh) |
-| [tools/](tools/) | Pacotes essenciais do sistema e suporte ao Homebrew |
+| [tools/](tools/) | Pacotes essenciais do sistema |
 | [users/](users/) | Definição de usuários, grupos e política de sudo |
 
 ## Uso
@@ -38,7 +38,6 @@ imports = [
   ../../modules/system/network/wifi.nix
   ../../modules/system/security/tpm2.nix
   ../../modules/system/shell/shells.nix
-  ../../modules/system/tools/homebrew.nix
   ../../modules/system/tools/packages.nix
   ../../modules/system/users/users.nix
 ];
