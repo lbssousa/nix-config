@@ -1,4 +1,4 @@
-# Esqueleto para definição de usuários
+# Esqueleto para definição de usuários NixOS (conta do sistema)
 # INSTRUÇÕES:
 # 1. Copie este arquivo para users/<seu-usuario>.nix
 # 2. Substitua "skeleton" pelo nome do usuário desejado
@@ -12,15 +12,16 @@
 # 5. Descomente a linha de importação em hosts/<host>/configuration.nix:
 #      ./../../users/<seu-usuario>.nix
 #
+# Para configuração Home Manager personalizada (opcional):
+# 6. Crie home/users/<seu-usuario>/home.nix (copie de home/users/laercio/home.nix)
+# 7. Adicione a entrada em homeConfigurations no flake.nix:
+#      "<seu-usuario>@<host>" = mkHome "<seu-usuario>" "x86_64-linux" [ ./home/users/<seu-usuario>/home.nix ];
+#    (para usuários sem customização, a entrada já é gerada automaticamente por mkHomeAllHosts)
+#
 { pkgs, lib, ... }:
 import ./mkUser.nix { inherit pkgs lib; } {
   username = "skeleton";
   description = "Nome Completo do Usuário";
   # Descomente se o usuário deve ter permissão de sudo:
   # hasSudo = true;
-  # Módulos Home Manager adicionais (descomente conforme necessário):
-  # extraHomeImports = [
-  #   ./skeleton-home.nix
-  #   ../modules/user/apps/brave.nix  # Brave Browser via nixpkgs
-  # ];
 }

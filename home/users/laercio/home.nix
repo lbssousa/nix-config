@@ -1,8 +1,12 @@
-# Configurações home-manager específicas para o usuário laercio
+# Configurações Home Manager específicas para o usuário laercio
 { pkgs, lib, ... }:
 
 {
-  home.packages = [ pkgs.github-copilot-cli ];
+  home = {
+    username = lib.mkDefault "laercio";
+    homeDirectory = lib.mkDefault "/home/laercio";
+    packages = [ pkgs.github-copilot-cli ];
+  };
 
   dconf.settings = {
     "org/gnome/Ptyxis" = {
@@ -64,6 +68,7 @@
         gpg.format = "ssh";
         gpg.ssh.program = "/run/current-system/sw/bin/ssh-keygen";
         tag.gpgsign = true;
+        safe.directory = [ "/etc/nixos" ];
       };
     };
   };
