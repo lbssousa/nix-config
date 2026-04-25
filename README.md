@@ -46,9 +46,16 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 .
 ├── flake.nix                 # Entrada principal do Flake
 ├── flake.lock                # Lockfile das dependências
-├── home.nix                  # Configuração base do Home Manager
 ├── disko.nix                 # Template Btrfs de particionamento (LUKS+LVM+Btrfs)
-├── hosts/                    # Configurações específicas por host
+├── home/                     # Configurações Home Manager (independentes do sistema)
+│   ├── common.nix            # Config HM base — aplicada a todos os usuários
+│   ├── modules/              # Módulos HM reutilizáveis por usuário
+│   │   └── apps/
+│   │       └── brave.nix     # Brave Browser via nixpkgs (alternativa ao Flatpak)
+│   └── users/                # Customizações por usuário
+│       └── laercio/
+│           └── home.nix      # Config específica do laercio (p10k, git, Bitwarden)
+├── hosts/                    # Configurações específicas por host (NixOS)
 │   ├── barbudus/
 │   │   ├── configuration.nix        # Config específica (NVIDIA, fprintd, etc.)
 │   │   ├── hardware-configuration.nix # Hardware + disko + zram
@@ -57,48 +64,62 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 │       ├── configuration.nix
 │       ├── hardware-configuration.nix
 │       └── disko.nix
-├── modules/                  # Módulos compartilhados
-│   ├── system/               # Módulos de sistema
-│   │   ├── audio/
-│   │   │   └── audio.nix     # PipeWire
-│   │   ├── boot/
-│   │   │   └── boot.nix      # systemd-boot/lanzaboote + Plymouth (flicker-free)
-│   │   ├── containers/
-│   │   │   └── containers.nix # Podman rootless + Distrobox
-│   │   ├── core/
-│   │   │   ├── common.nix    # Configurações básicas (locale, nix, Btrfs)
-│   │   │   └── impermanence.nix # Raiz tmpfs + diretórios persistentes (/persist)
-│   │   ├── desktop/
-│   │   │   └── desktop.nix   # GNOME, Flatpak, fontes, instalação automática de apps
-│   │   ├── hardware/
-│   │   │   └── printing.nix  # Impressora Epson ESC-P/R + ecbd.service
-│   │   ├── network/
-│   │   │   ├── ssh.nix       # Servidor SSH
-│   │   │   └── wifi.nix      # Redes Wi-Fi declarativas (NetworkManager)
-│   │   ├── security/
-│   │   │   └── tpm2.nix      # TPM2 para desbloqueio automático do LUKS
-│   │   ├── shell/
-│   │   │   └── shells.nix    # Bash, Fish, Zsh (padrão: Zsh)
-│   │   ├── tools/
-│   │   │   ├── homebrew.nix  # Suporte ao Linuxbrew/Homebrew
-│   │   │   └── packages.nix  # Pacotes essenciais (Neovim, Helix, etc.)
-│   │   └── users/
-│   │       └── users.nix     # Configuração base de usuários
-│   └── user/                 # Módulos de usuário (Home Manager)
-│       └── apps/
-│           └── brave.nix     # Brave Browser via nixpkgs (alternativa ao Flatpak)
+├── modules/                  # Módulos NixOS compartilhados
+│   └── system/               # Módulos de sistema (nixos-rebuild)
+│       ├── audio/
+│       │   └── audio.nix     # PipeWire
+│       ├── boot/
+│       │   └── boot.nix      # systemd-boot/lanzaboote + Plymouth (flicker-free)
+│       ├── containers/
+│       │   └── containers.nix # Podman rootless + Distrobox
+│       ├── core/
+│       │   ├── common.nix    # Configurações básicas (locale, nix, Btrfs)
+│       │   └── impermanence.nix # Raiz tmpfs + diretórios persistentes (/persist)
+│       ├── desktop/
+│       │   └── desktop.nix   # GNOME, Flatpak, fontes, instalação automática de apps
+│       ├── hardware/
+│       │   └── printing.nix  # Impressora Epson ESC-P/R + ecbd.service
+│       ├── network/
+│       │   ├── ssh.nix       # Servidor SSH
+│       │   └── wifi.nix      # Redes Wi-Fi declarativas (NetworkManager)
+│       ├── security/
+│       │   └── tpm2.nix      # TPM2 para desbloqueio automático do LUKS
+│       ├── shell/
+│       │   └── shells.nix    # Shells disponíveis no sistema (Bash, Fish, Zsh)
+│       ├── tools/
+│       │   ├── homebrew.nix  # Suporte ao Linuxbrew/Homebrew
+│       │   ├── lbnix.nix     # Wrapper lbnix (switch, home, update, gc, diff...)
+│       │   └── packages.nix  # Pacotes essenciais (Neovim, Helix, home-manager, etc.)
+│       └── users/
+│           └── users.nix     # Contas de usuário, grupos e política de sudo
 ├── scripts/
 │   ├── install.sh            # Script de instalação automatizada
 │   ├── update.sh             # Atualizar flake inputs + nixos-rebuild switch
 │   ├── enroll-tpm2.sh        # Configurar desbloqueio LUKS via TPM2
 │   └── setup-secureboot.sh   # Configurar Secure Boot + assinar módulos (barbudus)
-├── users/                    # Configurações de usuário
-│   └── skeleton.nix          # Template para criar novo usuário
+├── users/                    # Definições de contas de usuário NixOS
+│   ├── skeleton.nix          # Template para criar novo usuário
+│   ├── laercio.nix           # Conta do sistema do laercio
+│   ├── roberta.nix           # Conta do sistema da roberta
+│   └── ...                   # Demais usuários
 ├── .gitignore                # Ignorar arquivos temporários e chaves
 ├── INSTALLATION.md           # Guia de instalação detalhado
 ├── NIXOS_CONFIG_SPECS.md     # Especificações do projeto
 └── README.md                 # Este arquivo
 ```
+
+### Desacoplamento NixOS ↔ Home Manager
+
+A configuração está organizada em dois planos independentes:
+
+| Plano | Diretórios | Comando |
+|-------|-----------|---------|
+| **Sistema (NixOS)** | `hosts/`, `modules/system/`, `users/` | `sudo nixos-rebuild switch --flake /etc/nixos#<host>` |
+| **Usuário (Home Manager)** | `home/` | `home-manager switch --flake /etc/nixos#<usuario>@<host>` |
+
+- Switches de sistema **não** aplicam configurações de home-manager.
+- Switches de home-manager **não** exigem rebuild do sistema.
+- Ambos usam o mesmo `nixpkgs` (pinado via `flake.lock`).
 
 ## 🚀 Início Rápido
 
@@ -175,7 +196,7 @@ exit
 sudo reboot
 ```
 
-### Atualização
+### Atualização do sistema
 
 ```bash
 # Atualizar flake inputs e rebuildar o sistema (recomendado):
@@ -187,6 +208,34 @@ sudo bash scripts/update.sh --update-only
 # Apenas rebuild (sem atualizar inputs):
 sudo bash scripts/update.sh --rebuild-only
 ```
+
+### Switch do sistema (NixOS)
+
+```bash
+# Rebuild e ativa a configuração do sistema para o host atual:
+sudo nixos-rebuild switch --flake /etc/nixos#barbudus   # ou bigodon
+
+# Via lbnix (detecta o host automaticamente):
+sudo lbnix switch
+```
+
+### Switch do Home Manager (usuário)
+
+```bash
+# Aplica a configuração HM do usuário laercio no host barbudus:
+home-manager switch --flake /etc/nixos#laercio@barbudus
+
+# Via lbnix (detecta usuário e host automaticamente):
+lbnix home
+
+# Especificando usuário e/ou host manualmente:
+lbnix home laercio@bigodon
+```
+
+> **Primeira vez?** Se `home-manager` ainda não está instalado, use:
+> ```bash
+> nix run nixpkgs#home-manager -- switch --flake /etc/nixos#laercio@barbudus
+> ```
 
 ### Rollback
 
@@ -200,6 +249,8 @@ sudo nixos-rebuild switch --rollback
 
 ## 🔧 Adicionando um Usuário
 
+### 1. Criar a conta do sistema
+
 1. Copie o template de usuário:
    ```bash
    cp users/skeleton.nix users/seu-usuario.nix
@@ -212,7 +263,7 @@ sudo nixos-rebuild switch --rollback
    git add users/seu-usuario.nix
    ```
 
-4. Importe o arquivo no `hosts/<host>/configuration.nix`:
+4. Importe o arquivo em cada `hosts/<host>/configuration.nix` desejado:
    ```nix
    imports = [
      # ...outros módulos...
@@ -223,6 +274,54 @@ sudo nixos-rebuild switch --rollback
 5. Rebuilde o sistema:
    ```bash
    sudo nixos-rebuild switch --flake /etc/nixos#barbudus
+   ```
+
+### 2. Configurar o Home Manager do usuário (opcional)
+
+Para uma configuração HM personalizada (além da `home/common.nix` padrão):
+
+1. Crie o arquivo de customização do usuário:
+   ```bash
+   mkdir -p home/users/seu-usuario
+   cp home/users/laercio/home.nix home/users/seu-usuario/home.nix
+   # Edite conforme necessário
+   ```
+
+2. Adicione entradas no `flake.nix` dentro de `homeConfigurations`:
+   ```nix
+   // mkHomeAllHosts "seu-usuario" [ ./home/users/seu-usuario/home.nix ]
+   ```
+
+3. Aplique:
+   ```bash
+   home-manager switch --flake /etc/nixos#seu-usuario@barbudus
+   ```
+
+> **Usuários sem customização** já possuem entradas automáticas em `homeConfigurations`
+> (via `mkHomeAllHosts`), aplicando apenas `home/common.nix`.
+
+## 🖥️ Adicionando um Novo Host
+
+1. Crie o diretório `hosts/<novo-host>/` com os arquivos:
+   - `configuration.nix` — importa os módulos de sistema e usuários
+   - `hardware-configuration.nix` — gerado por `nixos-generate-config`
+   - `disko.nix` — parâmetros de particionamento (copie de um host existente)
+
+2. Adicione o host em `flake.nix`:
+   ```nix
+   nixosConfigurations = {
+     # ...hosts existentes...
+     novo-host = mkHost "novo-host" "x86_64-linux" [ ];
+   };
+   ```
+
+3. Adicione o host em `allHosts` em `flake.nix` para geração automática dos `homeConfigurations`:
+   ```nix
+   allHosts = {
+     barbudus = "x86_64-linux";
+     bigodon  = "x86_64-linux";
+     novo-host = "x86_64-linux";
+   };
    ```
 
 ## 📡 Configurando Redes Wi-Fi
