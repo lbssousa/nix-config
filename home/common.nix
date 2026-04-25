@@ -96,6 +96,7 @@
         nrs = "sudo nixos-rebuild switch --flake /etc/nixos";
         nru = "sudo nix flake update /etc/nixos && sudo nixos-rebuild switch --flake /etc/nixos";
         nrb = "sudo nixos-rebuild boot --flake /etc/nixos";
+        hms = "home-manager switch --flake /etc/nixos#$(whoami)@$(hostname)";
         # Podman/Docker aliases
         dk = "podman";
         dkc = "podman-compose";
