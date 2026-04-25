@@ -2,6 +2,13 @@
 { pkgs, lib, ... }:
 
 {
+  dconf.settings = {
+    "org/gnome/Ptyxis" = {
+      use-system-font = false;
+      font-name = "JetBrainsMono Nerd Font Mono Regular 14";
+    };
+  };
+
   programs = {
     # Usar powerlevel10k como tema do Zsh em vez do Starship
     starship.enableZshIntegration = false;
