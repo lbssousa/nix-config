@@ -1,7 +1,12 @@
-# Configurações home-manager específicas para o usuário laercio
+# Configurações Home Manager específicas para o usuário laercio
 { pkgs, lib, ... }:
 
 {
+  home = {
+    username = lib.mkDefault "laercio";
+    homeDirectory = lib.mkDefault "/home/laercio";
+  };
+
   dconf.settings = {
     "org/gnome/Ptyxis" = {
       use-system-font = false;
@@ -62,6 +67,7 @@
         gpg.format = "ssh";
         gpg.ssh.program = "/run/current-system/sw/bin/ssh-keygen";
         tag.gpgsign = true;
+        safe.directory = [ "/etc/nixos" ];
       };
     };
   };

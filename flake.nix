@@ -82,29 +82,50 @@
             # Host-specific system configuration
             ./hosts/${hostname}/configuration.nix
 
-            # Home Manager as NixOS module
-            home-manager.nixosModules.home-manager
-
             # sops-nix for secret management
             sops-nix.nixosModules.sops
 
             # nix-flatpak for declarative Flatpak management
             nix-flatpak.nixosModules.nix-flatpak
-            {
-              home-manager = {
-                useGlobalPkgs = true;
-                useUserPackages = true;
-                backupFileExtension = "hm-backup";
-                # User-specific home-manager configs are loaded from ./users/
-                # See users/skeleton.nix for the template
-              };
-            }
           ]
           ++ extraModules;
         };
+
+      # Helper to build a standalone Home Manager configuration for a given user/host
+      mkHome =
+        username: system: extraModules:
+        home-manager.lib.homeManagerConfiguration {
+          pkgs = nixpkgs.legacyPackages.${system};
+          extraSpecialArgs = { inherit inputs; };
+          modules = [
+            # Global Home Manager configuration (common to all users)
+            ./home/common.nix
+            # User identity
+            {
+              home.username = username;
+              home.homeDirectory = "/home/${username}";
+            }
+          ] ++ extraModules;
+        };
+
+      # Hosts and their system architectures
+      allHosts = {
+        barbudus = "x86_64-linux";
+        bigodon = "x86_64-linux";
+      };
+
+      # Generate homeConfigurations entries for a user across all hosts
+      mkHomeAllHosts =
+        username: extraModules:
+        nixpkgs.lib.mapAttrs' (
+          hostname: system: {
+            name = "${username}@${hostname}";
+            value = mkHome username system extraModules;
+          }
+        ) allHosts;
     in
     {
-      # NixOS configurations
+      # NixOS configurations (system-level — run with: nixos-rebuild switch --flake .#<host>)
       nixosConfigurations = {
         # Dell Inspiron 14 5490 (Intel i5-10210U, 16GB RAM, Intel + Nvidia MX230)
         # NOTA: Não há módulo nixos-hardware específico para este modelo.
@@ -115,6 +136,16 @@
         # Morefine M6 Mini-PC (Intel N200, 16GB RAM, Intel UHD Graphics)
         bigodon = mkHost "bigodon" "x86_64-linux" [ ];
       };
+
+      # Home Manager configurations (user-level — run with: home-manager switch --flake .#<user>@<host>)
+      # laercio: configuração personalizada (powerlevel10k, git SSH signing, Bitwarden)
+      homeConfigurations =
+        mkHomeAllHosts "laercio" [ ./home/users/laercio/home.nix ]
+        // mkHomeAllHosts "roberta" [ ]
+        // mkHomeAllHosts "miguel" [ ]
+        // mkHomeAllHosts "jose" [ ]
+        // mkHomeAllHosts "joao" [ ]
+        // mkHomeAllHosts "maria" [ ];
 
       # Expose disko configurations for standalone partitioning
       diskoConfigurations = {
