@@ -253,6 +253,28 @@ if [[ "$OPT_SIGN_ONLY" != "true" && "$OPT_VERIFY_ONLY" != "true" ]]; then
   success "Firmware em Setup Mode. Prosseguindo com o registro de chaves."
   echo
 
+  # Alguns firmwares marcam as variáveis EFI (PK/KEK/db/dbx) com chattr +i mesmo
+  # em Setup Mode, impedindo o sbctl de escrever nelas. Remove o atributo imutável
+  # antes de prosseguir com o enrollment.
+  _efivarfs=/sys/firmware/efi/efivars
+  _had_immutable=false
+  for _f in \
+    "$_efivarfs"/PK-* \
+    "$_efivarfs"/KEK-* \
+    "$_efivarfs"/db-* \
+    "$_efivarfs"/dbx-*; do
+    if [ -f "$_f" ] && lsattr "$_f" 2>/dev/null | awk '{print $1}' | grep -q 'i'; then
+      _had_immutable=true
+      chattr -i "$_f" 2>/dev/null \
+        || warn "Não foi possível remover atributo imutável de: $_f"
+    fi
+  done
+  if [ "$_had_immutable" = "true" ]; then
+    warn "Atributo imutável (chattr +i) detectado e removido das variáveis EFI."
+    warn "Isso ocorre em alguns firmwares que bloqueiam variáveis EFI mesmo em Setup Mode."
+    echo
+  fi
+
   warn "As chaves Microsoft são incluídas para garantir compatibilidade com"
   warn "drivers de firmware assinados pela Microsoft (ex: drivers de GPU)."
   echo
