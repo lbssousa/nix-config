@@ -45,6 +45,16 @@
 
   };
 
+  # Fonte de entrada GNOME: usar IBus com o layout ABNT2 (xkb:br::por)
+  # Sem esta configuração, o GNOME usa XKB nativo sem passar pelo daemon IBus,
+  # o que faz as teclas mortas (dead_tilde, etc.) chegarem "cruas" ao VTE/Ptyxis
+  # e ficarem presas — impedindo digitar ~ isoladamente (dead_tilde + espaço = ~).
+  dconf.settings = {
+    "org/gnome/desktop/input-sources" = {
+      sources = [ (lib.hm.gvariant.mkTuple [ "ibus" "xkb:br::por" ]) ];
+    };
+  };
+
   programs = {
     # Git - configuração básica (sobrescreva no arquivo do usuário)
     git = {
