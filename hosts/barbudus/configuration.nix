@@ -100,6 +100,10 @@ in
     # Módulo de vídeo NVIDIA (KMS/Wayland)
     xserver.videoDrivers = [ "nvidia" ];
 
+    # switcheroo-control: expõe GPUs via D-Bus para o GNOME exibir a opção
+    # "Abrir com a placa de vídeo dedicada" no menu de contexto
+    switcherooControl.enable = true;
+
     fprintd = {
       enable = true;
       # NOTA: Depois de resolver o hash do libfprint-goodix acima,
