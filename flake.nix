@@ -34,7 +34,7 @@
     nixos-hardware.url = "github:NixOS/nixos-hardware";
 
     # Lanzaboote for Secure Boot (used on barbudus for NVIDIA module signing)
-    lanzaboote.url = "github:nix-community/lanzaboote/v0.4.1";
+    lanzaboote.url = "github:nix-community/lanzaboote/v1.0.0";
 
     # sops-nix for secret management (Wi-Fi passwords, etc.)
     sops-nix = {
