@@ -84,66 +84,75 @@ in
   # de modo que ele leia o /etc/shadow restaurado e preserve as senhas.
   system.activationScripts.users.deps = [ "restoreShadow" ];
 
-  # Monitora /etc/shadow e persiste toda alteração em /persist/etc/shadow.
-  # PathChanged captura IN_MOVED_TO (rename atômico do 'passwd'/'chage'/'users')
-  # bem como IN_CLOSE_WRITE (escrita direta). O serviço é oneshot e idempotente.
-  systemd.paths.persistShadow = {
-    description = "Monitorar /etc/shadow para persistir alterações de senha";
-    wantedBy = [ "multi-user.target" ];
-    pathConfig = {
-      PathChanged = "/etc/shadow";
-      Unit = "persistShadow.service";
-    };
-  };
+  systemd = {
+    # Permissão de escrita em /etc/nixos para o grupo wheel.
+    # O diretório real fica em /persist/etc/nixos (bind mount via impermanence).
+    # A regra 'z' ajusta dono e modo sem apagar o conteúdo existente.
+    tmpfiles.rules = [ "z /persist/etc/nixos 0775 root wheel - -" ];
 
-  systemd.services.persistShadow = {
-    description = "Persistir /etc/shadow em /persist/etc/shadow";
-    serviceConfig = {
-      Type = "oneshot";
+    # Monitora /etc/shadow e persiste toda alteração em /persist/etc/shadow.
+    # PathChanged captura IN_MOVED_TO (rename atômico do 'passwd'/'chage'/'users')
+    # bem como IN_CLOSE_WRITE (escrita direta). O serviço é oneshot e idempotente.
+    paths.persistShadow = {
+      description = "Monitorar /etc/shadow para persistir alterações de senha";
+      wantedBy = [ "multi-user.target" ];
+      pathConfig = {
+        PathChanged = "/etc/shadow";
+        Unit = "persistShadow.service";
+      };
     };
-    script = ''
-      mkdir -p /persist/etc
-      if [ -f /etc/shadow ]; then
-        ${pkgs.coreutils}/bin/install -m 640 /etc/shadow /persist/etc/shadow
-      fi
-    '';
-  };
 
-  # Força a troca de senha no primeiro login para usuários com initialPassword/initialHashedPassword.
-  # Usa um arquivo de flag em /persist para que a troca seja exigida apenas uma vez.
-  #
-  # Inicia após 'persistShadow.path' (acima), garantindo que o monitor inotify já
-  # esteja ativo quando 'chage -d 0' modifica /etc/shadow. Assim a alteração é
-  # imediatamente copiada para /persist/etc/shadow pelo persistShadow.service.
-  #
-  # Para redefinir: apague /persist/.password-change-required-<usuario> e reinicie.
-  systemd.services.forceInitialPasswordChange = lib.mkIf (usersWithInitialPassword != { }) {
-    description = "Forçar troca de senha no primeiro login (usuários com senha inicial)";
-    wantedBy = [ "multi-user.target" ];
-    after = [
-      "local-fs.target"
-      "persistShadow.path"
-    ];
-    wants = [ "persistShadow.path" ];
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-    };
-    script = lib.concatMapStrings (
-      username:
-      let
-        flagFile = lib.escapeShellArg "/persist/.password-change-required-${username}";
-        escapedUser = lib.escapeShellArg username;
-      in
-      ''
-        if [ ! -f ${flagFile} ]; then
-          if ${pkgs.shadow}/bin/chage -d 0 ${escapedUser}; then
-            touch ${flagFile}
-          else
-            echo "forceInitialPasswordChange: chage falhou para ${escapedUser}" >&2
+    services = {
+      persistShadow = {
+        description = "Persistir /etc/shadow em /persist/etc/shadow";
+        serviceConfig = {
+          Type = "oneshot";
+        };
+        script = ''
+          mkdir -p /persist/etc
+          if [ -f /etc/shadow ]; then
+            ${pkgs.coreutils}/bin/install -m 640 /etc/shadow /persist/etc/shadow
           fi
-        fi
-      ''
-    ) (lib.attrNames usersWithInitialPassword);
+        '';
+      };
+
+      # Força a troca de senha no primeiro login para usuários com initialPassword/initialHashedPassword.
+      # Usa um arquivo de flag em /persist para que a troca seja exigida apenas uma vez.
+      #
+      # Inicia após 'persistShadow.path' (acima), garantindo que o monitor inotify já
+      # esteja ativo quando 'chage -d 0' modifica /etc/shadow. Assim a alteração é
+      # imediatamente copiada para /persist/etc/shadow pelo persistShadow.service.
+      #
+      # Para redefinir: apague /persist/.password-change-required-<usuario> e reinicie.
+      forceInitialPasswordChange = lib.mkIf (usersWithInitialPassword != { }) {
+        description = "Forçar troca de senha no primeiro login (usuários com senha inicial)";
+        wantedBy = [ "multi-user.target" ];
+        after = [
+          "local-fs.target"
+          "persistShadow.path"
+        ];
+        wants = [ "persistShadow.path" ];
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+        };
+        script = lib.concatMapStrings (
+          username:
+          let
+            flagFile = lib.escapeShellArg "/persist/.password-change-required-${username}";
+            escapedUser = lib.escapeShellArg username;
+          in
+          ''
+            if [ ! -f ${flagFile} ]; then
+              if ${pkgs.shadow}/bin/chage -d 0 ${escapedUser}; then
+                touch ${flagFile}
+              else
+                echo "forceInitialPasswordChange: chage falhou para ${escapedUser}" >&2
+              fi
+            fi
+          ''
+        ) (lib.attrNames usersWithInitialPassword);
+      };
+    };
   };
 }

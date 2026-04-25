@@ -1,18 +1,20 @@
-# Configuração Home Manager base
-# Utilizado como ponto de partida para configurações de usuário
-# Os usuários reais devem criar seu próprio arquivo em users/<usuario>.nix
-# e referenciar este arquivo ou criar o próprio home.nix customizado
+# Configuração Home Manager base — aplicada a todos os usuários
+# Importada automaticamente por cada homeConfiguration no flake.nix.
+# Os arquivos por usuário ficam em home/users/<usuario>/home.nix.
 { pkgs, lib, ... }:
 
 {
   home = {
-    # Home Manager precisa conhecer o usuário e o diretório home
-    # NOTA: Estes valores devem ser sobrescritos pelo arquivo do usuário real
+    # Home Manager precisa conhecer o usuário e o diretório home.
+    # NOTA: Estes valores são sobrescritos pelo mkHome em flake.nix.
     username = lib.mkDefault "user";
     homeDirectory = lib.mkDefault "/home/user";
 
     # Versão do Home Manager (não altere sem verificar as release notes)
     stateVersion = "25.05";
+
+    # Extensão de backup para arquivos gerenciados pelo Home Manager
+    backupFileExtension = "hm-backup";
 
     # Pacotes instalados para o usuário
     packages = with pkgs; [
@@ -94,7 +96,7 @@
         nrs = "sudo nixos-rebuild switch --flake /etc/nixos";
         nru = "sudo nix flake update /etc/nixos && sudo nixos-rebuild switch --flake /etc/nixos";
         nrb = "sudo nixos-rebuild boot --flake /etc/nixos";
-        hms = "home-manager switch --flake /etc/nixos";
+        hms = "home-manager switch --flake /etc/nixos#$(whoami)@$(hostname)";
         # Podman/Docker aliases
         dk = "podman";
         dkc = "podman-compose";

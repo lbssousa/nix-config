@@ -1,7 +1,12 @@
-# Configurações home-manager específicas para o usuário abutre
+# Configurações Home Manager específicas para o usuário abutre
 { pkgs, lib, ... }:
 
 {
+  home = {
+    username = lib.mkDefault abutre;
+    homeDirectory = lib.mkDefault "/home/abutre";
+  };
+
   dconf.settings = {
     "org/gnome/Ptyxis" = {
       use-system-font = false;
@@ -62,6 +67,7 @@
         gpg.format = "ssh";
         gpg.ssh.program = "/run/current-system/sw/bin/ssh-keygen";
         tag.gpgsign = true;
+        safe.directory = [ "/etc/nixos" ];
       };
     };
   };
