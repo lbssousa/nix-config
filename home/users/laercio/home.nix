@@ -26,6 +26,9 @@
       package = pkgs.vscode.fhs;
     };
 
+    # Direnv para automatizar a ativação de nix-shell / nix develop
+    direnv.enable = true;
+
     # Usar powerlevel10k como tema do Zsh em vez do Starship
     starship.enableZshIntegration = false;
 
