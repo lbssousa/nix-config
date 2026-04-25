@@ -5,7 +5,10 @@
   home = {
     username = lib.mkDefault abutre;
     homeDirectory = lib.mkDefault "/home/abutre";
-    packages = [ pkgs.github-copilot-cli ];
+    packages = [
+      pkgs.github-copilot-cli
+      pkgs.vscode.fhs
+    ];
   };
 
   dconf.settings = {
