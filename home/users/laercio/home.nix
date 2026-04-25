@@ -5,6 +5,7 @@
   home = {
     username = lib.mkDefault "laercio";
     homeDirectory = lib.mkDefault "/home/laercio";
+    packages = [ pkgs.github-copilot-cli ];
   };
 
   dconf.settings = {
