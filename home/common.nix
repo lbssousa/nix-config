@@ -13,9 +13,6 @@
     # Versão do Home Manager (não altere sem verificar as release notes)
     stateVersion = "25.05";
 
-    # Extensão de backup para arquivos gerenciados pelo Home Manager
-    backupFileExtension = "hm-backup";
-
     # Pacotes instalados para o usuário
     packages = with pkgs; [
       # Ferramentas de desenvolvimento
