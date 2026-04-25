@@ -59,6 +59,10 @@
             export SSH_AUTH_SOCK="$HOME/.bitwarden-ssh-agent.sock"
           fi
         ''
+        # Ativar hook do direnv
+        ''
+          eval "$(direnv hook zsh)"
+        ''
       ];
     };
 
