@@ -86,7 +86,7 @@ let
         ;;
       fmt)
         pushd "$FLAKE_DIR" > /dev/null
-        ${pkgs.nixfmt-rfc-style}/bin/nixfmt .
+        ${pkgs.nixfmt}/bin/nixfmt .
         popd > /dev/null
         ;;
       diff)
