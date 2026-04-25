@@ -8,7 +8,6 @@ Serve como referência para manutenção e extensão futura.
 Propiciar uma experiência de uso similar à do Fedora Silverblue ou do projeto Bluefin, com:
 - Sistema base enxuto e declarativo via Nix Flakes
 - Uso massivo de Flatpaks para aplicações GUI
-- Aplicativos CLI instalados via Homebrew (Linuxbrew)
 - Sistema efêmero (impermanence) com raiz limpa a cada boot
 - Dados importantes preservados em subvolumes Btrfs dedicados
 
@@ -193,16 +192,6 @@ flatpak install flathub io.github.bazaar_cabinet.Bazaar  # App store
 - Usa pacotes globais do sistema (`useGlobalPkgs = true`)
 - Configuração base em `home.nix`
 - Configurações de usuário em `users/<usuario>.nix` (commitados)
-
-## Homebrew (Linuxbrew)
-
-- Instalado em `/home/linuxbrew/.linuxbrew` para uso system-wide
-- PATH configurado automaticamente para todos os usuários
-- Diretório `/home/linuxbrew` preservado em `/persist`
-- Instalação manual necessária após o setup do NixOS:
-  ```bash
-  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-  ```
 
 ## Impermanence (Sistema Efêmero)
 

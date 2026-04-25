@@ -872,8 +872,6 @@ echo
 echo -e "  Após o primeiro boot:"
 echo -e "    • Os Flatpaks são instalados automaticamente pelo serviço ${CYAN}install-system-flatpaks${RESET}"
 echo -e "      (requer conexão com a internet no primeiro boot)"
-echo -e "    • O Homebrew é instalado automaticamente pelo serviço ${CYAN}install-homebrew${RESET}"
-echo -e "      (requer conexão com a internet no primeiro boot)"
 echo -e "    • Configurar Secure Boot com lanzaboote (apenas barbudus)"
 echo -e "      (consulte ${BOLD}INSTALLATION.md${RESET} → 'Configuração do Secure Boot')"
 echo -e "    • Configurar desbloqueio automático LUKS via TPM2"

@@ -352,19 +352,6 @@ sudo reboot
    > **Nota:** O repositório Flathub é pré-configurado pelo `install.sh` durante a instalação.
    > Se o serviço falhar (sem internet no primeiro boot), ele tentará novamente automaticamente.
 
-4. **Homebrew** (instalação automática):
-   O Homebrew (Linuxbrew) é instalado automaticamente pelo serviço `install-homebrew` na primeira
-   vez que o sistema iniciar com acesso à internet. Nenhuma ação manual é necessária.
-
-   Para acompanhar o status:
-   ```bash
-   systemctl status install-homebrew
-   journalctl -u install-homebrew -f
-   ```
-
-   > **Nota:** O serviço roda como o usuário `linuxbrew`. Se falhar (sem internet), tentará
-   > novamente automaticamente. O Homebrew fica instalado em `/home/linuxbrew/.linuxbrew`.
-
 ## 🥾 Menu de Boot (systemd-boot)
 
 O menu do systemd-boot está **oculto por padrão** (`timeout = 0`) para proporcionar um boot

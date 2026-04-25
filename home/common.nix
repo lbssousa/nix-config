@@ -43,11 +43,6 @@
       BROWSER = "xdg-open";
     };
 
-    # Adicionar diretórios ao PATH do usuário
-    sessionPath = [
-      "$HOME/.linuxbrew/bin" # Homebrew do usuário (se instalado)
-      "/home/linuxbrew/.linuxbrew/bin" # Homebrew system-wide (se instalado)
-    ];
   };
 
   programs = {
@@ -113,10 +108,6 @@
         # Completions case-insensitive
         zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
 
-        # Homebrew path
-        if [ -d "/home/linuxbrew/.linuxbrew" ]; then
-          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-        fi
       '';
     };
 
@@ -126,11 +117,6 @@
       interactiveShellInit = ''
         # Zoxide
         zoxide init fish | source
-
-        # Homebrew
-        if test -d /home/linuxbrew/.linuxbrew
-          eval (/home/linuxbrew/.linuxbrew/bin/brew shellenv)
-        end
 
         # Starship prompt
         starship init fish | source
