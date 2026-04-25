@@ -42,6 +42,13 @@ in
     docker = { }; # Compatibilidade com Docker (Podman)
   };
 
+  # Permissão de escrita em /etc/nixos para o grupo wheel.
+  # O diretório real fica em /persist/etc/nixos (bind mount via impermanence).
+  # A regra 'z' ajusta dono e modo sem apagar o conteúdo existente.
+  systemd.tmpfiles.rules = [
+    "z /persist/etc/nixos 0775 root wheel - -"
+  ];
+
   # ─────────────────────────────────────────────────────────────────────────
   # Persistência do /etc/shadow (senhas de usuário)
   # ─────────────────────────────────────────────────────────────────────────
