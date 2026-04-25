@@ -4,6 +4,9 @@
 { pkgs, lib, ... }:
 
 {
+  # Permitir pacotes proprietários/não-livres (ex: github-copilot-cli, vscode, etc.)
+  nixpkgs.config.allowUnfree = true;
+
   home = {
     # Home Manager precisa conhecer o usuário e o diretório home.
     # NOTA: Estes valores são sobrescritos pelo mkHome em flake.nix.
