@@ -6,6 +6,7 @@
 #
 # Uso básico:
 #   sudo lbnix switch          # rebuild + ativa configuração do host atual
+#   lbnix home                 # home-manager switch do usuário atual no host atual
 #   lbnix update               # atualiza todos os inputs do flake
 #   lbnix gc                   # coleta lixo (padrão: entradas > 30 dias)
 #   lbnix diff                 # mostra diff da geração atual para a nova
@@ -27,11 +28,15 @@ let
       echo ""
       echo "Uso: lbnix <comando> [opções]"
       echo ""
-      echo "Comandos de rebuild (requerem sudo):"
+      echo "Comandos de rebuild do sistema (requerem sudo):"
       echo "  switch [host]        Rebuild e ativa a configuração (padrão: host atual)"
       echo "  boot   [host]        Rebuild e define para o próximo boot"
       echo "  test   [host]        Rebuild e testa (não define como padrão)"
       echo "  build  [host]        Apenas constrói sem ativar"
+      echo ""
+      echo "Comandos de home-manager (sem sudo):"
+      echo "  home [user[@host]]   Aplica configuração Home Manager do usuário"
+      echo "                       Padrão: usuário atual no host atual"
       echo ""
       echo "Manutenção:"
       echo "  update [input...]    Atualiza inputs do flake (todos ou específicos)"
@@ -60,6 +65,17 @@ let
     case "''${1:-}" in
       switch|boot|test|build)
         _rebuild "$@"
+        ;;
+      home)
+        # home-manager switch para um usuário@host
+        # Uso: lbnix home [user[@host]]
+        # Padrão: usuário atual no host atual
+        _target="''${2:-$(whoami)@$HOST}"
+        # Se apenas o usuário foi fornecido (sem @host), adiciona o host atual
+        if [[ "''${_target}" != *@* ]]; then
+          _target="''${_target}@''${HOST}"
+        fi
+        home-manager switch --flake "''${FLAKE_DIR}#''${_target}" "''${@:3}"
         ;;
       update)
         pushd "$FLAKE_DIR" > /dev/null

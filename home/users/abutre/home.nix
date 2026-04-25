@@ -1,8 +1,12 @@
-# Configurações home-manager específicas para o usuário abutre
+# Configurações Home Manager específicas para o usuário abutre
 { pkgs, lib, ... }:
 
 {
-  home.packages = [ pkgs.github-copilot-cli ];
+  home = {
+    username = lib.mkDefault abutre;
+    homeDirectory = lib.mkDefault "/home/abutre";
+    packages = [ pkgs.github-copilot-cli ];
+  };
 
   dconf.settings = {
     "org/gnome/Ptyxis" = {
@@ -64,6 +68,7 @@
         gpg.format = "ssh";
         gpg.ssh.program = "/run/current-system/sw/bin/ssh-keygen";
         tag.gpgsign = true;
+        safe.directory = [ "/etc/nixos" ];
       };
     };
   };
