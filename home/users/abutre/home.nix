@@ -1,7 +1,12 @@
-# Configurações home-manager específicas para o usuário abutre
+# Configurações Home Manager específicas para o usuário abutre
 { pkgs, lib, ... }:
 
 {
+  home = {
+    username = lib.mkDefault abutre;
+    homeDirectory = lib.mkDefault "/home/abutre";
+  };
+
   dconf.settings = {
     "org/gnome/Ptyxis" = {
       use-system-font = false;
@@ -26,6 +31,10 @@
           file = "share/zsh-powerlevel10k/powerlevel10k.zsh-theme";
         }
       ];
+      shellAliases = {
+        # Home Manager switch para este usuário (detecta o host automaticamente)
+        hms = "home-manager switch --flake /etc/nixosabutre@$(hostname)";
+      };
       initContent = lib.mkMerge [
         # Instant prompt deve ser o primeiro código executado no .zshrc
         (lib.mkBefore ''
