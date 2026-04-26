@@ -100,6 +100,7 @@ stdenv.mkDerivation rec {
 
     # Instala a documentação
     if [ -d usr/share/doc ]; then
+      mkdir -p $out/share/doc/epson-printer-utility
       cp -r usr/share/doc/. $out/share/doc/epson-printer-utility/
     fi
 
