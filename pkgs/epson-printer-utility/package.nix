@@ -2,11 +2,13 @@
 # Inclui o daemon ecbd (Epson Communication Bridge Daemon) e a interface gráfica.
 # Compatível com a multifuncional Epson L4160 e outros modelos EcoTank/InkTank.
 #
-# Para atualizar o hash após uma nova versão:
-#   nix-prefetch-url https://download3.ebz.epson.net/dsc/f/03/00/14/91/63/epson-printer-utility_1.1.2-1_amd64.deb
-# ou
-#   nix store prefetch-file --hash-type sha256 \
-#     https://download3.ebz.epson.net/dsc/f/03/00/14/91/63/epson-printer-utility_1.1.2-1_amd64.deb
+# Para atualizar para uma nova versão:
+# 1. Localize a URL de download em: https://download.ebz.epson.net/dsc/search/01/search/?OSC=LX
+# 2. Obtenha o hash SHA256 com:
+#      nix-prefetch-url <url>
+#    ou:
+#      nix store prefetch-file --hash-type sha256 <url>
+# 3. Atualize os campos `url` e `hash` abaixo.
 {
   lib,
   stdenv,
@@ -22,15 +24,15 @@
 
 stdenv.mkDerivation rec {
   pname = "epson-printer-utility";
-  version = "1.1.2";
+  version = "1.2.2";
 
   src = fetchurl {
     # Página de download: https://download.ebz.epson.net/dsc/search/01/search/?OSC=LX
-    url = "https://download3.ebz.epson.net/dsc/f/03/00/14/91/63/epson-printer-utility_${version}-1_amd64.deb";
-    # Para obter o hash correto, execute:
-    #   nix-prefetch-url <url>
-    # e substitua o valor abaixo pelo resultado.
-    hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+    # FIXME: O segmento de caminho abaixo (/03/00/.../  ) é específico de cada versão
+    # no CDN da Epson. Verifique a URL correta para a versão ${version} na página acima
+    # e atualize este campo antes de fazer o build.
+    url = "https://download3.ebz.epson.net/dsc/f/03/00/16/08/67/epson-printer-utility_${version}-1_amd64.deb";
+    hash = "sha256-8OG2Hva+7FGA9s8x/7uH9IMbgRgez6zl5z1XA32RRJI=";
   };
 
   nativeBuildInputs = [
