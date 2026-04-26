@@ -89,8 +89,16 @@ stdenv.mkDerivation rec {
     mkdir -p $out/share/epson-printer-utility
     cp -r opt/epson-printer-utility/resource $out/share/epson-printer-utility/resource
 
-    # Instala o arquivo .desktop
+    # Instala o ícone no diretório XDG padrão
+    install -Dm644 opt/epson-printer-utility/resource/Images/AppIcon.png \
+      $out/share/icons/hicolor/256x256/apps/epson-printer-utility.png
+
+    # Instala e corrige o arquivo .desktop (paths do DEB apontam para /opt)
     install -Dm644 opt/epson-printer-utility/epson-printer-utility.desktop \
+      $out/share/applications/epson-printer-utility.desktop
+    sed -i \
+      -e 's|^Exec=.*|Exec=epson-printer-utility|' \
+      -e 's|^Icon=.*|Icon=epson-printer-utility|' \
       $out/share/applications/epson-printer-utility.desktop
 
     # Instala as regras udev
