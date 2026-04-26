@@ -7,9 +7,12 @@
   services.printing = {
     enable = true;
     # Driver inkjet ESC/P-R da Epson (versão 1) - compatível com L4160, L3x50, etc.
+    # epson-printer-utility também é incluído aqui para que o backend CUPS (ecblp)
+    # seja descoberto pelo CUPS automaticamente via CUPS_SERVERBIN.
     drivers = with pkgs; [
       epson-escpr # ESC/P-R driver versão 1 (L4160, L3x50, etc.)
       epson-escpr2 # ESC/P-R driver versão 2 (modelos mais novos)
+      epson-printer-utility # backend CUPS ecblp para comunicação com ecbd
     ];
   };
 
@@ -19,6 +22,10 @@
     nssmdns4 = true;
     openFirewall = true;
   };
+
+  # Regras udev do epson-printer-utility (79-udev-epson.rules):
+  # permite acesso de leitura/escrita ao dispositivo USB da impressora Epson.
+  services.udev.packages = [ pkgs.epson-printer-utility ];
 
   # Utilitário de impressora Epson: monitoramento de tinta, limpeza de cabeçotes, etc.
   # O pacote epson-printer-utility inclui o daemon ecbd (Epson Communication Bridge Daemon).
@@ -33,6 +40,8 @@
 
   # Serviço ecbd da Epson (Epson Communication Bridge Daemon)
   # Necessário para o utilitário epson-printer-utility funcionar corretamente.
+  # WorkingDirectory aponta para o diretório de suporte do daemon na Nix store,
+  # onde ecbd.conf e demais arquivos de configuração estão instalados.
   systemd.services.ecbd = {
     description = "Epson Communication Bridge Daemon";
     wantedBy = [ "multi-user.target" ];
@@ -40,6 +49,7 @@
     serviceConfig = {
       Type = "forking";
       ExecStart = "${pkgs.epson-printer-utility}/lib/epson-backend/ecbd";
+      WorkingDirectory = "${pkgs.epson-printer-utility}/lib/epson-backend";
       PIDFile = "/run/ecbd.pid";
       Restart = "on-failure";
     };
