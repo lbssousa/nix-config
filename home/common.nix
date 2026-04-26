@@ -51,7 +51,7 @@
   # e ficarem presas — impedindo digitar ~ isoladamente (dead_tilde + espaço = ~).
   dconf.settings = {
     "org/gnome/desktop/input-sources" = {
-      sources = [ (lib.hm.gvariant.mkTuple [ "ibus" "xkb:br::por" ]) ];
+      sources = [ (lib.hm.gvariant.mkTuple [ "xkb" "br" ]) ];
     };
   };
 

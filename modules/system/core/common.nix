@@ -33,10 +33,10 @@ _:
     # ao pressionar Enter (impedindo o uso de ~ como atalho de diretório), sem sacrificar
     # a ergonomia: acentos continuam a funcionar com 2 teclas (´ + a = á, ~ + a = ã, etc.)
     # e o AltGr continua funcional para [ ] { } | etc.
-    inputMethod = {
-      enable = true;
-      type = "ibus";
-    };
+    #inputMethod = {
+    #  enable = true;
+    #  type = "ibus";
+    #};
   };
 
   # Configuração do teclado X11/Wayland — layout ABNT2 padrão com dead keys
