@@ -21,8 +21,7 @@
   autoPatchelfHook,
   dpkg,
   cups,
-  gtk3,
-  glib,
+  qt5,
   libusb1,
 }:
 
@@ -52,8 +51,7 @@ stdenv.mkDerivation rec {
 
   buildInputs = [
     cups
-    gtk3
-    glib
+    qt5.qtbase
     libusb1
     stdenv.cc.cc.lib
   ];
