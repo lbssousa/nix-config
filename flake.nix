@@ -59,6 +59,11 @@
       ...
     }@inputs:
     let
+      # Overlay com pacotes customizados não disponíveis no nixpkgs oficial
+      localOverlay = final: _prev: {
+        epson-printer-utility = final.callPackage ./pkgs/epson-printer-utility/package.nix { };
+      };
+
       # Helper to build a NixOS configuration for a given host
       mkHost =
         hostname: system: extraModules:
@@ -66,6 +71,7 @@
           inherit system;
           specialArgs = { inherit inputs; };
           modules = [
+            { nixpkgs.overlays = [ localOverlay ]; }
             # Disko module
             disko.nixosModules.disko
 
@@ -101,7 +107,8 @@
               home.username = username;
               home.homeDirectory = "/home/${username}";
             }
-          ] ++ extraModules;
+          ]
+          ++ extraModules;
         };
 
       # Hosts and their system architectures
@@ -113,12 +120,10 @@
       # Generate homeConfigurations entries for a user across all hosts
       mkHomeAllHosts =
         username: extraModules:
-        nixpkgs.lib.mapAttrs' (
-          hostname: system: {
-            name = "${username}@${hostname}";
-            value = mkHome username system extraModules;
-          }
-        ) allHosts;
+        nixpkgs.lib.mapAttrs' (hostname: system: {
+          name = "${username}@${hostname}";
+          value = mkHome username system extraModules;
+        }) allHosts;
     in
     {
       # NixOS configurations (system-level — run with: nixos-rebuild switch --flake .#<host>)
