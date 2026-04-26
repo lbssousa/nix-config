@@ -36,7 +36,7 @@ stdenv.mkDerivation rec {
     # Requer User-Agent "Firefox" para contornar o WAF Akamai (strings com "Mozilla"
     # são bloqueadas). O segmento de caminho numérico é específico de cada versão;
     # consulte os passos no cabeçalho deste arquivo para obter a URL da nova versão.
-    url = "https://download3.ebz.epson.net/dsc/f/03/00/16/08/67/epson-printer-utility_${version}-1_amd64.deb";
+    url = "https://download3.ebz.epson.net/dsc/f/03/00/16/74/30/9067c71049e81fbbee48a4695c5c0acf308b9f18/epson-printer-utility_${version}-1_amd64.deb";
     # User-Agent "Firefox" necessário para o WAF Akamai da Epson (todas as variantes
     # de "Mozilla/..." são explicitamente bloqueadas; use apenas "Firefox").
     curlOptsList = [
