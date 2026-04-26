@@ -3,6 +3,23 @@
 { pkgs, ... }:
 
 {
+  # Fila CUPS declarativa para sobreviver ao root efêmero (impermanence).
+  #
+  # Importante: o epson-printer-utility não lida bem com filas dnssd:// e
+  # implicitclass://; por isso usamos URI baseada em IP (socket://).
+  hardware.printers = {
+    ensurePrinters = [
+      {
+        name = "L4160_IP";
+        location = "Wi-Fi";
+        description = "EPSON L4160 Series";
+        deviceUri = "socket://192.168.1.75:9100";
+        model = "epson-inkjet-printer-escpr/Epson-L4160_Series-epson-escpr-en.ppd";
+      }
+    ];
+    ensureDefaultPrinter = "L4160_IP";
+  };
+
   # CUPS - sistema de impressão
   services.printing = {
     enable = true;
@@ -22,6 +39,22 @@
     nssmdns4 = true;
     openFirewall = true;
   };
+
+  # SNMP (UDP/161) — necessário para o epson-printer-utility descobrir
+  # impressoras Wi-Fi/Ethernet.
+  #
+  # A GUI faz broadcast SNMP em 255.255.255.255:161 (ver símbolos
+  # `snmpFindStart`, `epsmpSetBroadCast`, `SnmpTransact` no binário). As
+  # respostas vêm em unicast do IP da impressora (porta de origem 161),
+  # mas o conntrack do nixos-fw não associa essas respostas à entrada do
+  # broadcast (IPs de destino divergem) e descarta os pacotes. Abrir 161
+  # explicitamente nas regras de entrada resolve a descoberta de rede.
+  #
+  # Sem isso, o epson-printer-utility só enxerga impressoras USB (via ecbd)
+  # e impressoras já cadastradas no CUPS com URI baseada em IP
+  # (socket://, lpd:// ou ipp://); URIs dnssd:// e implicitclass://
+  # não são reconhecidas pelo binário.
+  networking.firewall.allowedUDPPorts = [ 161 ];
 
   # Regras udev do epson-printer-utility (79-udev-epson.rules):
   # permite acesso de leitura/escrita ao dispositivo USB da impressora Epson.
