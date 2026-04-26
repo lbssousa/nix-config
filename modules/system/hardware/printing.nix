@@ -39,7 +39,7 @@
     after = [ "network.target" ];
     serviceConfig = {
       Type = "forking";
-      ExecStart = "${pkgs.epson-printer-utility}/sbin/ecbd";
+      ExecStart = "${pkgs.epson-printer-utility}/lib/epson-backend/ecbd";
       PIDFile = "/run/ecbd.pid";
       Restart = "on-failure";
     };
