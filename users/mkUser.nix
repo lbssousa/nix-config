@@ -12,6 +12,10 @@
 }:
 
 {
+  # Cria um grupo com o mesmo nome do usuário (necessário para aplicativos que
+  # chamam `chown username:username`, como o epson-printer-utility).
+  users.groups.${username} = { };
+
   users.users.${username} = {
     isNormalUser = true;
     inherit description;
