@@ -20,6 +20,7 @@
   fetchurl,
   autoPatchelfHook,
   dpkg,
+  file,
   cups,
   qt5,
   libusb1,
@@ -47,6 +48,7 @@ stdenv.mkDerivation rec {
   nativeBuildInputs = [
     autoPatchelfHook
     dpkg
+    file
     qt5.wrapQtAppsHook
   ];
 
@@ -104,6 +106,19 @@ stdenv.mkDerivation rec {
     # Instala as regras udev
     install -Dm644 opt/epson-printer-utility/rules/79-udev-epson.rules \
       $out/lib/udev/rules.d/79-udev-epson.rules
+
+    # Corrige caminhos absolutos codificados do pacote .deb original
+    # (/usr/lib/epson-backend e /opt/epson-printer-utility) em todos os
+    # arquivos de texto instalados (ecbd.conf, scripts, rc.d, etc.),
+    # substituindo-os pelos caminhos corretos na Nix store.
+    find "$out/lib/epson-backend" -type f | while read -r f; do
+      if file --mime-type "$f" | grep -q "text/"; then
+        sed -i \
+          -e "s|/usr/lib/epson-backend|$out/lib/epson-backend|g" \
+          -e "s|/opt/epson-printer-utility|$out/share/epson-printer-utility|g" \
+          "$f"
+      fi
+    done
 
     # Instala a documentação
     if [ -d usr/share/doc ]; then
