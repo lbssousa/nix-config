@@ -20,7 +20,6 @@
   fetchurl,
   autoPatchelfHook,
   dpkg,
-  makeWrapper,
   cups,
   gtk3,
   glib,
@@ -49,7 +48,6 @@ stdenv.mkDerivation rec {
   nativeBuildInputs = [
     autoPatchelfHook
     dpkg
-    makeWrapper
   ];
 
   buildInputs = [
@@ -67,20 +65,42 @@ stdenv.mkDerivation rec {
   installPhase = ''
     runHook preInstall
 
-    mkdir -p $out/bin $out/sbin $out/lib $out/share
+    # Instala o binário principal da GUI
+    install -Dm755 opt/epson-printer-utility/bin/epson-printer-utility \
+      $out/bin/epson-printer-utility
 
-    # Instala os executáveis
-    install -Dm755 usr/bin/epson-printer-utility $out/bin/epson-printer-utility
-    install -Dm755 usr/sbin/ecbd $out/sbin/ecbd
+    # Instala o daemon ecbd e o backend CUPS
+    install -Dm755 usr/lib/epson-backend/ecbd $out/lib/epson-backend/ecbd
+    install -Dm755 usr/lib/cups/backend/ecblp $out/lib/cups/backend/ecblp
 
-    # Copia as bibliotecas
-    if [ -d usr/lib ]; then
-      cp -r usr/lib/. $out/lib/
+    # Instala configuração e arquivos de suporte do daemon
+    for f in ecbd.conf ecbd.pp ecbd.service ecblp.pp epson_pol.pp; do
+      if [ -f usr/lib/epson-backend/$f ]; then
+        install -Dm644 usr/lib/epson-backend/$f $out/lib/epson-backend/$f
+      fi
+    done
+    if [ -d usr/lib/epson-backend/rc.d ]; then
+      cp -r usr/lib/epson-backend/rc.d $out/lib/epson-backend/rc.d
+    fi
+    if [ -d usr/lib/epson-backend/scripts ]; then
+      cp -r usr/lib/epson-backend/scripts $out/lib/epson-backend/scripts
     fi
 
-    # Copia dados compartilhados (ícones, .desktop, traduções)
-    if [ -d usr/share ]; then
-      cp -r usr/share/. $out/share/
+    # Instala recursos (imagens e traduções)
+    mkdir -p $out/share/epson-printer-utility
+    cp -r opt/epson-printer-utility/resource $out/share/epson-printer-utility/resource
+
+    # Instala o arquivo .desktop
+    install -Dm644 opt/epson-printer-utility/epson-printer-utility.desktop \
+      $out/share/applications/epson-printer-utility.desktop
+
+    # Instala as regras udev
+    install -Dm644 opt/epson-printer-utility/rules/79-udev-epson.rules \
+      $out/lib/udev/rules.d/79-udev-epson.rules
+
+    # Instala a documentação
+    if [ -d usr/share/doc ]; then
+      cp -r usr/share/doc/. $out/share/doc/epson-printer-utility/
     fi
 
     runHook postInstall
