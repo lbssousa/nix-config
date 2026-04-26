@@ -41,6 +41,7 @@
       EDITOR = "nvim";
       VISUAL = "nvim";
       BROWSER = "xdg-open";
+      QT_QPA_PLATFORM = "wayland"; # Forçar backend Wayland para aplicações Qt
     };
 
   };
