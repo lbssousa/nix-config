@@ -47,6 +47,7 @@ stdenv.mkDerivation rec {
   nativeBuildInputs = [
     autoPatchelfHook
     dpkg
+    qt5.wrapQtAppsHook
   ];
 
   buildInputs = [
