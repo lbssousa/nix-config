@@ -23,10 +23,9 @@
   # Utilitário de impressora Epson: monitoramento de tinta, limpeza de cabeçotes, etc.
   # O pacote epson-printer-utility inclui o daemon ecbd (Epson Communication Bridge Daemon).
   #
-  # NOTA: O hash SHA256 em pkgs/epson-printer-utility/package.nix precisa ser
-  # atualizado antes do primeiro uso. Execute:
-  #   nix-prefetch-url https://download3.ebz.epson.net/dsc/f/03/00/14/91/63/epson-printer-utility_1.1.2-1_amd64.deb
-  # e substitua o valor do campo `hash` no arquivo acima.
+  # NOTA: ao atualizar para uma nova versão, consulte os passos no cabeçalho de
+  # pkgs/epson-printer-utility/package.nix para obter a nova URL via API da Epson
+  # e calcular o hash SHA256 do arquivo.
   environment.systemPackages = with pkgs; [
     epson-printer-utility # GUI + ecbd daemon para impressoras Epson inkjet
     system-config-printer # Interface gráfica para configuração de impressoras CUPS
