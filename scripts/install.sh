@@ -12,6 +12,7 @@
 #   6b. Restaura chave age do sops-nix (opcional)
 #   7. Instala o NixOS
 #   8. Pergunta por cada usuário se deve definir senha agora ou no primeiro login
+#   9. Executa home-manager switch para cada usuário (exceto root)
 #
 # Uso:
 #   bash scripts/install.sh [--host <hostname>] [--disk <device>]
@@ -176,6 +177,7 @@ Este script automatiza os passos descritos em INSTALLATION.md:
   6b. Restaura chave age do sops-nix (opcional)
   7. Instala o NixOS
   8. Define senhas via passwd --root
+  9. Executa home-manager switch para cada usuário (exceto root)
 EOF
       exit 0 ;;
     *) die "Opção desconhecida: $1. Use --help para ver as opções disponíveis." ;;
@@ -854,6 +856,41 @@ fi
 for _user in "${_USERS_WITH_PASSWORD[@]}"; do
   touch "/mnt/persist/.password-change-required-${_user}"
   info "Usuário '$_user': senha pré-definida — troca não será forçada no primeiro login."
+done
+
+# ---------------------------------------------------------------------------
+# 9. Aplicar configuração do Home Manager para cada usuário
+# ---------------------------------------------------------------------------
+
+echo
+info "==> Passo 9: Aplicar configuração Home Manager"
+info "Executando 'home-manager switch' para cada usuário no sistema instalado..."
+
+for _user in "${_ALL_PASSWD_USERS[@]}"; do
+  [[ "$_user" == "root" ]] && continue
+
+  # Verifica se o usuário existe no sistema instalado
+  if ! grep -q "^${_user}:" /mnt/etc/passwd 2>/dev/null; then
+    continue
+  fi
+
+  echo
+  info "Aplicando Home Manager para '$_user' (${_user}@${HOST})..."
+  # runuser não exige autenticação quando chamado pelo root, tornando-o
+  # adequado para uso dentro do nixos-enter sem interação do usuário.
+  if nixos-enter --root /mnt -- \
+      runuser -u "$_user" -- \
+      home-manager switch \
+        --flake "/etc/nixos#${_user}@${HOST}" \
+        --option accept-flake-config true \
+        --option extra-substituters "$NIX_COMMUNITY_SUBSTITUTER" \
+        --option extra-trusted-public-keys "$NIX_COMMUNITY_KEY"; then
+    success "Configuração Home Manager aplicada para '$_user'."
+  else
+    warn "Não foi possível aplicar Home Manager para '$_user'."
+    warn "Execute manualmente após o primeiro boot: lbnix home $_user"
+    warn "(lbnix home executa: home-manager switch --flake /etc/nixos#${_user}@${HOST})"
+  fi
 done
 
 # ---------------------------------------------------------------------------
