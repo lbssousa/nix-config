@@ -41,6 +41,7 @@
       # Utilitários do sistema
       gptfdisk
       parted
+      e2fsprogs # fornece chattr
       cryptsetup
       lvm2
       zfs

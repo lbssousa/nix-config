@@ -44,6 +44,165 @@ warn()    { echo -e "${YELLOW}[WARN]${RESET} $*"; }
 error()   { echo -e "${RED}[ERRO]${RESET} $*" >&2; }
 die()     { error "$*"; exit 1; }
 
+verify_signed_efi_binaries() {
+  local _verify_output
+  local _verify_exit
+
+  if _verify_output=$(sbctl verify 2>&1); then
+    _verify_exit=0
+  else
+    _verify_exit=$?
+  fi
+  echo "$_verify_output"
+
+  # Em algumas versões do sbctl, o exit code pode não refletir binários pendentes.
+  # Então também validamos o conteúdo textual da saída.
+  if echo "$_verify_output" | grep -Eiq 'is not signed|not signed'; then
+    return 1
+  fi
+
+  return $_verify_exit
+}
+
+extract_unsigned_efi_paths() {
+  local _verify_output="$1"
+
+  echo "$_verify_output" \
+    | grep -E 'not signed' \
+    | grep -Eo '/[^[:space:]]+\.efi' \
+    | sort -u
+}
+
+sign_explicit_efi_path() {
+  local _path="$1"
+
+  if [[ ! -f "$_path" ]]; then
+    warn "Arquivo EFI não encontrado para assinatura explícita: $_path"
+    return 1
+  fi
+
+  # Algumas versões usam 'sbctl sign -s <path>', outras aceitam 'sbctl sign <path>'.
+  if sbctl sign -s "$_path" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if sbctl sign "$_path" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  return 1
+}
+
+try_fix_unsigned_efi_binaries() {
+  local _verify_output="$1"
+  local _unsigned_paths
+  local _path
+  local _fixed_any=false
+  local _failed_any=false
+
+  _unsigned_paths=$(extract_unsigned_efi_paths "$_verify_output")
+  if [[ -z "$_unsigned_paths" ]]; then
+    return 1
+  fi
+
+  warn "Foram detectados binários EFI não assinados. Tentando assinatura explícita..."
+  while IFS= read -r _path; do
+    [[ -z "$_path" ]] && continue
+    if sign_explicit_efi_path "$_path"; then
+      success "Assinatura explícita aplicada: $_path"
+      _fixed_any=true
+    else
+      warn "Falha ao assinar explicitamente: $_path"
+      _failed_any=true
+    fi
+  done <<< "$_unsigned_paths"
+
+  if [[ "$_fixed_any" == "true" && "$_failed_any" == "false" ]]; then
+    return 0
+  fi
+
+  if [[ "$_fixed_any" == "true" ]]; then
+    return 2
+  fi
+
+  return 1
+}
+
+sign_nixos_efi_binaries_explicitly() {
+  local _nixos_efi_dir=/boot/EFI/nixos
+  local _path
+  local _found_any=false
+
+  if [[ ! -d "$_nixos_efi_dir" ]]; then
+    return 0
+  fi
+
+  info "==> Assinando explicitamente binários em $_nixos_efi_dir (fallback para sign-all)..."
+  for _path in "$_nixos_efi_dir"/*.efi; do
+    if [[ -f "$_path" ]]; then
+      _found_any=true
+      if sign_explicit_efi_path "$_path"; then
+        success "Assinado explicitamente: $_path"
+      else
+        warn "Falha ao assinar explicitamente: $_path"
+      fi
+    fi
+  done
+
+  if [[ "$_found_any" == "false" ]]; then
+    warn "Nenhum .efi encontrado em $_nixos_efi_dir para assinatura explícita."
+  fi
+
+  echo
+  return 0
+}
+
+unlock_efivarfs_immutables() {
+  local _efivarfs=/sys/firmware/efi/efivars
+  local _had_immutable=false
+  local _cleared_any=false
+  local _f
+
+  if [[ ! -d "$_efivarfs" ]]; then
+    warn "efivarfs não está montado em $_efivarfs."
+    return 1
+  fi
+
+  if ! command -v chattr >/dev/null 2>&1; then
+    warn "'chattr' não encontrado. Não foi possível desbloquear variáveis EFI imutáveis."
+    return 1
+  fi
+
+  for _f in \
+    "$_efivarfs"/PK-* \
+    "$_efivarfs"/KEK-* \
+    "$_efivarfs"/db-* \
+    "$_efivarfs"/dbx-*; do
+    if [ -f "$_f" ]; then
+      if lsattr "$_f" 2>/dev/null | awk '{print $1}' | grep -q 'i'; then
+        _had_immutable=true
+      fi
+
+      # Tenta remover imutabilidade de forma idempotente.
+      if chattr -i "$_f" 2>/dev/null; then
+        _cleared_any=true
+      fi
+    fi
+  done
+
+  if [ "$_had_immutable" = "true" ]; then
+    warn "Atributo imutável (chattr +i) detectado e tratado nas variáveis EFI."
+    warn "Isso ocorre em alguns firmwares que bloqueiam efivars mesmo em Setup Mode."
+    echo
+  fi
+
+  if [ "$_cleared_any" = "true" ]; then
+    return 0
+  fi
+
+  return 1
+}
+
 # ---------------------------------------------------------------------------
 # Garantir execução como root
 # ---------------------------------------------------------------------------
@@ -182,20 +341,40 @@ if [[ "$OPT_ENROLL_ONLY" != "true" && "$OPT_VERIFY_ONLY" != "true" ]]; then
     warn "Alguns binários podem não ter sido assinados."
     warn "Execute 'sbctl verify' para verificar quais estão pendentes."
   fi
+  sign_nixos_efi_binaries_explicitly
   echo
 
   # Verificar assinaturas ANTES de prosseguir com o registro no firmware.
   # Se houver binários não assinados, o boot com Secure Boot ativo falhará.
   info "==> Verificando assinaturas antes do registro no firmware..."
-  if ! sbctl verify; then
+  if _verify_before_enroll_output=$(verify_signed_efi_binaries); then
+    echo "$_verify_before_enroll_output"
+  else
+    echo "$_verify_before_enroll_output"
     echo
-    error "Há binários EFI sem assinatura válida."
-    warn "O Secure Boot falhará se o firmware for configurado agora."
-    warn "Execute os seguintes comandos para corrigir e tente novamente:"
-    warn "  1. sudo nixos-rebuild switch   (regenera e assina os stubs lanzaboote)"
-    warn "  2. sudo sbctl sign-all         (assina binários adicionais)"
-    warn "  3. sudo bash scripts/setup-secureboot.sh   (execute este script novamente)"
-    die "Assinaturas incompletas. Corrija antes de registrar as chaves no firmware."
+
+    if try_fix_unsigned_efi_binaries "$_verify_before_enroll_output"; then
+      echo
+      info "==> Revalidando assinaturas EFI após correção automática..."
+      if ! verify_signed_efi_binaries; then
+        echo
+        error "Há binários EFI sem assinatura válida após tentativa de correção automática."
+        warn "O Secure Boot falhará se o firmware for configurado agora."
+        warn "Execute os seguintes comandos para corrigir e tente novamente:"
+        warn "  1. sudo nixos-rebuild switch   (regenera e assina os stubs lanzaboote)"
+        warn "  2. sudo sbctl sign-all         (assina binários adicionais)"
+        warn "  3. sudo bash scripts/setup-secureboot.sh   (execute este script novamente)"
+        die "Assinaturas incompletas. Corrija antes de registrar as chaves no firmware."
+      fi
+    else
+      error "Há binários EFI sem assinatura válida."
+      warn "O Secure Boot falhará se o firmware for configurado agora."
+      warn "Execute os seguintes comandos para corrigir e tente novamente:"
+      warn "  1. sudo nixos-rebuild switch   (regenera e assina os stubs lanzaboote)"
+      warn "  2. sudo sbctl sign-all         (assina binários adicionais)"
+      warn "  3. sudo bash scripts/setup-secureboot.sh   (execute este script novamente)"
+      die "Assinaturas incompletas. Corrija antes de registrar as chaves no firmware."
+    fi
   fi
   success "Todos os binários EFI estão assinados. Prosseguindo com o registro."
   echo
@@ -253,42 +432,53 @@ if [[ "$OPT_SIGN_ONLY" != "true" && "$OPT_VERIFY_ONLY" != "true" ]]; then
   success "Firmware em Setup Mode. Prosseguindo com o registro de chaves."
   echo
 
-  # Alguns firmwares marcam as variáveis EFI (PK/KEK/db/dbx) com chattr +i mesmo
-  # em Setup Mode, impedindo o sbctl de escrever nelas. Remove o atributo imutável
-  # antes de prosseguir com o enrollment.
-  _efivarfs=/sys/firmware/efi/efivars
-  _had_immutable=false
-  for _f in \
-    "$_efivarfs"/PK-* \
-    "$_efivarfs"/KEK-* \
-    "$_efivarfs"/db-* \
-    "$_efivarfs"/dbx-*; do
-    if [ -f "$_f" ] && lsattr "$_f" 2>/dev/null | awk '{print $1}' | grep -q 'i'; then
-      _had_immutable=true
-      chattr -i "$_f" 2>/dev/null \
-        || warn "Não foi possível remover atributo imutável de: $_f"
-    fi
-  done
-  if [ "$_had_immutable" = "true" ]; then
-    warn "Atributo imutável (chattr +i) detectado e removido das variáveis EFI."
-    warn "Isso ocorre em alguns firmwares que bloqueiam variáveis EFI mesmo em Setup Mode."
-    echo
-  fi
+  # Alguns firmwares marcam efivars como imutáveis mesmo em Setup Mode.
+  # Faz uma tentativa preventiva de desbloqueio antes do enrollment.
+  unlock_efivarfs_immutables || true
 
   warn "As chaves Microsoft são incluídas para garantir compatibilidade com"
   warn "drivers de firmware assinados pela Microsoft (ex: drivers de GPU)."
   echo
 
-  if sbctl enroll-keys --microsoft; then
+  if _enroll_output=$(sbctl enroll-keys --microsoft 2>&1); then
+    _enroll_exit=0
+  else
+    _enroll_exit=$?
+  fi
+  echo "$_enroll_output"
+
+  if [[ $_enroll_exit -eq 0 ]]; then
     success "Chaves PKI registradas no firmware UEFI."
   else
-    _exit_code=$?
-    error "Falha ao registrar chaves PKI (código: $_exit_code)."
-    warn "Possíveis causas:"
-    warn "  • O firmware não aceitou as chaves (verifique o Setup Mode na UEFI)"
-    warn "  • As chaves já foram registradas anteriormente (execute --verify-only)"
-    warn "  • UEFI com restrição de escrita (tente sbctl enroll-keys --yes-this-might-brick-my-machine)"
-    die "Registro de chaves falhou. Corrija e tente novamente."
+    if echo "$_enroll_output" | grep -Eiq 'file is immutable|chattr -i files in efivarfs'; then
+      warn "Falha detectada por efivars imutáveis. Tentando desbloquear e repetir enrollment..."
+      unlock_efivarfs_immutables || true
+
+      if _retry_output=$(sbctl enroll-keys --microsoft 2>&1); then
+        _retry_exit=0
+      else
+        _retry_exit=$?
+      fi
+      echo "$_retry_output"
+
+      if [[ $_retry_exit -eq 0 ]]; then
+        success "Chaves PKI registradas no firmware UEFI (após desbloquear efivars)."
+      else
+        error "Falha ao registrar chaves PKI após tentativa de desbloqueio (código: $_retry_exit)."
+        warn "Possíveis causas:"
+        warn "  • O firmware não aceitou as chaves (verifique o Setup Mode na UEFI)"
+        warn "  • As chaves já foram registradas anteriormente (execute --verify-only)"
+        warn "  • UEFI com restrição de escrita (tente sbctl enroll-keys --yes-this-might-brick-my-machine)"
+        die "Registro de chaves falhou. Corrija e tente novamente."
+      fi
+    else
+      error "Falha ao registrar chaves PKI (código: $_enroll_exit)."
+      warn "Possíveis causas:"
+      warn "  • O firmware não aceitou as chaves (verifique o Setup Mode na UEFI)"
+      warn "  • As chaves já foram registradas anteriormente (execute --verify-only)"
+      warn "  • UEFI com restrição de escrita (tente sbctl enroll-keys --yes-this-might-brick-my-machine)"
+      die "Registro de chaves falhou. Corrija e tente novamente."
+    fi
   fi
   echo
 fi
@@ -301,7 +491,7 @@ if [[ "$OPT_ENROLL_ONLY" != "true" && "$OPT_SIGN_ONLY" != "true" ]]; then
   info "==> Verificação final dos binários EFI..."
   echo
 
-  if sbctl verify; then
+  if verify_signed_efi_binaries; then
     echo
     success "Todos os binários EFI estão devidamente assinados!"
   else
