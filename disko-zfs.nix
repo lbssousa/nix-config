@@ -85,7 +85,7 @@ in
             };
             options = {
               volblocksize = "4096";
-              compression = "zle"; # Compressão leve para swap
+              compression = "lz4"; # Compressão leve para swap (melhor ratio que zle)
               "com.sun:auto-snapshot" = "false";
             };
           };
@@ -152,7 +152,7 @@ in
             mountpoint = "/var/log";
             options = {
               mountpoint = "legacy";
-              compression = "off"; # Logs geralmente já comprimidos internamente
+              compression = "lz4"; # lz4 é eficiente para logs de texto com baixo overhead
             };
           };
 
