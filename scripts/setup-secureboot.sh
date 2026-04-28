@@ -74,10 +74,17 @@ verify_signed_efi_binaries() {
 extract_unsigned_efi_paths() {
   local _verify_output="$1"
 
+  # Exclui TODOS os artefatos em /boot/EFI/nixos/ do conjunto "precisa ser assinado".
+  # O Lanzaboote gerencia esses arquivos internamente:
+  #   • kernel-*.efi: o hash do kernel *sem assinatura* é embutido no UKI (/boot/EFI/Linux/);
+  #     assinar o kernel com sbctl altera o binário e quebra a verificação do Lanzaboote
+  #     com erro "Kernel hash does not match!" no boot.
+  #   • initrd-*.efi: não são imagens PE/COFF, não podem ser assinadas pelo sbctl.
+  # Apenas os UKIs (/boot/EFI/Linux/*.efi) e os bootloaders precisam de assinatura manual.
   echo "$_verify_output" \
     | grep -E 'not signed' \
     | grep -Eo '/[^[:space:]]+\.efi' \
-    | grep -Ev '/boot/EFI/nixos/initrd-[^/]+\.efi$' \
+    | grep -Ev '^/boot/EFI/nixos/' \
     | sort -u
 }
 
@@ -90,10 +97,13 @@ sign_explicit_efi_path() {
     return 1
   fi
 
-  # Os artefatos /boot/EFI/nixos/initrd-*.efi não são imagens PE/COFF assináveis.
-  # O que precisa estar assinado para boot é o UKI em /boot/EFI/Linux/*.efi.
-  if [[ "$_path" =~ ^/boot/EFI/nixos/initrd-.*\.efi$ ]]; then
-    warn "Ignorando artefato não-assinável: $_path"
+  # Nenhum arquivo em /boot/EFI/nixos/ deve ser assinado pelo sbctl:
+  #   • kernel-*.efi: assinar modifica o binário e quebra o hash embutido nos UKIs
+  #     pelo Lanzaboote → erro "Kernel hash does not match!" no boot.
+  #   • initrd-*.efi: não são imagens PE/COFF, o sbctl não consegue assiná-las.
+  # Os UKIs completos ficam em /boot/EFI/Linux/ e já são assinados pelo Lanzaboote.
+  if [[ "$_path" =~ ^/boot/EFI/nixos/ ]]; then
+    warn "Ignorando artefato lanzaboote interno (não deve ser assinado por sbctl): $_path"
     return 3
   fi
 
@@ -160,48 +170,16 @@ try_fix_unsigned_efi_binaries() {
   return 1
 }
 
-sign_nixos_efi_binaries_explicitly() {
-  local _nixos_efi_dir=/boot/EFI/nixos
-  local _path
-  local _base
-  local _sign_rc
-  local _found_any=false
-
-  if [[ ! -d "$_nixos_efi_dir" ]]; then
-    return 0
-  fi
-
-  info "==> Assinando explicitamente binários em $_nixos_efi_dir (fallback para sign-all)..."
-  for _path in "$_nixos_efi_dir"/*.efi; do
-    if [[ -f "$_path" ]]; then
-      _found_any=true
-      _base=$(basename "$_path")
-
-      if [[ "$_base" == initrd-* ]]; then
-        warn "Ignorando $_path (artefato initrd não assinável por sbctl)."
-        continue
-      fi
-
-      if sign_explicit_efi_path "$_path"; then
-        success "Assinado explicitamente: $_path"
-      else
-        _sign_rc=$?
-        if [[ $_sign_rc -eq 3 ]]; then
-          warn "Ignorado (não assinável por sbctl): $_path"
-        else
-          warn "Falha ao assinar explicitamente: $_path"
-        fi
-      fi
-    fi
-  done
-
-  if [[ "$_found_any" == "false" ]]; then
-    warn "Nenhum .efi encontrado em $_nixos_efi_dir para assinatura explícita."
-  fi
-
-  echo
-  return 0
-}
+# NOTA: A função sign_nixos_efi_binaries_explicitly foi removida.
+# /boot/EFI/nixos/ contém artefatos internos do Lanzaboote que NÃO devem ser
+# assinados manualmente pelo sbctl:
+#   • kernel-*.efi: o Lanzaboote embute o hash do kernel original (sem assinatura)
+#     nos UKIs. Assinar o kernel com sbctl altera o binário, fazendo o hash não
+#     bater no boot → "Kernel hash does not match!".
+#   • initrd-*.efi: não são PE/COFF, impossível assinar com sbctl.
+# Os UKIs prontos ficam em /boot/EFI/Linux/ e já vêm assinados pelo Lanzaboote
+# durante o nixos-rebuild. Somente bootloaders extras podem precisar de assinatura
+# manual via 'sbctl sign-all'.
 
 unlock_efivarfs_immutables() {
   local _efivarfs=/sys/firmware/efi/efivars
@@ -387,7 +365,6 @@ if [[ "$OPT_ENROLL_ONLY" != "true" && "$OPT_VERIFY_ONLY" != "true" ]]; then
     warn "Alguns binários podem não ter sido assinados."
     warn "Execute 'sbctl verify' para verificar quais estão pendentes."
   fi
-  sign_nixos_efi_binaries_explicitly
   echo
 
   # Verificar assinaturas ANTES de prosseguir com o registro no firmware.
