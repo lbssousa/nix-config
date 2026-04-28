@@ -1,6 +1,6 @@
 # Módulo de ambiente gráfico: GNOME + Flatpak
 # Experiência similar ao Fedora Silverblue / Bluefin
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
 
 let
   # Flatpaks padrão do sistema (baseado no projeto Bluefin)
@@ -113,6 +113,20 @@ in
   xdg.portal = {
     enable = true;
     extraPortals = [ pkgs.xdg-desktop-portal-gnome ];
+  };
+
+  # Aplicar fonte de entrada do GNOME globalmente
+  programs.dconf = {
+    enable = true;
+    profiles.user.databases = [
+      {
+        settings = {
+          "org/gnome/desktop/input-sources" = {
+            sources = [ (lib.gvariant.mkTuple [ "xkb" "br" ]) ];
+          };
+        };
+      }
+    ];
   };
 
   # Bluetooth
