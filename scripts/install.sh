@@ -4,6 +4,7 @@
 # Automatiza os passos descritos em INSTALLATION.md:
 #   1. Habilita Flakes no ambiente live
 #   2. Seleciona o host e o disco de destino
+#   2b. Seleciona o perfil de particionamento (btrfs ou zfs)
 #   3. Particiona e formata o disco com disko
 #   4. Cria arquivos de usuário a partir do skeleton
 #   5. Adiciona os arquivos de usuário ao índice do git (git add)
@@ -16,25 +17,30 @@
 #
 # Uso:
 #   bash scripts/install.sh [--host <hostname>] [--disk <device>]
+#                           [--partition-profile <btrfs|zfs>]
 #                           [--user "login:Nome Completo:sudo"]
 #                           [--user "login2:Nome2:nosudo"] ...
 #                           [--non-interactive]
 #                           [--help]
 #
 # Opções:
-#   --host            Nome do host NixOS (ex: barbudus, bigodon)
-#   --disk            Dispositivo de disco (ex: /dev/nvme0n1, /dev/sda)
-#   --user            Usuário no formato "login:Nome Completo:sudo|nosudo".
-#                     Pode ser repetido para criar múltiplos usuários.
-#                     "sudo" (padrão) inclui o usuário no grupo wheel (sudo).
-#                     "nosudo" cria o usuário sem permissão de sudo.
-#   --age-keys-backup Caminho para o backup do arquivo keys.txt da chave age
-#                     (sops-nix). Copiado para /persist/etc/sops/age/keys.txt
-#                     no sistema instalado. Se omitido, é perguntado
-#                     interativamente (pode ser deixado vazio para pular).
-#   --non-interactive Não faz perguntas; falha se informações obrigatórias
-#                     não forem fornecidas via flags
-#   --help, -h        Exibe ajuda e sai
+#   --host              Nome do host NixOS (ex: barbudus, bigodon)
+#   --disk              Dispositivo de disco (ex: /dev/nvme0n1, /dev/sda)
+#   --partition-profile Perfil de particionamento: btrfs (padrão) ou zfs.
+#                       btrfs: tmpfs na raiz + subvolumes Btrfs para dados persistentes.
+#                       zfs:   dataset ZFS na raiz (rollback @blank no boot) +
+#                              datasets ZFS para dados persistentes.
+#   --user              Usuário no formato "login:Nome Completo:sudo|nosudo".
+#                       Pode ser repetido para criar múltiplos usuários.
+#                       "sudo" (padrão) inclui o usuário no grupo wheel (sudo).
+#                       "nosudo" cria o usuário sem permissão de sudo.
+#   --age-keys-backup   Caminho para o backup do arquivo keys.txt da chave age
+#                       (sops-nix). Copiado para /persist/etc/sops/age/keys.txt
+#                       no sistema instalado. Se omitido, é perguntado
+#                       interativamente (pode ser deixado vazio para pular).
+#   --non-interactive   Não faz perguntas; falha se informações obrigatórias
+#                       não forem fornecidas via flags
+#   --help, -h          Exibe ajuda e sai
 
 set -euo pipefail
 
@@ -92,6 +98,7 @@ NIX_COMMUNITY_KEY="nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCW
 
 OPT_HOST=""
 OPT_DISK=""
+OPT_PARTITION_PROFILE=""
 OPT_USERS_LOGIN=()
 OPT_USERS_FULLNAME=()
 OPT_USERS_SUDO=()
@@ -102,6 +109,11 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --host)           OPT_HOST="$2";          shift 2 ;;
     --disk)           OPT_DISK="$2";          shift 2 ;;
+    --partition-profile)
+      OPT_PARTITION_PROFILE="$2"
+      [[ "$OPT_PARTITION_PROFILE" == "btrfs" || "$OPT_PARTITION_PROFILE" == "zfs" ]] \
+        || die "Perfil de particionamento inválido: '$OPT_PARTITION_PROFILE'. Use 'btrfs' ou 'zfs'."
+      shift 2 ;;
     --age-keys-backup) OPT_AGE_KEYS_BACKUP="$2"; shift 2 ;;
     --user)
       # Formato: "login:Nome Completo:sudo|nosudo"
@@ -132,43 +144,61 @@ while [[ $# -gt 0 ]]; do
       cat <<'EOF'
 Uso:
   bash scripts/install.sh [--host <hostname>] [--disk <device>]
+                          [--partition-profile <btrfs|zfs>]
                           [--user "login:Nome Completo:sudo"]
                           [--user "login2:Nome2:nosudo"] ...
                           [--non-interactive] [--help]
 
 Opções:
-  --host            Nome do host NixOS (ex: barbudus, bigodon).
-                    Se omitido, é perguntado interativamente.
-  --disk            Dispositivo de disco de destino (ex: /dev/nvme0n1, /dev/sda).
-                    Se omitido, é perguntado interativamente.
-  --user            Usuário no formato "login:Nome Completo:sudo|nosudo".
-                    Pode ser repetido para criar múltiplos usuários.
-                    "sudo" (padrão) inclui o usuário no grupo wheel (sudo).
-                    "nosudo" cria o usuário sem permissão de sudo.
-                    Se omitido, é perguntado interativamente.
-  --age-keys-backup Caminho para o backup do arquivo keys.txt da chave age
-                    (sops-nix). Copiado para /persist/etc/sops/age/keys.txt
-                    no sistema instalado. Se omitido, é perguntado
-                    interativamente (pode ser deixado vazio para pular).
-  --non-interactive Não faz perguntas; falha se informações obrigatórias
-                    não forem fornecidas via flags.
-  --help, -h        Exibe esta ajuda e sai.
+  --host              Nome do host NixOS (ex: barbudus, bigodon).
+                      Se omitido, é perguntado interativamente.
+  --disk              Dispositivo de disco de destino (ex: /dev/nvme0n1, /dev/sda).
+                      Se omitido, é perguntado interativamente.
+  --partition-profile Perfil de particionamento: btrfs (padrão) ou zfs.
+                      btrfs: tmpfs na raiz + subvolumes Btrfs para dados persistentes
+                             (suporta hibernação via swap em LVM+LUKS).
+                      zfs:   dataset ZFS na raiz (rollback ao snapshot @blank no boot) +
+                             datasets ZFS para dados persistentes
+                             (snapshot/rollback nativos do ZFS; swap via ZVOL, sem hibernação).
+                      Se omitido, é perguntado interativamente.
+  --user              Usuário no formato "login:Nome Completo:sudo|nosudo".
+                      Pode ser repetido para criar múltiplos usuários.
+                      "sudo" (padrão) inclui o usuário no grupo wheel (sudo).
+                      "nosudo" cria o usuário sem permissão de sudo.
+                      Se omitido, é perguntado interativamente.
+  --age-keys-backup   Caminho para o backup do arquivo keys.txt da chave age
+                      (sops-nix). Copiado para /persist/etc/sops/age/keys.txt
+                      no sistema instalado. Se omitido, é perguntado
+                      interativamente (pode ser deixado vazio para pular).
+  --non-interactive   Não faz perguntas; falha se informações obrigatórias
+                      não forem fornecidas via flags.
+  --help, -h          Exibe esta ajuda e sai.
 
 Exemplos:
   # Instalação totalmente interativa (recomendado para iniciantes):
   bash scripts/install.sh
 
-  # Instalação não-interativa:
+  # Instalação não-interativa com perfil Btrfs:
   bash scripts/install.sh \
     --host barbudus \
     --disk /dev/nvme0n1 \
+    --partition-profile btrfs \
     --user "joao:João Silva:sudo" \
     --user "maria:Maria Souza:nosudo" \
+    --non-interactive
+
+  # Instalação não-interativa com perfil ZFS:
+  bash scripts/install.sh \
+    --host bigodon \
+    --disk /dev/nvme0n1 \
+    --partition-profile zfs \
+    --user "joao:João Silva:sudo" \
     --non-interactive
 
 Este script automatiza os passos descritos em INSTALLATION.md:
   1. Habilita Flakes no ambiente live
   2. Seleciona o host e o disco de destino
+  2b. Seleciona o perfil de particionamento (btrfs ou zfs)
   3. Particiona e formata o disco com disko
   4. Cria arquivos de usuário a partir do skeleton
   5. Adiciona os arquivos de usuário ao índice do git (git add)
@@ -313,6 +343,87 @@ ask OPT_DISK "Dispositivo de disco (ex: /dev/nvme0n1)"
 
 success "Disco selecionado: $OPT_DISK"
 DISK="$OPT_DISK"
+
+# ---------------------------------------------------------------------------
+# 2b. Selecionar o perfil de particionamento
+# ---------------------------------------------------------------------------
+
+echo
+info "==> Passo 2b: Selecionar o perfil de particionamento"
+echo
+echo "Perfis disponíveis:"
+echo "  btrfs  — tmpfs na raiz + subvolumes Btrfs para dados persistentes"
+echo "           (impermanência via tmpfs; suporta hibernação)"
+echo "  zfs    — dataset ZFS na raiz (rollback ao snapshot @blank no boot) +"
+echo "           datasets ZFS para dados persistentes"
+echo "           (impermanência nativa do ZFS; sem suporte a hibernação via ZVOL)"
+echo
+
+# Se não foi especificado via flag, detectar o perfil atual do disko.nix do host
+if [[ -z "$OPT_PARTITION_PROFILE" ]]; then
+  if grep -q "disko-zfs\.nix" "$DISKO_FILE" 2>/dev/null; then
+    _detected_profile="zfs"
+  else
+    _detected_profile="btrfs"
+  fi
+  ask OPT_PARTITION_PROFILE "Perfil de particionamento (btrfs/zfs)" "$_detected_profile"
+fi
+
+# Validar
+OPT_PARTITION_PROFILE="${OPT_PARTITION_PROFILE:-btrfs}"
+[[ "$OPT_PARTITION_PROFILE" == "btrfs" || "$OPT_PARTITION_PROFILE" == "zfs" ]] \
+  || die "Perfil inválido: '$OPT_PARTITION_PROFILE'. Use 'btrfs' ou 'zfs'."
+
+PARTITION_PROFILE="$OPT_PARTITION_PROFILE"
+success "Perfil de particionamento selecionado: $PARTITION_PROFILE"
+
+# Atualizar disko.nix do host para usar o template correto
+# O template btrfs é disko.nix; o ZFS é disko-zfs.nix
+if [[ "$PARTITION_PROFILE" == "zfs" ]]; then
+  _DISKO_TEMPLATE="disko-zfs.nix"
+  _IMPERMANENCE_MODULE="impermanence-zfs.nix"
+else
+  _DISKO_TEMPLATE="disko.nix"
+  _IMPERMANENCE_MODULE="impermanence.nix"
+fi
+
+# Substituir o template de disko no host (troca entre disko.nix e disko-zfs.nix)
+if grep -q "disko-zfs\.nix\|disko\.nix" "$DISKO_FILE" 2>/dev/null; then
+  sed -i \
+    -e "s|import \.\./\.\./disko-zfs\.nix|import ../../$_DISKO_TEMPLATE|g" \
+    -e "s|import \.\./\.\./disko\.nix|import ../../$_DISKO_TEMPLATE|g" \
+    "$DISKO_FILE"
+  success "Template disko em $DISKO_FILE atualizado para: $_DISKO_TEMPLATE"
+else
+  warn "Não foi possível detectar o template disko em $DISKO_FILE. Verifique manualmente."
+fi
+
+# Atualizar módulo de impermanência no configuration.nix do host
+if grep -q "impermanence-zfs\.nix\|impermanence\.nix" "$CFG_FILE" 2>/dev/null; then
+  sed -i \
+    -e "s|modules/system/core/impermanence-zfs\.nix|modules/system/core/$_IMPERMANENCE_MODULE|g" \
+    -e "s|modules/system/core/impermanence\.nix|modules/system/core/$_IMPERMANENCE_MODULE|g" \
+    "$CFG_FILE"
+  success "Módulo de impermanência em $CFG_FILE atualizado para: $_IMPERMANENCE_MODULE"
+fi
+
+# Para o perfil ZFS: gerar networking.hostId (obrigatório para pools ZFS)
+if [[ "$PARTITION_PROFILE" == "zfs" ]]; then
+  if grep -q "networking\.hostId" "$HW_FILE" "$CFG_FILE" 2>/dev/null; then
+    info "networking.hostId já definido. Mantendo valor existente."
+  else
+    _ZFS_HOST_ID=$(head -c4 /dev/urandom | od -A none -t x4 | tr -d ' \n')
+    info "Gerando networking.hostId para ZFS: $_ZFS_HOST_ID"
+    # Inserir networking.hostId antes de nixpkgs.hostPlatform no hardware-configuration.nix
+    if grep -q "nixpkgs\.hostPlatform" "$HW_FILE"; then
+      sed -i "s|nixpkgs\.hostPlatform|networking.hostId = \"$_ZFS_HOST_ID\"; # ZFS: ID único do pool (gerado automaticamente)\n  nixpkgs.hostPlatform|" "$HW_FILE"
+      success "networking.hostId=$_ZFS_HOST_ID adicionado a $HW_FILE."
+    else
+      warn "Não foi possível inserir networking.hostId automaticamente em $HW_FILE."
+      warn "Adicione manualmente: networking.hostId = \"$_ZFS_HOST_ID\";"
+    fi
+  fi
+fi
 
 # Atualizar disko.nix com o disco correto
 # Extrai o valor entre aspas após 'device = ' usando sed (mais portável que grep -P)
@@ -561,8 +672,9 @@ for _i in "${!USERS_LOGIN[@]}"; do
   fi
 done
 
-# Garantir que configuration.nix e disko.nix também estão no índice (podem ter sido editados)
-git add "$CFG_FILE" "$DISKO_FILE"
+# Garantir que configuration.nix, disko.nix e hardware-configuration.nix também estão no índice
+# (podem ter sido editados no passo 2b para trocar o perfil de particionamento)
+git add "$CFG_FILE" "$DISKO_FILE" "$HW_FILE"
 success "Arquivos de configuração registrados no índice do git."
 
 # ---------------------------------------------------------------------------
@@ -687,10 +799,12 @@ if [[ "$OPT_NON_INTERACTIVE" == "true" ]] || confirm "Copiar configuração para
     fi
   done
 
-  # Re-indexar configuration.nix e disko.nix do host (modificados pelos passos 2 e 6)
+  # Re-indexar configuration.nix, disko.nix e hardware-configuration.nix do host
+  # (modificados pelos passos 2b e 6)
   git -C /mnt/etc/nixos add \
     "hosts/$HOST/configuration.nix" \
-    "hosts/$HOST/disko.nix" 2>/dev/null || true
+    "hosts/$HOST/disko.nix" \
+    "hosts/$HOST/hardware-configuration.nix" 2>/dev/null || true
 
   info "Executando nixos-install..."
   # Passa os caches binários explicitamente para que o nixos-install os use mesmo
