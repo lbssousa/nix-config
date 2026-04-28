@@ -47,6 +47,7 @@ die()     { error "$*"; exit 1; }
 verify_signed_efi_binaries() {
   local _verify_output
   local _verify_exit
+  local _unsigned_actionable
 
   if _verify_output=$(sbctl verify 2>&1); then
     _verify_exit=0
@@ -58,7 +59,13 @@ verify_signed_efi_binaries() {
   # Em algumas versões do sbctl, o exit code pode não refletir binários pendentes.
   # Então também validamos o conteúdo textual da saída.
   if echo "$_verify_output" | grep -Eiq 'is not signed|not signed'; then
-    return 1
+    _unsigned_actionable=$(extract_unsigned_efi_paths "$_verify_output")
+    if [[ -n "$_unsigned_actionable" ]]; then
+      return 1
+    fi
+
+    warn "Há entradas 'not signed' não acionáveis (ex.: initrd-*.efi não-PE); ignorando."
+    return 0
   fi
 
   return $_verify_exit
@@ -70,24 +77,43 @@ extract_unsigned_efi_paths() {
   echo "$_verify_output" \
     | grep -E 'not signed' \
     | grep -Eo '/[^[:space:]]+\.efi' \
+    | grep -Ev '/boot/EFI/nixos/initrd-[^/]+\.efi$' \
     | sort -u
 }
 
 sign_explicit_efi_path() {
   local _path="$1"
+  local _sign_output
 
   if [[ ! -f "$_path" ]]; then
     warn "Arquivo EFI não encontrado para assinatura explícita: $_path"
     return 1
   fi
 
+  # Os artefatos /boot/EFI/nixos/initrd-*.efi não são imagens PE/COFF assináveis.
+  # O que precisa estar assinado para boot é o UKI em /boot/EFI/Linux/*.efi.
+  if [[ "$_path" =~ ^/boot/EFI/nixos/initrd-.*\.efi$ ]]; then
+    warn "Ignorando artefato não-assinável: $_path"
+    return 3
+  fi
+
   # Algumas versões usam 'sbctl sign -s <path>', outras aceitam 'sbctl sign <path>'.
-  if sbctl sign -s "$_path" >/dev/null 2>&1; then
+  if _sign_output=$(sbctl sign -s "$_path" 2>&1); then
     return 0
   fi
 
-  if sbctl sign "$_path" >/dev/null 2>&1; then
+  if echo "$_sign_output" | grep -qi 'unrecognized PE machine'; then
+    warn "Arquivo não é uma imagem PE/COFF assinável: $_path"
+    return 3
+  fi
+
+  if _sign_output=$(sbctl sign "$_path" 2>&1); then
     return 0
+  fi
+
+  if echo "$_sign_output" | grep -qi 'unrecognized PE machine'; then
+    warn "Arquivo não é uma imagem PE/COFF assinável: $_path"
+    return 3
   fi
 
   return 1
@@ -97,6 +123,7 @@ try_fix_unsigned_efi_binaries() {
   local _verify_output="$1"
   local _unsigned_paths
   local _path
+  local _sign_rc
   local _fixed_any=false
   local _failed_any=false
 
@@ -112,8 +139,13 @@ try_fix_unsigned_efi_binaries() {
       success "Assinatura explícita aplicada: $_path"
       _fixed_any=true
     else
-      warn "Falha ao assinar explicitamente: $_path"
-      _failed_any=true
+      _sign_rc=$?
+      if [[ $_sign_rc -eq 3 ]]; then
+        warn "Arquivo não assinável pelo sbctl (ignorado): $_path"
+      else
+        warn "Falha ao assinar explicitamente: $_path"
+        _failed_any=true
+      fi
     fi
   done <<< "$_unsigned_paths"
 
@@ -131,6 +163,8 @@ try_fix_unsigned_efi_binaries() {
 sign_nixos_efi_binaries_explicitly() {
   local _nixos_efi_dir=/boot/EFI/nixos
   local _path
+  local _base
+  local _sign_rc
   local _found_any=false
 
   if [[ ! -d "$_nixos_efi_dir" ]]; then
@@ -141,10 +175,22 @@ sign_nixos_efi_binaries_explicitly() {
   for _path in "$_nixos_efi_dir"/*.efi; do
     if [[ -f "$_path" ]]; then
       _found_any=true
+      _base=$(basename "$_path")
+
+      if [[ "$_base" == initrd-* ]]; then
+        warn "Ignorando $_path (artefato initrd não assinável por sbctl)."
+        continue
+      fi
+
       if sign_explicit_efi_path "$_path"; then
         success "Assinado explicitamente: $_path"
       else
-        warn "Falha ao assinar explicitamente: $_path"
+        _sign_rc=$?
+        if [[ $_sign_rc -eq 3 ]]; then
+          warn "Ignorado (não assinável por sbctl): $_path"
+        else
+          warn "Falha ao assinar explicitamente: $_path"
+        fi
       fi
     fi
   done
