@@ -6,7 +6,14 @@
     username = lib.mkDefault abutre;
     homeDirectory = lib.mkDefault "/home/abutre";
     packages = [ pkgs.github-copilot-cli ];
+    # Garante que apps da sessão gráfica (ex: VSCode via launcher) usem o mesmo agent.
+    sessionVariables.SSH_AUTH_SOCK = "$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock";
   };
+
+  # Exporta para a sessão systemd do usuário, cobrindo apps GUI iniciados fora do shell.
+  xdg.configFile."environment.d/90-ssh-auth-sock.conf".text = ''
+    SSH_AUTH_SOCK=$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock
+  '';
 
   dconf.settings = {
     "org/gnome/Ptyxis" = {
@@ -128,14 +135,6 @@
         # Carregar configuração do powerlevel10k ao final
         ''
           [[ -f ~/.p10k.zsh ]] && source ~/.p10k.zsh
-        ''
-        # Injetar SSH_AUTH_SOCK do agente SSH do Bitwarden, quando disponível
-        ''
-          if [[ -S "$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock" ]]; then
-            export SSH_AUTH_SOCK="$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock"
-          elif [[ -S "$HOME/.bitwarden-ssh-agent.sock" ]]; then
-            export SSH_AUTH_SOCK="$HOME/.bitwarden-ssh-agent.sock"
-          fi
         ''
         # Ativar hook do direnv
         ''

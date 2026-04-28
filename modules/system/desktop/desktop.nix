@@ -7,6 +7,7 @@ let
   # Ref: https://github.com/projectbluefin/common/blob/main/system_files/bluefin/usr/share/ublue-os/homebrew/system-flatpaks.Brewfile
   # Firefox e Thunderbird excluídos intencionalmente
   systemFlatpaks = [
+    "com.bitwarden.desktop"
     "com.github.PintaProject.Pinta"
     "com.github.tchx84.Flatseal"
     "com.mattjakeman.ExtensionManager"
@@ -107,7 +108,7 @@ in
         return polkit.Result.YES;
       }
     });
-  '';
+  ''; 
 
   # XDG Portal para integração Flatpak com GNOME
   xdg.portal = {
