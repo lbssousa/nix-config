@@ -1,5 +1,9 @@
 # Configurações Home Manager específicas para o usuário abutre
-{ pkgs, lib, ... }:
+{ pkgs, lib, desktop ? "plasma", ... }:
+
+let
+  isPlasma = desktop == "plasma";
+in
 
 {
   imports = [
@@ -9,37 +13,55 @@
   home = {
     username = lib.mkDefault abutre;
     homeDirectory = lib.mkDefault "/home/abutre";
-    packages = [
-      pkgs.github-copilot-cli
-      pkgs.kdePackages.yakuake
-    ];
+    packages = [ pkgs.github-copilot-cli ] ++ lib.optionals isPlasma [ pkgs.kdePackages.yakuake ];
     # Garante que apps da sessão gráfica (ex: VSCode via launcher) usem o mesmo agent.
     sessionVariables.SSH_AUTH_SOCK = "$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock";
   };
 
-  # Exporta para a sessão systemd do usuário, cobrindo apps GUI iniciados fora do shell.
-  xdg.configFile."environment.d/90-ssh-auth-sock.conf".text = ''
-    SSH_AUTH_SOCK=$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock
-  '';
+  xdg.configFile = {
+    # Exporta para a sessão systemd do usuário, cobrindo apps GUI iniciados fora do shell.
+    "environment.d/90-ssh-auth-sock.conf".text = ''
+      SSH_AUTH_SOCK=$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock
+    '';
+  } // lib.optionalAttrs isPlasma {
+    "autostart/yakuake.desktop".text = ''
+      [Desktop Entry]
+      Exec=yakuake
+      Icon=yakuake
+      Name=Yakuake
+      Type=Application
+      X-KDE-StartupNotify=false
+    '';
 
-  xdg.configFile."konsolerc".text = ''
-    [Desktop Entry]
-    DefaultProfile=default.profile
-  '';
+    "konsolerc".text = ''
+      [Desktop Entry]
+      DefaultProfile=default.profile
+    '';
 
-  xdg.configFile."yakuakerc".text = ''
-    [Desktop Entry]
-    DefaultProfile=default.profile
-  '';
+    "yakuakerc".text = ''
+      [Dialogs]
+      FirstRun=false
 
-  xdg.dataFile."konsole/default.profile".text = ''
-    [Appearance]
-    Font=JetBrainsMono Nerd Font Mono,14,-1,5,50,0,0,0,0,0
+      [Window]
+      Height=90
+      KeepOpen=false
+      ShowOnStart=false
+      Width=90
+    '';
+  };
 
-    [General]
-    Name=Default
-    Parent=FALLBACK/
-  '';
+  xdg.dataFile = lib.optionalAttrs isPlasma {
+    "konsole/default.profile".text = ''
+      [Appearance]
+      Font=JetBrainsMono Nerd Font Mono,14,-1,5,50,0,0,0,0,0
+
+      [General]
+      Name=Default
+      Parent=FALLBACK/
+      TerminalColumns=154
+      TerminalRows=32
+    '';
+  };
 
   dconf.settings = {
     "org/gnome/Ptyxis" = {
