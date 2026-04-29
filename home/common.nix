@@ -4,6 +4,10 @@
 { pkgs, lib, ... }:
 
 {
+  imports = [
+    ./modules/apps/browsers/google-chrome.nix
+  ];
+
   # Permitir pacotes proprietários/não-livres (ex: github-copilot-cli, vscode, etc.)
   nixpkgs.config.allowUnfree = true;
 

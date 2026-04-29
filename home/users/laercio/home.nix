@@ -23,14 +23,6 @@
   };
 
   programs = {
-    # Instalar extensão do Bitwarden no Brave por padrão
-    brave = {
-      enable = true;
-      extensions = [
-        { id = "nngceckbapebfimnlniiiahkandclblb"; } # Bitwarden Password Manager
-      ];
-    };
-
     vscode = {
       enable = true;
       profiles.default.extensions =
