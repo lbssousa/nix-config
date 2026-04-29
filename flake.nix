@@ -97,10 +97,12 @@
 
       # Helper to build a standalone Home Manager configuration for a given user/host
       mkHome =
-        username: system: extraModules:
+        username: system: desktop: extraModules:
         home-manager.lib.homeManagerConfiguration {
           pkgs = nixpkgs.legacyPackages.${system};
-          extraSpecialArgs = { inherit inputs; };
+          extraSpecialArgs = {
+            inherit inputs desktop;
+          };
           modules = [
             # Global Home Manager configuration (common to all users)
             ./home/common.nix
@@ -124,7 +126,14 @@
         username: extraModules:
         nixpkgs.lib.mapAttrs' (hostname: system: {
           name = "${username}@${hostname}";
-          value = mkHome username system extraModules;
+          value = mkHome username system "plasma" extraModules;
+        }) allHosts;
+
+      mkHomeAllHostsDesktop =
+        username: desktop: extraModules:
+        nixpkgs.lib.mapAttrs' (hostname: system: {
+          name = "${username}@${hostname}-${desktop}";
+          value = mkHome username system desktop extraModules;
         }) allHosts;
     in
     {
@@ -144,10 +153,12 @@
         bigodon-plasma = mkHost "bigodon" "x86_64-linux" [ ] "plasma";
       };
 
-      # Home Manager configurations (user-level — run with: home-manager switch --flake .#<user>@<host>)
+      # Home Manager configurations (user-level — run with: home-manager switch --flake .#<user>@<host>[-<desktop>])
       # laercio: configuração personalizada (powerlevel10k, git SSH signing, Bitwarden)
       homeConfigurations =
         mkHomeAllHosts "laercio" [ ./home/users/laercio/home.nix ]
+        // mkHomeAllHostsDesktop "laercio" "gnome" [ ./home/users/laercio/home.nix ]
+        // mkHomeAllHostsDesktop "laercio" "plasma" [ ./home/users/laercio/home.nix ]
         // mkHomeAllHosts "roberta" [ ]
         // mkHomeAllHosts "miguel" [ ]
         // mkHomeAllHosts "jose" [ ]

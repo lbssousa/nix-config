@@ -36,9 +36,10 @@ let
       echo "                           desktop: gnome | plasma"
       echo ""
       echo "Comandos de home-manager (sem sudo):"
-      echo "  home [user[@host]]   Aplica configuração Home Manager do usuário"
+      echo "  home [user[@host]] [desktop]   Aplica configuração Home Manager do usuário"
       echo "                       Padrão: usuário atual no host atual"
-      echo "  news [user[@host]]   Exibe notícias do Home Manager desde a última versão"
+      echo "                       desktop opcional: gnome | plasma"
+      echo "  news [user[@host]] [desktop]   Exibe notícias do Home Manager desde a última versão"
       echo "                       Padrão: usuário atual no host atual"
       echo ""
       echo "Manutenção:"
@@ -90,24 +91,44 @@ let
         ;;
       home)
         # home-manager switch para um usuário@host
-        # Uso: lbnix home [user[@host]]
+        # Uso: lbnix home [user[@host]] [desktop]
         # Padrão: usuário atual no host atual
         _target="''${2:-$(whoami)@$HOST}"
+        _desktop=""
+        if [[ "''${3:-}" == "gnome" || "''${3:-}" == "plasma" ]]; then
+          _desktop="''${3}"
+          _args_start=4
+        else
+          _args_start=3
+        fi
         # Se apenas o usuário foi fornecido (sem @host), adiciona o host atual
         if [[ "''${_target}" != *@* ]]; then
           _target="''${_target}@''${HOST}"
         fi
-        home-manager switch --flake "''${FLAKE_DIR}#''${_target}" "''${@:3}"
+        if [[ -n "''${_desktop}" ]]; then
+          _target="''${_target}-''${_desktop}"
+        fi
+        home-manager switch --flake "''${FLAKE_DIR}#''${_target}" "''${@:_args_start}"
         ;;
       news)
         # home-manager news para um usuário@host
-        # Uso: lbnix news [user[@host]]
+        # Uso: lbnix news [user[@host]] [desktop]
         # Padrão: usuário atual no host atual
         _target="''${2:-$(whoami)@$HOST}"
+        _desktop=""
+        if [[ "''${3:-}" == "gnome" || "''${3:-}" == "plasma" ]]; then
+          _desktop="''${3}"
+          _args_start=4
+        else
+          _args_start=3
+        fi
         if [[ "''${_target}" != *@* ]]; then
           _target="''${_target}@''${HOST}"
         fi
-        home-manager news --flake "''${FLAKE_DIR}#''${_target}" "''${@:3}"
+        if [[ -n "''${_desktop}" ]]; then
+          _target="''${_target}-''${_desktop}"
+        fi
+        home-manager news --flake "''${FLAKE_DIR}#''${_target}" "''${@:_args_start}"
         ;;
       update)
         pushd "$FLAKE_DIR" > /dev/null
