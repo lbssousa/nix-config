@@ -102,9 +102,8 @@ in
     services.desktopManager.gnome.enable = mkIf (cfg.environment == "gnome") true;
 
     # Sessão KDE Plasma
-    services.displayManager.sddm = mkIf (cfg.environment == "plasma") {
+    services.displayManager.plasma-login-manager = mkIf (cfg.environment == "plasma") {
       enable = true;
-      wayland.enable = true;
     };
     services.desktopManager.plasma6.enable = mkIf (cfg.environment == "plasma") true;
 
