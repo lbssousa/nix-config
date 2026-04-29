@@ -9,7 +9,10 @@
   home = {
     username = lib.mkDefault "laercio";
     homeDirectory = lib.mkDefault "/home/laercio";
-    packages = [ pkgs.github-copilot-cli ];
+    packages = [
+      pkgs.github-copilot-cli
+      pkgs.kdePackages.yakuake
+    ];
     # Garante que apps da sessão gráfica (ex: VSCode via launcher) usem o mesmo agent.
     sessionVariables.SSH_AUTH_SOCK = "$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock";
   };
@@ -20,6 +23,11 @@
   '';
 
   xdg.configFile."konsolerc".text = ''
+    [Desktop Entry]
+    DefaultProfile=default.profile
+  '';
+
+  xdg.configFile."yakuakerc".text = ''
     [Desktop Entry]
     DefaultProfile=default.profile
   '';
