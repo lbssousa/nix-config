@@ -2,6 +2,10 @@
 { pkgs, lib, ... }:
 
 {
+  imports = [
+    ../../modules/apps/nix-validation.nix
+  ];
+
   home = {
     username = lib.mkDefault abutre;
     homeDirectory = lib.mkDefault "/home/abutre";
