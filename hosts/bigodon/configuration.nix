@@ -42,8 +42,7 @@
     ];
   };
 
-  # Driver Intel modesetting (KMS/Wayland)
-  services.xserver.videoDrivers = [ "modesetting" ];
+  # Intel UHD Graphics usa modesetting nativamente em Wayland
 
   # Configurações de energia para mini-PC
   services.power-profiles-daemon.enable = true;
