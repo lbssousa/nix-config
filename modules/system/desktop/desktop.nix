@@ -107,6 +107,9 @@ in
     };
     services.desktopManager.plasma6.enable = mkIf (cfg.environment == "plasma") true;
 
+    # Wayland-only: desabilitar servidor X11 (Xorg) completamente
+    services.xserver.enable = false;
+
     # Excluir pacotes padrão do GNOME que serão substituídos por Nix ou Flatpaks
     environment.gnome.excludePackages = mkIf (cfg.environment == "gnome") (
       with pkgs;

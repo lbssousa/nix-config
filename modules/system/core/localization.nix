@@ -20,8 +20,6 @@ _:
     };
   };
 
-  services.xserver.xkb = {
-    layout = "br";
-    variant = "";
-  };
+  # Configuração de teclado em Wayland via console.keyMap (acima)
+  # services.xserver não é necessário para Wayland
 }
