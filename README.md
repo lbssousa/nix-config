@@ -1,6 +1,6 @@
 # nixos-config
 
-Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento declarativo (disko), sistema efêmero (impermanence), swap híbrida e ambiente GNOME similar ao Fedora Silverblue/Bluefin.
+Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento declarativo (disko), sistema efêmero (impermanence), swap híbrida e alternância de ambiente desktop (GNOME ou KDE Plasma).
 
 ## 🎯 Características
 
@@ -10,7 +10,7 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 - ✅ **Btrfs**: Sistema de arquivos moderno com compressão zstd, subvolumes e snapshots
 - ✅ **Impermanence**: Sistema efêmero com tmpfs na raiz — limpo a cada boot
 - ✅ **Swap híbrida**: zram + swap em disco para máxima performance
-- ✅ **GNOME**: Ambiente desktop moderno com suporte a Wayland
+- ✅ **Desktop alternável**: GNOME ou KDE Plasma por variante do flake
 - ✅ **Flatpak**: Aplicações instaladas system-wide automaticamente após o boot (como Silverblue)
 - ✅ **Podman + Distrobox**: Containers rootless (experiência Silverblue)
 - ✅ **Home Manager**: Gerenciamento de configurações de usuário
@@ -152,6 +152,7 @@ sudo bash scripts/install.sh --help
 ```bash
 sudo bash scripts/install.sh \
   --host barbudus \
+   --desktop plasma \
   --disk /dev/nvme0n1 \
   --user "joao:João Silva:sudo" \
   --non-interactive
@@ -210,11 +211,17 @@ sudo bash scripts/update.sh --rebuild-only
 ### Switch do sistema (NixOS)
 
 ```bash
-# Rebuild e ativa a configuração do sistema para o host atual:
-sudo nixos-rebuild switch --flake /etc/nixos#barbudus   # ou bigodon
+# Rebuild e ativa GNOME (compatível com os nomes antigos):
+sudo nixos-rebuild switch --flake /etc/nixos#barbudus
+
+# Rebuild e ativa KDE Plasma:
+sudo nixos-rebuild switch --flake /etc/nixos#barbudus-plasma
 
 # Via lbnix (detecta o host automaticamente):
 sudo lbnix switch
+
+# Via lbnix selecionando desktop explicitamente:
+sudo lbnix switch barbudus plasma
 ```
 
 ### Switch do Home Manager (usuário)

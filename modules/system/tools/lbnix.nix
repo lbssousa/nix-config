@@ -29,10 +29,11 @@ let
       echo "Uso: lbnix <comando> [opções]"
       echo ""
       echo "Comandos de rebuild do sistema (requerem sudo):"
-      echo "  switch [host]        Rebuild e ativa a configuração (padrão: host atual)"
-      echo "  boot   [host]        Rebuild e define para o próximo boot"
-      echo "  test   [host]        Rebuild e testa (não define como padrão)"
-      echo "  build  [host]        Apenas constrói sem ativar"
+      echo "  switch [host] [desktop]  Rebuild e ativa a configuração"
+      echo "  boot   [host] [desktop]  Rebuild e define para o próximo boot"
+      echo "  test   [host] [desktop]  Rebuild e testa (não define como padrão)"
+      echo "  build  [host] [desktop]  Apenas constrói sem ativar"
+      echo "                           desktop: gnome | plasma"
       echo ""
       echo "Comandos de home-manager (sem sudo):"
       echo "  home [user[@host]]   Aplica configuração Home Manager do usuário"
@@ -47,21 +48,40 @@ let
       echo "  fmt                  Formata todos os arquivos .nix com nixfmt"
       echo ""
       echo "Informações:"
-      echo "  diff [host]          Mostra diff entre geração atual e a nova"
+      echo "  diff [host] [desktop] Mostra diff entre geração atual e a nova"
       echo ""
       echo "Variáveis de ambiente:"
       echo "  LBNIX_FLAKE_DIR      Caminho para o flake (padrão: /etc/nixos)"
     }
 
+    _flake_attr() {
+      local host="$1"
+      local desktop="''${2:-}"
+      if [[ -z "$desktop" ]]; then
+        echo "$host"
+      elif [[ "$desktop" == "gnome" || "$desktop" == "plasma" ]]; then
+        echo "''${host}-''${desktop}"
+      else
+        echo "Desktop inválido: '$desktop' (use gnome|plasma)" >&2
+        exit 1
+      fi
+    }
+
     _rebuild() {
       local subcmd="$1"
       local host="''${2:-$HOST}"
-      if [ "$#" -ge 2 ]; then
+      local desktop="''${3:-}"
+      local flake_attr
+      flake_attr="$(_flake_attr "$host" "$desktop")"
+
+      if [ "$#" -ge 3 ]; then
+        shift 3
+      elif [ "$#" -ge 2 ]; then
         shift 2
       else
         shift "$#"
       fi
-      nixos-rebuild "$subcmd" --flake "$FLAKE_DIR#$host" "$@"
+      nixos-rebuild "$subcmd" --flake "$FLAKE_DIR#$flake_attr" "$@"
     }
 
     case "''${1:-}" in
@@ -119,9 +139,11 @@ let
         ;;
       diff)
         host="''${2:-$HOST}"
+        desktop="''${3:-}"
+        flake_attr="$(_flake_attr "$host" "$desktop")"
         new_drv="$(
           nix build \
-            "$FLAKE_DIR#nixosConfigurations.''${host}.config.system.build.toplevel" \
+            "$FLAKE_DIR#nixosConfigurations.''${flake_attr}.config.system.build.toplevel" \
             --no-link --print-out-paths 2>/dev/null
         )"
         ${pkgs.nvd}/bin/nvd diff /run/current-system "$new_drv"

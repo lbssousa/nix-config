@@ -135,15 +135,12 @@ A convenção `@` é compatível com ferramentas como Timeshift e amplamente ado
 
 ## Ambiente Gráfico
 
-### GNOME
+### GNOME e KDE Plasma
 
-- Sessão Wayland por padrão (via GDM)
-- Aplicações GNOME instaladas via Flatpak (Flathub)
-- Pacotes GNOME excluídos da instalação padrão:
-  - gnome-software → substituído pelo **Bazaar** (Flatpak)
-  - epiphany → substituído pelo **Brave** (Nix)
-  - evince → substituído pelo **Papers** (Flatpak)
-  - gnome-terminal → substituído pelo **Ptyxis** (Flatpak)
+- Seleção de desktop por variante do flake (`<host>-gnome` ou `<host>-plasma`)
+- GNOME usa GDM (Wayland) e KDE usa SDDM + Plasma 6 (Wayland)
+- Aplicações Flatpak comuns são compartilhadas entre os dois ambientes
+- No perfil GNOME, apps padrão são substituídos por Brave/Ptyxis/Flatpaks
 
 ### Flatpak
 

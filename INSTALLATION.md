@@ -34,7 +34,7 @@ O script irá guiar você por cada etapa, perguntando as informações necessár
 
 ```
 Uso:
-  bash scripts/install.sh [--host <hostname>] [--disk <device>]
+  bash scripts/install.sh [--host <hostname>] [--desktop <gnome|plasma>] [--disk <device>]
                           [--user "login:Nome Completo:sudo"]
                           [--user "login2:Nome2:nosudo"] ...
                           [--non-interactive]
@@ -42,6 +42,8 @@ Uso:
 
 Opções:
   --host            Nome do host NixOS (ex: barbudus, bigodon).
+                    Se omitido, é perguntado interativamente.
+  --desktop         Ambiente desktop: gnome (padrão) ou plasma.
                     Se omitido, é perguntado interativamente.
   --disk            Dispositivo de disco de destino (ex: /dev/nvme0n1, /dev/sda).
                     Se omitido, é perguntado interativamente.
@@ -74,6 +76,7 @@ sudo bash scripts/install.sh
 ```bash
 sudo bash scripts/install.sh \
   --host barbudus \
+  --desktop plasma \
   --disk /dev/nvme0n1 \
   --user "joao:João Silva:sudo" \
   --user "maria:Maria Souza:nosudo" \
@@ -285,8 +288,9 @@ sudo cp -r /tmp/nixos-config /mnt/etc/nixos
 # instalação resiliente a falhas de download do crates.io (ex: lanzaboote/Rust).
 # --option accept-flake-config true aplica a nixConfig do flake (substituter + chave)
 # simultaneamente, evitando avisos de substitutos sem chave confiável.
+DESKTOP=gnome  # ou plasma
 sudo nixos-install \
-  --flake /mnt/etc/nixos#$HOST \
+  --flake /mnt/etc/nixos#${HOST}-${DESKTOP} \
   --option accept-flake-config true \
   --option extra-substituters "https://nix-community.cachix.org" \
   --option extra-trusted-public-keys "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCUSeBs="

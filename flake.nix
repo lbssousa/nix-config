@@ -66,12 +66,14 @@
 
       # Helper to build a NixOS configuration for a given host
       mkHost =
-        hostname: system: extraModules:
+        hostname: system: extraModules: desktop:
         nixpkgs.lib.nixosSystem {
           inherit system;
           specialArgs = { inherit inputs; };
           modules = [
             { nixpkgs.overlays = [ localOverlay ]; }
+            # Seleção de ambiente desktop por variante do flake
+            { my.desktop.environment = desktop; }
             # Disko module
             disko.nixosModules.disko
 
@@ -132,10 +134,14 @@
         # NOTA: Não há módulo nixos-hardware específico para este modelo.
         # Se disponível no futuro, adicione em extraModules.
         # O módulo lanzaboote é incluído apenas para este host (usa Secure Boot)
-        barbudus = mkHost "barbudus" "x86_64-linux" [ lanzaboote.nixosModules.lanzaboote ];
+        barbudus = mkHost "barbudus" "x86_64-linux" [ lanzaboote.nixosModules.lanzaboote ] "gnome";
+        barbudus-gnome = mkHost "barbudus" "x86_64-linux" [ lanzaboote.nixosModules.lanzaboote ] "gnome";
+        barbudus-plasma = mkHost "barbudus" "x86_64-linux" [ lanzaboote.nixosModules.lanzaboote ] "plasma";
 
         # Morefine M6 Mini-PC (Intel N200, 16GB RAM, Intel UHD Graphics)
-        bigodon = mkHost "bigodon" "x86_64-linux" [ ];
+        bigodon = mkHost "bigodon" "x86_64-linux" [ ] "gnome";
+        bigodon-gnome = mkHost "bigodon" "x86_64-linux" [ ] "gnome";
+        bigodon-plasma = mkHost "bigodon" "x86_64-linux" [ ] "plasma";
       };
 
       # Home Manager configurations (user-level — run with: home-manager switch --flake .#<user>@<host>)

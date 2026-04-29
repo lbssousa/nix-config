@@ -16,7 +16,7 @@
 #   9. Executa home-manager switch para cada usuário (exceto root)
 #
 # Uso:
-#   bash scripts/install.sh [--host <hostname>] [--disk <device>]
+#   bash scripts/install.sh [--host <hostname>] [--desktop <gnome|plasma>] [--disk <device>]
 #                           [--partition-profile <btrfs|zfs>]
 #                           [--user "login:Nome Completo:sudo"]
 #                           [--user "login2:Nome2:nosudo"] ...
@@ -25,6 +25,8 @@
 #
 # Opções:
 #   --host              Nome do host NixOS (ex: barbudus, bigodon)
+#   --desktop           Ambiente desktop: gnome (padrão) ou plasma.
+#                       Define o atributo do flake usado no nixos-install/switch.
 #   --disk              Dispositivo de disco (ex: /dev/nvme0n1, /dev/sda)
 #   --partition-profile Perfil de particionamento: btrfs (padrão) ou zfs.
 #                       btrfs: tmpfs na raiz + subvolumes Btrfs para dados persistentes.
@@ -97,6 +99,7 @@ NIX_COMMUNITY_KEY="nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCW
 # ---------------------------------------------------------------------------
 
 OPT_HOST=""
+OPT_DESKTOP_ENV=""
 OPT_DISK=""
 OPT_PARTITION_PROFILE=""
 OPT_USERS_LOGIN=()
@@ -108,6 +111,11 @@ OPT_NON_INTERACTIVE=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --host)           OPT_HOST="$2";          shift 2 ;;
+    --desktop)
+      OPT_DESKTOP_ENV="$2"
+      [[ "$OPT_DESKTOP_ENV" == "gnome" || "$OPT_DESKTOP_ENV" == "plasma" ]] \
+        || die "Ambiente desktop inválido: '$OPT_DESKTOP_ENV'. Use 'gnome' ou 'plasma'."
+      shift 2 ;;
     --disk)           OPT_DISK="$2";          shift 2 ;;
     --partition-profile)
       OPT_PARTITION_PROFILE="$2"
@@ -143,7 +151,7 @@ while [[ $# -gt 0 ]]; do
     --help|-h)
       cat <<'EOF'
 Uso:
-  bash scripts/install.sh [--host <hostname>] [--disk <device>]
+  bash scripts/install.sh [--host <hostname>] [--desktop <gnome|plasma>] [--disk <device>]
                           [--partition-profile <btrfs|zfs>]
                           [--user "login:Nome Completo:sudo"]
                           [--user "login2:Nome2:nosudo"] ...
@@ -151,6 +159,8 @@ Uso:
 
 Opções:
   --host              Nome do host NixOS (ex: barbudus, bigodon).
+                      Se omitido, é perguntado interativamente.
+  --desktop           Ambiente desktop: gnome (padrão) ou plasma.
                       Se omitido, é perguntado interativamente.
   --disk              Dispositivo de disco de destino (ex: /dev/nvme0n1, /dev/sda).
                       Se omitido, é perguntado interativamente.
@@ -181,6 +191,7 @@ Exemplos:
   # Instalação não-interativa com perfil Btrfs:
   bash scripts/install.sh \
     --host barbudus \
+    --desktop plasma \
     --disk /dev/nvme0n1 \
     --partition-profile btrfs \
     --user "joao:João Silva:sudo" \
@@ -190,6 +201,7 @@ Exemplos:
   # Instalação não-interativa com perfil ZFS:
   bash scripts/install.sh \
     --host bigodon \
+    --desktop gnome \
     --disk /dev/nvme0n1 \
     --partition-profile zfs \
     --user "joao:João Silva:sudo" \
@@ -325,6 +337,25 @@ HOST="$OPT_HOST"
 DISKO_FILE="$CONFIG_DIR/hosts/$HOST/disko.nix"
 HW_FILE="$CONFIG_DIR/hosts/$HOST/hardware-configuration.nix"
 CFG_FILE="$CONFIG_DIR/hosts/$HOST/configuration.nix"
+
+# ---------------------------------------------------------------------------
+# 1b. Selecionar o ambiente desktop
+# ---------------------------------------------------------------------------
+
+echo
+info "==> Passo 1b: Selecionar o ambiente desktop"
+echo "Ambientes disponíveis:"
+echo "  - gnome"
+echo "  - plasma"
+
+ask OPT_DESKTOP_ENV "Ambiente desktop (gnome/plasma)" "gnome"
+[[ "$OPT_DESKTOP_ENV" == "gnome" || "$OPT_DESKTOP_ENV" == "plasma" ]] \
+  || die "Ambiente desktop inválido: '$OPT_DESKTOP_ENV'. Use 'gnome' ou 'plasma'."
+
+DESKTOP_ENV="$OPT_DESKTOP_ENV"
+FLAKE_SYSTEM_ATTR="${HOST}-${DESKTOP_ENV}"
+success "Ambiente desktop selecionado: $DESKTOP_ENV"
+success "Atributo do sistema no flake: $FLAKE_SYSTEM_ATTR"
 
 # ---------------------------------------------------------------------------
 # 2. Selecionar o disco
@@ -815,7 +846,7 @@ if [[ "$OPT_NON_INTERACTIVE" == "true" ]] || confirm "Copiar configuração para
   # nixos-install também pede uma senha de root, mas essa senha nunca chega ao
   # /persist/etc/shadow (a cópia acontece no passo 8, após nixos-install).
   nixos-install \
-    --flake "/mnt/etc/nixos#$HOST" \
+    --flake "/mnt/etc/nixos#$FLAKE_SYSTEM_ATTR" \
     --no-root-password \
     --option accept-flake-config true \
     --option extra-substituters "$NIX_COMMUNITY_SUBSTITUTER" \
@@ -870,7 +901,7 @@ if [[ "$OPT_NON_INTERACTIVE" == "true" ]] || confirm "Copiar configuração para
 else
   warn "Instalação pulada. Execute manualmente:"
   echo "  cp -r $CONFIG_DIR /mnt/etc/nixos"
-  echo "  nixos-install --flake /mnt/etc/nixos#$HOST \\"
+  echo "  nixos-install --flake /mnt/etc/nixos#$FLAKE_SYSTEM_ATTR \\" 
   echo "    --option accept-flake-config true \\"
   echo "    --option extra-substituters \"$NIX_COMMUNITY_SUBSTITUTER\" \\"
   echo "    --option extra-trusted-public-keys \"$NIX_COMMUNITY_KEY\""
