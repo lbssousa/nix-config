@@ -25,7 +25,7 @@
 #
 # Opções:
 #   --host              Nome do host NixOS (ex: barbudus, bigodon)
-#   --desktop           Ambiente desktop: plasma (padrão) ou gnome.
+#   --desktop           Ambiente desktop: gnome (padrão) ou plasma.
 #                       Define o atributo do flake usado no nixos-install/switch.
 #   --disk              Dispositivo de disco (ex: /dev/nvme0n1, /dev/sda)
 #   --partition-profile Perfil de particionamento: btrfs (padrão) ou zfs.
@@ -99,7 +99,7 @@ NIX_COMMUNITY_KEY="nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCW
 # ---------------------------------------------------------------------------
 
 OPT_HOST=""
-OPT_DESKTOP_ENV=""
+OPT_DESKTOP_ENV="gnome"
 OPT_DISK=""
 OPT_PARTITION_PROFILE=""
 OPT_USERS_LOGIN=()
@@ -114,7 +114,7 @@ while [[ $# -gt 0 ]]; do
     --desktop)
       OPT_DESKTOP_ENV="$2"
       [[ "$OPT_DESKTOP_ENV" == "gnome" || "$OPT_DESKTOP_ENV" == "plasma" ]] \
-        || die "Ambiente desktop inválido: '$OPT_DESKTOP_ENV'. Use 'plasma' ou 'gnome'."
+        || die "Ambiente desktop inválido: '$OPT_DESKTOP_ENV'. Use 'gnome' ou 'plasma'."
       shift 2 ;;
     --disk)           OPT_DISK="$2";          shift 2 ;;
     --partition-profile)
@@ -160,7 +160,7 @@ Uso:
 Opções:
   --host              Nome do host NixOS (ex: barbudus, bigodon).
                       Se omitido, é perguntado interativamente.
-  --desktop           Ambiente desktop: plasma (padrão) ou gnome.
+  --desktop           Ambiente desktop: gnome (padrão) ou plasma.
                       Se omitido, é perguntado interativamente.
   --disk              Dispositivo de disco de destino (ex: /dev/nvme0n1, /dev/sda).
                       Se omitido, é perguntado interativamente.
@@ -348,9 +348,9 @@ echo "Ambientes disponíveis:"
 echo "  - gnome"
 echo "  - plasma"
 
-ask OPT_DESKTOP_ENV "Ambiente desktop (gnome/plasma)" "plasma"
+ask OPT_DESKTOP_ENV "Ambiente desktop (gnome/plasma)" "gnome"
 [[ "$OPT_DESKTOP_ENV" == "gnome" || "$OPT_DESKTOP_ENV" == "plasma" ]] \
-  || die "Ambiente desktop inválido: '$OPT_DESKTOP_ENV'. Use 'plasma' ou 'gnome'."
+  || die "Ambiente desktop inválido: '$OPT_DESKTOP_ENV'. Use 'gnome' ou 'plasma'."
 
 DESKTOP_ENV="$OPT_DESKTOP_ENV"
 FLAKE_SYSTEM_ATTR="${HOST}-${DESKTOP_ENV}"
