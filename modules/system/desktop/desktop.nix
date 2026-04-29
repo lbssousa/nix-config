@@ -18,7 +18,6 @@ let
     "com.ranfdev.DistroShelf"
     "io.github.flattool.Ignition"
     "io.github.flattool.Warehouse"
-    "io.github.kolunmi.Bazaar"
     "io.gitlab.adhami3310.Impression"
     "io.missioncenter.MissionCenter"
     "it.mijorus.smile"
@@ -30,6 +29,7 @@ let
   # Flatpaks específicos para GNOME
   gnomeFlatpaks = [
     "com.mattjakeman.ExtensionManager"
+    "io.github.kolunmi.Bazaar"
     "org.gnome.Calculator"
     "org.gnome.Calendar"
     "org.gnome.Characters"
@@ -53,6 +53,18 @@ let
     "org.gnome.clocks"
     "org.gnome.font-viewer"
   ];
+
+  # Flatpaks específicos para KDE Plasma
+  plasmaFlatpaks = [
+    "org.kde.filelight"
+    "org.kde.gwenview"
+    "org.kde.kate"
+    "org.kde.kcalc"
+    "org.kde.kcharselect"
+    "org.kde.konsole"
+    "org.kde.okular"
+    "org.kde.skanpage"
+  ];
 in
 {
   options.my.desktop.environment = mkOption {
@@ -60,7 +72,7 @@ in
       "gnome"
       "plasma"
     ];
-    default = "gnome";
+    default = "plasma";
     description = "Desktop environment to enable for this host.";
   };
 
@@ -69,7 +81,10 @@ in
       # Flatpak - instalação system-wide via nix-flatpak
       flatpak = {
         enable = true;
-        packages = commonFlatpaks ++ lib.optionals (cfg.environment == "gnome") gnomeFlatpaks;
+        packages =
+          commonFlatpaks
+          ++ lib.optionals (cfg.environment == "gnome") gnomeFlatpaks
+          ++ lib.optionals (cfg.environment == "plasma") plasmaFlatpaks;
       };
 
       # Bluetooth
@@ -181,9 +196,6 @@ in
       ]
       ++ lib.optionals (cfg.environment == "gnome") [
         ptyxis # Terminal moderno no GNOME
-      ]
-      ++ lib.optionals (cfg.environment == "plasma") [
-        kdePackages.konsole
       ];
 
     # Definir Brave como browser padrão via xdg-mime

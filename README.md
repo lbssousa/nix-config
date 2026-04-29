@@ -15,7 +15,7 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 - ✅ **Podman + Distrobox**: Containers rootless (experiência Silverblue)
 - ✅ **Home Manager**: Gerenciamento de configurações de usuário
 - ✅ **Brave**: Navegador padrão instalado via Nix
-- ✅ **Ptyxis**: Terminal moderno instalado via Nix (substitui GNOME Console)
+- ✅ **Ptyxis**: Terminal moderno via Nix (apenas no perfil GNOME)
 - ✅ **Multi-host**: Configurações específicas para cada máquina
 - ✅ **Modular**: Módulos compartilhados para fácil manutenção
 - ✅ **Secure Boot**: Suporte via lanzaboote (barbudus)
@@ -75,7 +75,7 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 │       │   ├── common.nix    # Configurações básicas (locale, nix, Btrfs)
 │       │   └── impermanence.nix # Raiz tmpfs + diretórios persistentes (/persist)
 │       ├── desktop/
-│       │   └── desktop.nix   # GNOME, Flatpak, fontes, instalação automática de apps
+│       │   └── desktop.nix   # GNOME/KDE, Flatpak, fontes, instalação automática de apps
 │       ├── hardware/
 │       │   └── printing.nix  # Impressora Epson ESC-P/R + ecbd.service
 │       ├── network/
@@ -211,11 +211,14 @@ sudo bash scripts/update.sh --rebuild-only
 ### Switch do sistema (NixOS)
 
 ```bash
-# Rebuild e ativa GNOME (compatível com os nomes antigos):
+# Rebuild e ativa o desktop padrão do host (KDE Plasma):
 sudo nixos-rebuild switch --flake /etc/nixos#barbudus
 
 # Rebuild e ativa KDE Plasma:
 sudo nixos-rebuild switch --flake /etc/nixos#barbudus-plasma
+
+# Rebuild e ativa GNOME explicitamente:
+sudo nixos-rebuild switch --flake /etc/nixos#barbudus-gnome
 
 # Via lbnix (detecta o host automaticamente):
 sudo lbnix switch
@@ -347,8 +350,9 @@ systemd (`install-system-flatpaks`) na primeira inicialização, ou sempre que a
 lista de aplicativos for alterada. Não é necessária nenhuma ação manual.
 
 O repositório Flathub é configurado automaticamente. Os aplicativos instalados
-incluem: Bazaar (loja de apps), Papers (PDF), Mission Center (monitor), e muitos
-outros apps GNOME. Brave Browser e Ptyxis são instalados via Nix.
+incluem apps comuns e apps específicos do desktop selecionado (GNOME ou KDE Plasma).
+No perfil GNOME, o Bazaar é instalado por Flatpak e o Ptyxis é instalado via Nix.
+No perfil KDE Plasma, o Bazaar e o Ptyxis não são instalados por padrão.
 
 Para instalar aplicativos adicionais manualmente:
 
@@ -359,6 +363,31 @@ flatpak install flathub <app-id>
 # Exemplo:
 flatpak install flathub org.gimp.GIMP
 ```
+
+## 🔄 Migração de GNOME para KDE Plasma
+
+Para alternar uma instalação atual para KDE Plasma:
+
+```bash
+# 1) Atualize o repositório local
+cd /etc/nixos
+git pull
+
+# 2) Ative a variante KDE Plasma do host atual
+sudo lbnix switch "$(hostname)" plasma
+
+# Alternativa equivalente com nixos-rebuild:
+# sudo nixos-rebuild switch --flake /etc/nixos#$(hostname)-plasma
+
+# 3) Reinicie a sessão (ou reinicie a máquina)
+sudo reboot
+
+# 4) Opcional: limpar Flatpaks não utilizados após a migração
+flatpak uninstall --system --unused -y
+```
+
+Após o switch, o SDDM + Plasma 6 passam a ser usados neste host.
+Para voltar ao GNOME depois, use `sudo lbnix switch "$(hostname)" gnome`.
 
 ## 🔒 Configuração Pós-Instalação
 

@@ -43,7 +43,7 @@ Uso:
 Opções:
   --host            Nome do host NixOS (ex: barbudus, bigodon).
                     Se omitido, é perguntado interativamente.
-  --desktop         Ambiente desktop: gnome (padrão) ou plasma.
+  --desktop         Ambiente desktop: plasma (padrão) ou gnome.
                     Se omitido, é perguntado interativamente.
   --disk            Dispositivo de disco de destino (ex: /dev/nvme0n1, /dev/sda).
                     Se omitido, é perguntado interativamente.
@@ -288,7 +288,7 @@ sudo cp -r /tmp/nixos-config /mnt/etc/nixos
 # instalação resiliente a falhas de download do crates.io (ex: lanzaboote/Rust).
 # --option accept-flake-config true aplica a nixConfig do flake (substituter + chave)
 # simultaneamente, evitando avisos de substitutos sem chave confiável.
-DESKTOP=gnome  # ou plasma
+DESKTOP=plasma  # ou gnome
 sudo nixos-install \
   --flake /mnt/etc/nixos#${HOST}-${DESKTOP} \
   --option accept-flake-config true \
@@ -343,9 +343,34 @@ sudo reboot
 2. **Login**: Use o usuário criado com a senha definida durante a instalação.
    Se nenhuma senha foi definida, use a senha temporária **`nixos`** — o sistema solicitará que você a troque imediatamente.
 3. **Flatpaks** (instalação automática):
-   Os Flatpaks da lista pré-definida (GNOME apps, Flatseal, MissionCenter, etc.) são instalados
+  Os Flatpaks da lista pré-definida (apps comuns + apps do desktop selecionado) são instalados
    automaticamente pelo serviço `install-system-flatpaks` na primeira vez que o sistema iniciar
    com acesso à internet. Nenhuma ação manual é necessária.
+
+## 🔄 Alternar uma instalação existente para KDE Plasma
+
+Use os comandos abaixo no sistema já instalado:
+
+```bash
+# Atualizar o repositório local
+cd /etc/nixos
+git pull
+
+# Aplicar KDE Plasma no host atual
+sudo lbnix switch "$(hostname)" plasma
+
+# Alternativa equivalente com nixos-rebuild:
+# sudo nixos-rebuild switch --flake /etc/nixos#$(hostname)-plasma
+
+# Reiniciar para garantir a nova sessão gráfica
+sudo reboot
+```
+
+Opcionalmente, após migrar para KDE, limpe Flatpaks não usados:
+
+```bash
+flatpak uninstall --system --unused -y
+```
 
    Para acompanhar o status:
    ```bash

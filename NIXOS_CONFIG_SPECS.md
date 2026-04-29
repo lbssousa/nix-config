@@ -138,9 +138,11 @@ A convenção `@` é compatível com ferramentas como Timeshift e amplamente ado
 ### GNOME e KDE Plasma
 
 - Seleção de desktop por variante do flake (`<host>-gnome` ou `<host>-plasma`)
+- Desktop padrão para novas instalações: KDE Plasma (`<host>` aponta para plasma)
 - GNOME usa GDM (Wayland) e KDE usa SDDM + Plasma 6 (Wayland)
 - Aplicações Flatpak comuns são compartilhadas entre os dois ambientes
 - No perfil GNOME, apps padrão são substituídos por Brave/Ptyxis/Flatpaks
+- No perfil KDE Plasma, apps KDE são instalados preferencialmente via Flatpak
 
 ### Flatpak
 
@@ -150,9 +152,9 @@ A convenção `@` é compatível com ferramentas como Timeshift e amplamente ado
 
 **Flatpaks recomendados para instalar:**
 ```bash
-flatpak install flathub org.gnome.Papers          # PDF viewer
-flatpak install flathub app.devsuite.Ptyxis       # Terminal
-flatpak install flathub io.github.bazaar_cabinet.Bazaar  # App store
+flatpak install flathub org.gnome.Papers   # GNOME: PDF viewer
+flatpak install flathub org.kde.okular     # KDE: PDF viewer
+flatpak install flathub org.kde.konsole    # KDE: terminal
 ```
 
 ### Navegador
