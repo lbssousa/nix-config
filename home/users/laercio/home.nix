@@ -1,5 +1,6 @@
 # Configurações Home Manager específicas para o usuário laercio
 {
+  config,
   pkgs,
   lib,
   desktop ? "plasma",
@@ -22,6 +23,14 @@ in
     packages = [ pkgs.github-copilot-cli ] ++ lib.optionals isPlasma [ pkgs.kdePackages.yakuake ];
     # Garante que apps da sessão gráfica (ex: VSCode via launcher) usem o mesmo agent.
     sessionVariables.SSH_AUTH_SOCK = "$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock";
+
+    # Cursor padrão do GNOME — configura Wayland, XWayland e o link ~/.icons/default
+    pointerCursor = lib.mkIf isGnome {
+      package = pkgs.adwaita-icon-theme;
+      name = "Adwaita";
+      size = 24;
+      gtk.enable = true;
+    };
   };
 
   xdg.configFile = {
@@ -70,10 +79,40 @@ in
     '';
   };
 
+  # Garante que sobras do Yakuake sejam removidas ao trocar para ambiente não-Plasma.
+  home.activation.cleanupYakuakeWhenNotPlasma = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    if [ "${desktop}" != "plasma" ]; then
+      rm -f "${config.xdg.configHome}/autostart/yakuake.desktop"
+      rm -f "${config.xdg.configHome}/konsolerc"
+      rm -f "${config.xdg.configHome}/yakuakerc"
+    fi
+  '';
+
   dconf.settings = lib.mkIf isGnome {
+    # Terminal (Ptyxis)
     "org/gnome/Ptyxis" = {
       use-system-font = false;
       font-name = "JetBrainsMono Nerd Font Mono Regular 14";
+    };
+
+    # Interface visual padrão do GNOME (reverter configurações do Plasma)
+    "org/gnome/desktop/interface" = {
+      # Remove temas residuais do Plasma (Breeze)
+      icon-theme = "Adwaita";
+      # Fontes padrão do GNOME
+      font-name = "Adwaita Regular 12"; # valor padrão: 11
+      monospace-font-name = "Adwaita Mono 12"; # valor padrão: 11
+      document-font-name = "Adwaita Regular 12"; # valor padrão: 11
+    };
+
+    # Cursor padrão do GNOME
+    "org/gnome/desktop/sound" = {
+      theme-name = "freedesktop";
+    };
+
+    # Layout da barra de título: sem ícone de app, sem minimizar/maximizar
+    "org/gnome/desktop/wm/preferences" = {
+      button-layout = ":close";
     };
   };
 
@@ -211,4 +250,5 @@ in
       };
     };
   };
+
 }
