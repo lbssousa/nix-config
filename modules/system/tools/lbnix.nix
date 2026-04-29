@@ -29,17 +29,16 @@ let
       echo "Uso: lbnix <comando> [opções]"
       echo ""
       echo "Comandos de rebuild do sistema (requerem sudo):"
-      echo "  switch [host] [desktop]  Rebuild e ativa a configuração"
-      echo "  boot   [host] [desktop]  Rebuild e define para o próximo boot"
-      echo "  test   [host] [desktop]  Rebuild e testa (não define como padrão)"
-      echo "  build  [host] [desktop]  Apenas constrói sem ativar"
-      echo "                           desktop: gnome | plasma"
+      echo "  switch [host|--host <host>] [--gnome|--plasma|--desktop <nome>]  Rebuild e ativa a configuração"
+      echo "  boot   [host|--host <host>] [--gnome|--plasma|--desktop <nome>]  Rebuild e define para o próximo boot"
+      echo "  test   [host|--host <host>] [--gnome|--plasma|--desktop <nome>]  Rebuild e testa (não define como padrão)"
+      echo "  build  [host|--host <host>] [--gnome|--plasma|--desktop <nome>]  Apenas constrói sem ativar"
+      echo "                       desktop padrão: gnome"
       echo ""
       echo "Comandos de home-manager (sem sudo):"
-      echo "  home [user[@host]] [desktop]   Aplica configuração Home Manager do usuário"
+      echo "  home [user[@host]|--target <user[@host]>] [--gnome|--plasma|--desktop <nome>]   Aplica configuração Home Manager do usuário"
       echo "                       Padrão: usuário atual no host atual"
-      echo "                       desktop opcional: gnome | plasma"
-      echo "  news [user[@host]] [desktop]   Exibe notícias do Home Manager desde a última versão"
+      echo "  news [user[@host]|--target <user[@host]>] [--gnome|--plasma|--desktop <nome>]   Exibe notícias do Home Manager desde a última versão"
       echo "                       Padrão: usuário atual no host atual"
       echo ""
       echo "Manutenção:"
@@ -49,7 +48,7 @@ let
       echo "  fmt                  Formata todos os arquivos .nix com nixfmt"
       echo ""
       echo "Informações:"
-      echo "  diff [host] [desktop] Mostra diff entre geração atual e a nova"
+      echo "  diff [host|--host <host>] [--gnome|--plasma|--desktop <nome>] Mostra diff entre geração atual e a nova"
       echo ""
       echo "Variáveis de ambiente:"
       echo "  LBNIX_FLAKE_DIR      Caminho para o flake (padrão: /etc/nixos)"
@@ -68,21 +67,141 @@ let
       fi
     }
 
+    _parse_rebuild_args() {
+      PARSED_DESKTOP="gnome"
+      PARSED_HOST="$HOST"
+      PARSED_FORWARD_ARGS=()
+      local host_set=0
+
+      while [[ "$#" -gt 0 ]]; do
+        case "$1" in
+          --gnome)
+            PARSED_DESKTOP="gnome"
+            shift
+            ;;
+          --plasma)
+            PARSED_DESKTOP="plasma"
+            shift
+            ;;
+          --desktop)
+            if [[ "$#" -lt 2 ]]; then
+              echo "Faltou valor para --desktop (use gnome|plasma)" >&2
+              exit 1
+            fi
+            if [[ "$2" != "gnome" && "$2" != "plasma" ]]; then
+              echo "Desktop inválido: '$2' (use gnome|plasma)" >&2
+              exit 1
+            fi
+            PARSED_DESKTOP="$2"
+            shift 2
+            ;;
+          --host)
+            if [[ "$#" -lt 2 ]]; then
+              echo "Faltou valor para --host" >&2
+              exit 1
+            fi
+            PARSED_HOST="$2"
+            host_set=1
+            shift 2
+            ;;
+          --)
+            shift
+            PARSED_FORWARD_ARGS+=("$@")
+            break
+            ;;
+          -*)
+            PARSED_FORWARD_ARGS+=("$1")
+            shift
+            ;;
+          *)
+            if [[ "$host_set" -eq 0 ]]; then
+              PARSED_HOST="$1"
+              host_set=1
+            else
+              PARSED_FORWARD_ARGS+=("$1")
+            fi
+            shift
+            ;;
+        esac
+      done
+    }
+
+    _parse_home_args() {
+      PARSED_DESKTOP=""
+      PARSED_TARGET="$(whoami)@$HOST"
+      PARSED_FORWARD_ARGS=()
+      local target_set=0
+
+      while [[ "$#" -gt 0 ]]; do
+        case "$1" in
+          --gnome)
+            PARSED_DESKTOP="gnome"
+            shift
+            ;;
+          --plasma)
+            PARSED_DESKTOP="plasma"
+            shift
+            ;;
+          --desktop)
+            if [[ "$#" -lt 2 ]]; then
+              echo "Faltou valor para --desktop (use gnome|plasma)" >&2
+              exit 1
+            fi
+            if [[ "$2" != "gnome" && "$2" != "plasma" ]]; then
+              echo "Desktop inválido: '$2' (use gnome|plasma)" >&2
+              exit 1
+            fi
+            PARSED_DESKTOP="$2"
+            shift 2
+            ;;
+          --target)
+            if [[ "$#" -lt 2 ]]; then
+              echo "Faltou valor para --target" >&2
+              exit 1
+            fi
+            PARSED_TARGET="$2"
+            target_set=1
+            shift 2
+            ;;
+          --)
+            shift
+            PARSED_FORWARD_ARGS+=("$@")
+            break
+            ;;
+          -*)
+            PARSED_FORWARD_ARGS+=("$1")
+            shift
+            ;;
+          *)
+            if [[ "$target_set" -eq 0 ]]; then
+              PARSED_TARGET="$1"
+              target_set=1
+            else
+              PARSED_FORWARD_ARGS+=("$1")
+            fi
+            shift
+            ;;
+        esac
+      done
+    }
+
     _rebuild() {
       local subcmd="$1"
-      local host="''${2:-$HOST}"
-      local desktop="''${3:-}"
+      shift
+
+      _parse_rebuild_args "$@"
+
+      local host="$PARSED_HOST"
+      local desktop="$PARSED_DESKTOP"
       local flake_attr
+
       flake_attr="$(_flake_attr "$host" "$desktop")"
 
-      if [ "$#" -ge 3 ]; then
-        shift 3
-      elif [ "$#" -ge 2 ]; then
-        shift 2
+      if [[ "''${#PARSED_FORWARD_ARGS[@]}" -gt 0 ]]; then
+        nixos-rebuild "$subcmd" --flake "$FLAKE_DIR#$flake_attr" "''${PARSED_FORWARD_ARGS[@]}"
       else
-        shift "$#"
+        nixos-rebuild "$subcmd" --flake "$FLAKE_DIR#$flake_attr"
       fi
-      nixos-rebuild "$subcmd" --flake "$FLAKE_DIR#$flake_attr" "$@"
     }
 
     case "''${1:-}" in
@@ -91,16 +210,12 @@ let
         ;;
       home)
         # home-manager switch para um usuário@host
-        # Uso: lbnix home [user[@host]] [desktop]
+        # Uso: lbnix home [user[@host]] [--gnome|--plasma|--desktop <nome>]
         # Padrão: usuário atual no host atual
-        _target="''${2:-$(whoami)@$HOST}"
-        _desktop=""
-        if [[ "''${3:-}" == "gnome" || "''${3:-}" == "plasma" ]]; then
-          _desktop="''${3}"
-          _args_start=4
-        else
-          _args_start=3
-        fi
+        shift
+        _parse_home_args "$@"
+        _target="$PARSED_TARGET"
+        _desktop="$PARSED_DESKTOP"
         # Se apenas o usuário foi fornecido (sem @host), adiciona o host atual
         if [[ "''${_target}" != *@* ]]; then
           _target="''${_target}@''${HOST}"
@@ -108,27 +223,31 @@ let
         if [[ -n "''${_desktop}" ]]; then
           _target="''${_target}-''${_desktop}"
         fi
-        home-manager switch --flake "''${FLAKE_DIR}#''${_target}" "''${@:_args_start}"
+        if [[ "''${#PARSED_FORWARD_ARGS[@]}" -gt 0 ]]; then
+          home-manager switch --flake "''${FLAKE_DIR}#''${_target}" "''${PARSED_FORWARD_ARGS[@]}"
+        else
+          home-manager switch --flake "''${FLAKE_DIR}#''${_target}"
+        fi
         ;;
       news)
         # home-manager news para um usuário@host
-        # Uso: lbnix news [user[@host]] [desktop]
+        # Uso: lbnix news [user[@host]] [--gnome|--plasma|--desktop <nome>]
         # Padrão: usuário atual no host atual
-        _target="''${2:-$(whoami)@$HOST}"
-        _desktop=""
-        if [[ "''${3:-}" == "gnome" || "''${3:-}" == "plasma" ]]; then
-          _desktop="''${3}"
-          _args_start=4
-        else
-          _args_start=3
-        fi
+        shift
+        _parse_home_args "$@"
+        _target="$PARSED_TARGET"
+        _desktop="$PARSED_DESKTOP"
         if [[ "''${_target}" != *@* ]]; then
           _target="''${_target}@''${HOST}"
         fi
         if [[ -n "''${_desktop}" ]]; then
           _target="''${_target}-''${_desktop}"
         fi
-        home-manager news --flake "''${FLAKE_DIR}#''${_target}" "''${@:_args_start}"
+        if [[ "''${#PARSED_FORWARD_ARGS[@]}" -gt 0 ]]; then
+          home-manager news --flake "''${FLAKE_DIR}#''${_target}" "''${PARSED_FORWARD_ARGS[@]}"
+        else
+          home-manager news --flake "''${FLAKE_DIR}#''${_target}"
+        fi
         ;;
       update)
         pushd "$FLAKE_DIR" > /dev/null
@@ -159,8 +278,10 @@ let
         popd > /dev/null
         ;;
       diff)
-        host="''${2:-$HOST}"
-        desktop="''${3:-}"
+        shift
+        _parse_rebuild_args "$@"
+        host="$PARSED_HOST"
+        desktop="$PARSED_DESKTOP"
         flake_attr="$(_flake_attr "$host" "$desktop")"
         new_drv="$(
           nix build \
