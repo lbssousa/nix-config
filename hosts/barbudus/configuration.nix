@@ -63,6 +63,12 @@ in
 
   # --- Drivers NVIDIA (proprietary) ---
   # GeForce MX230 com PRIME offload (Intel integrada + NVIDIA discreta)
+  #
+  # COMO USAR A GPU DEDICADA NO PLASMA:
+  # - Terminal: nvidia-offload <app>  (ex: nvidia-offload blender)
+  # - Helper: run-with-nvidia <app>   (alias com melhor UX)
+  # - Dolphin: Clique direito → "Open with NVIDIA GPU" (para executáveis)
+  # - Verificar: glxinfo | grep "NVIDIA" ou nvidia-smi
 
   # Habilitar suporte OpenGL/Vulkan
   hardware.graphics = {
@@ -97,8 +103,9 @@ in
   # fprintd com suporte ao sensor Goodix (fork do infinytum/libfprint)
   services = {
 
-    # switcheroo-control: expõe GPUs via D-Bus para o GNOME exibir a opção
-    # "Abrir com a placa de vídeo dedicada" no menu de contexto
+    # switcheroo-control: expõe GPUs via D-Bus (principalmente para GNOME)
+    # Nota: KDE Plasma não tem suporte nativo para exibir no menu de contexto.
+    # Use 'nvidia-offload <app>' no terminal ou crie ações personalizadas no Dolphin.
     switcherooControl.enable = true;
 
     fprintd = {
@@ -138,6 +145,35 @@ in
     # Adicionado explicitamente para garantir disponibilidade independente do que
     # o módulo lanzaboote injeta em systemPackages.
     pkgs.sbctl
+
+    # Ação personalizada do Dolphin para executar com GPU NVIDIA
+    (pkgs.writeTextDir "share/kio/servicemenus/nvidia-offload.desktop" ''
+      [Desktop Entry]
+      Type=Service
+      X-KDE-ServiceTypes=KonqPopupMenu/Plugin
+      Icon=nvidia
+
+      [Desktop Action NvidiaOffload]
+      Name=Open with NVIDIA GPU
+      Icon=nvidia
+      Exec=nvidia-offload %f
+
+      Actions=NvidiaOffload;
+    '')
+
+    # Script helper para executar aplicações com nvidia-offload
+    (pkgs.writeScriptBin "run-with-nvidia" ''
+      #!/usr/bin/env bash
+      # Helper para executar aplicações com GPU NVIDIA dedicada
+      # Uso: run-with-nvidia <comando> [args...]
+      if [[ -z "$1" ]]; then
+        echo "Uso: run-with-nvidia <comando> [args...]"
+        echo "Exemplo: run-with-nvidia glxinfo"
+        echo "         run-with-nvidia blender"
+        exit 1
+      fi
+      nvidia-offload "$@"
+    '')
   ];
 
   # Criar symlink /var/lib/sbctl → /persist/etc/secureboot a cada boot.
