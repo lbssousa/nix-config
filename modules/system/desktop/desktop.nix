@@ -1,5 +1,10 @@
 # Módulo de ambiente gráfico: GNOME ou KDE Plasma + Flatpak
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 let
   inherit (lib) mkIf mkOption types;
@@ -150,7 +155,12 @@ in
         {
           settings = {
             "org/gnome/desktop/input-sources" = {
-              sources = [ (lib.gvariant.mkTuple [ "xkb" "br" ]) ];
+              sources = [
+                (lib.gvariant.mkTuple [
+                  "xkb"
+                  "br"
+                ])
+              ];
             };
           };
         }
@@ -164,7 +174,8 @@ in
     };
 
     # Brave e terminal instalados via Nix
-    environment.systemPackages = with pkgs;
+    environment.systemPackages =
+      with pkgs;
       [
         brave # Navegador padrão
       ]

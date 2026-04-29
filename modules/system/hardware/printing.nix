@@ -20,24 +20,30 @@
     ensureDefaultPrinter = "L4160_IP";
   };
 
-  # CUPS - sistema de impressão
-  services.printing = {
-    enable = true;
-    # Driver inkjet ESC/P-R da Epson (versão 1) - compatível com L4160, L3x50, etc.
-    # epson-printer-utility também é incluído aqui para que o backend CUPS (ecblp)
-    # seja descoberto pelo CUPS automaticamente via CUPS_SERVERBIN.
-    drivers = with pkgs; [
-      epson-escpr # ESC/P-R driver versão 1 (L4160, L3x50, etc.)
-      epson-escpr2 # ESC/P-R driver versão 2 (modelos mais novos)
-      epson-printer-utility # backend CUPS ecblp para comunicação com ecbd
-    ];
-  };
+  services = {
+    # CUPS - sistema de impressão
+    printing = {
+      enable = true;
+      # Driver inkjet ESC/P-R da Epson (versão 1) - compatível com L4160, L3x50, etc.
+      # epson-printer-utility também é incluído aqui para que o backend CUPS (ecblp)
+      # seja descoberto pelo CUPS automaticamente via CUPS_SERVERBIN.
+      drivers = with pkgs; [
+        epson-escpr # ESC/P-R driver versão 1 (L4160, L3x50, etc.)
+        epson-escpr2 # ESC/P-R driver versão 2 (modelos mais novos)
+        epson-printer-utility # backend CUPS ecblp para comunicação com ecbd
+      ];
+    };
 
-  # Avahi para descoberta de impressoras na rede
-  services.avahi = {
-    enable = true;
-    nssmdns4 = true;
-    openFirewall = true;
+    # Avahi para descoberta de impressoras na rede
+    avahi = {
+      enable = true;
+      nssmdns4 = true;
+      openFirewall = true;
+    };
+
+    # Regras udev do epson-printer-utility (79-udev-epson.rules):
+    # permite acesso de leitura/escrita ao dispositivo USB da impressora Epson.
+    udev.packages = [ pkgs.epson-printer-utility ];
   };
 
   # SNMP (UDP/161) — necessário para o epson-printer-utility descobrir
@@ -55,10 +61,6 @@
   # (socket://, lpd:// ou ipp://); URIs dnssd:// e implicitclass://
   # não são reconhecidas pelo binário.
   networking.firewall.allowedUDPPorts = [ 161 ];
-
-  # Regras udev do epson-printer-utility (79-udev-epson.rules):
-  # permite acesso de leitura/escrita ao dispositivo USB da impressora Epson.
-  services.udev.packages = [ pkgs.epson-printer-utility ];
 
   # Utilitário de impressora Epson: monitoramento de tinta, limpeza de cabeçotes, etc.
   # O pacote epson-printer-utility inclui o daemon ecbd (Epson Communication Bridge Daemon).
