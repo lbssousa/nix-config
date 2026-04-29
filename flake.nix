@@ -1,5 +1,5 @@
 {
-  description = "NixOS configuration with Btrfs, impermanence, GNOME, and hybrid swap";
+  description = "NixOS configuration with Btrfs, impermanence, KDE Plasma, and hybrid swap";
 
   # Cache binário da comunidade Nix — disponibiliza artefatos pré-compilados do lanzaboote
   # e outros pacotes da nix-community, evitando compilações do zero (e downloads de crates.io).
@@ -134,12 +134,12 @@
         # NOTA: Não há módulo nixos-hardware específico para este modelo.
         # Se disponível no futuro, adicione em extraModules.
         # O módulo lanzaboote é incluído apenas para este host (usa Secure Boot)
-        barbudus = mkHost "barbudus" "x86_64-linux" [ lanzaboote.nixosModules.lanzaboote ] "gnome";
+        barbudus = mkHost "barbudus" "x86_64-linux" [ lanzaboote.nixosModules.lanzaboote ] "plasma";
         barbudus-gnome = mkHost "barbudus" "x86_64-linux" [ lanzaboote.nixosModules.lanzaboote ] "gnome";
         barbudus-plasma = mkHost "barbudus" "x86_64-linux" [ lanzaboote.nixosModules.lanzaboote ] "plasma";
 
         # Morefine M6 Mini-PC (Intel N200, 16GB RAM, Intel UHD Graphics)
-        bigodon = mkHost "bigodon" "x86_64-linux" [ ] "gnome";
+        bigodon = mkHost "bigodon" "x86_64-linux" [ ] "plasma";
         bigodon-gnome = mkHost "bigodon" "x86_64-linux" [ ] "gnome";
         bigodon-plasma = mkHost "bigodon" "x86_64-linux" [ ] "plasma";
       };
