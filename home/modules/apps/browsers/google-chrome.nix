@@ -5,6 +5,10 @@
 {
   home.packages = [ pkgs.google-chrome ];
 
+  # Evita falha do HM quando mimeapps.list já existe fora do gerenciamento declarativo.
+  xdg.configFile."mimeapps.list".force = true;
+  xdg.dataFile."applications/mimeapps.list".force = true;
+
   # Definir Chrome como browser padrão do usuário via xdg-mime
   xdg.mimeApps = {
     enable = true;
