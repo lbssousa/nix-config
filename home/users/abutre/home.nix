@@ -1,8 +1,14 @@
 # Configurações Home Manager específicas para o usuário abutre
-{ pkgs, lib, desktop ? "plasma", ... }:
+{
+  pkgs,
+  lib,
+  desktop ? "plasma",
+  ...
+}:
 
 let
   isPlasma = desktop == "plasma";
+  isGnome = desktop == "gnome";
 in
 
 {
@@ -23,7 +29,8 @@ in
     "environment.d/90-ssh-auth-sock.conf".text = ''
       SSH_AUTH_SOCK=$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock
     '';
-  } // lib.optionalAttrs isPlasma {
+  }
+  // lib.optionalAttrs isPlasma {
     "autostart/yakuake.desktop".text = ''
       [Desktop Entry]
       Exec=yakuake
@@ -63,7 +70,7 @@ in
     '';
   };
 
-  dconf.settings = {
+  dconf.settings = lib.mkIf isGnome {
     "org/gnome/Ptyxis" = {
       use-system-font = false;
       font-name = "JetBrainsMono Nerd Font Mono Regular 14";
