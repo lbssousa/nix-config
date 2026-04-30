@@ -107,15 +107,24 @@ in
   # GTK não encontra as tabelas Compose do sistema. O GTK built-in IM lê este arquivo.
   home.file.".XCompose" = lib.mkIf isGnome {
     text = ''
-      <dead_acute>      <space> : "´"   acute
-      <dead_grave>      <space> : "`"   grave
-      <dead_tilde>      <space> : "~"   asciitilde
-      <dead_circumflex> <space> : "^"   asciicircum
-      <dead_diaeresis>  <space> : "¨"   diaeresis
-      <dead_cedilla>    <space> : "¸"   cedilla
-      <dead_breve>      <space> : "˘"   breve
-      <dead_macron>     <space> : "¯"   macron
-      <dead_caron>      <space> : "ˇ"   caron
+      <dead_acute>      <space>      : "´"   acute
+      <dead_grave>      <space>      : "`"   grave
+      <dead_tilde>      <space>      : "~"   asciitilde
+      <dead_circumflex> <space>      : "^"   asciicircum
+      <dead_diaeresis>  <space>      : "¨"   diaeresis
+      <dead_cedilla>    <space>      : "¸"   cedilla
+      <dead_breve>      <space>      : "˘"   breve
+      <dead_macron>     <space>      : "¯"   macron
+      <dead_caron>      <space>      : "ˇ"   caron
+      <dead_acute>      <dead_acute>      : "´"   acute
+      <dead_grave>      <dead_grave>      : "`"   grave
+      <dead_tilde>      <dead_tilde>      : "~"   asciitilde
+      <dead_circumflex> <dead_circumflex> : "^"   asciicircum
+      <dead_diaeresis>  <dead_diaeresis>  : "¨"   diaeresis
+      <dead_cedilla>    <dead_cedilla>    : "¸"   cedilla
+      <dead_breve>      <dead_breve>      : "˘"   breve
+      <dead_macron>     <dead_macron>     : "¯"   macron
+      <dead_caron>      <dead_caron>      : "ˇ"   caron
     '';
   };
 
