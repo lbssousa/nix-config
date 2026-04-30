@@ -135,16 +135,6 @@ in
       ];
     };
 
-    # Variáveis de método de entrada para apps GTK/Qt sob GNOME/Wayland.
-    # Sem isso, dead key + espaço não produz o símbolo literal do acento.
-    environment.etc = mkIf (cfg.environment == "gnome") {
-      "environment.d/95-input-method.conf".text = ''
-        GTK_IM_MODULE=xim
-        QT_IM_MODULE=xim
-        XMODIFIERS=@im=none
-      '';
-    };
-
     # Excluir pacotes padrão do GNOME que serão substituídos por Nix ou Flatpaks
     environment.gnome.excludePackages = mkIf (cfg.environment == "gnome") (
       with pkgs;

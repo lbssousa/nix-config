@@ -24,10 +24,6 @@ in
     # Garante que apps da sessão gráfica (ex: VSCode via launcher) usem o mesmo agent.
     sessionVariables = {
       SSH_AUTH_SOCK = "$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock";
-    } // lib.optionalAttrs isGnome {
-      GTK_IM_MODULE = "xim";
-      QT_IM_MODULE = "xim";
-      XMODIFIERS = "@im=none";
     };
 
     # Cursor padrão do GNOME — configura Wayland, XWayland e o link ~/.icons/default
@@ -47,10 +43,12 @@ in
     '';
   }
   // lib.optionalAttrs isGnome {
-    "environment.d/95-input-method.conf".text = ''
-      GTK_IM_MODULE=xim
-      QT_IM_MODULE=xim
-      XMODIFIERS=@im=none
+    # Drop-in que impede o IBus de iniciar na sessão GNOME.
+    # Sem IBus, o GTK4 usa o IM Wayland nativo (Mutter/libxkbcommon),
+    # que processa dead keys via tabelas XKB sem workarounds adicionais.
+    "systemd/user/org.freedesktop.IBus.session.GNOME.service.d/disable.conf".text = ''
+      [Unit]
+      ConditionPathExists=!/run/current-system
     '';
   }
   // lib.optionalAttrs isPlasma {
@@ -101,32 +99,6 @@ in
       rm -f "${config.xdg.configHome}/yakuakerc"
     fi
   '';
-
-  # Sequências Compose para dead key + espaço → símbolo literal do acento.
-  # Necessário porque libX11 não está instalado no sistema (Wayland puro), então
-  # GTK não encontra as tabelas Compose do sistema. O GTK built-in IM lê este arquivo.
-  home.file.".XCompose" = lib.mkIf isGnome {
-    text = ''
-      <dead_acute>      <space>      : "´"   acute
-      <dead_grave>      <space>      : "`"   grave
-      <dead_tilde>      <space>      : "~"   asciitilde
-      <dead_circumflex> <space>      : "^"   asciicircum
-      <dead_diaeresis>  <space>      : "¨"   diaeresis
-      <dead_cedilla>    <space>      : "¸"   cedilla
-      <dead_breve>      <space>      : "˘"   breve
-      <dead_macron>     <space>      : "¯"   macron
-      <dead_caron>      <space>      : "ˇ"   caron
-      <dead_acute>      <dead_acute>      : "´"   acute
-      <dead_grave>      <dead_grave>      : "`"   grave
-      <dead_tilde>      <dead_tilde>      : "~"   asciitilde
-      <dead_circumflex> <dead_circumflex> : "^"   asciicircum
-      <dead_diaeresis>  <dead_diaeresis>  : "¨"   diaeresis
-      <dead_cedilla>    <dead_cedilla>    : "¸"   cedilla
-      <dead_breve>      <dead_breve>      : "˘"   breve
-      <dead_macron>     <dead_macron>     : "¯"   macron
-      <dead_caron>      <dead_caron>      : "ˇ"   caron
-    '';
-  };
 
   dconf.settings = lib.mkIf isGnome {
     "org/gnome/desktop/input-sources" = {
@@ -297,20 +269,5 @@ in
     };
   };
 
-  systemd.user.services = lib.mkIf isGnome {
-    input-method-env-override = {
-      Unit = {
-        Description = "Reaplica variaveis XIM apos o IBus do GNOME iniciar";
-        After = [ "org.freedesktop.IBus.session.GNOME.service" ];
-        PartOf = [ "gnome-session.target" ];
-      };
-      Service = {
-        Type = "oneshot";
-        ExecStart = "${pkgs.systemd}/bin/systemctl --user set-environment GTK_IM_MODULE=xim QT_IM_MODULE=xim XMODIFIERS=@im=none";
-        RemainAfterExit = true;
-      };
-      Install.WantedBy = [ "gnome-session.target" ];
-    };
-  };
-
 }
+
