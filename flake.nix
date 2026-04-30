@@ -15,6 +15,12 @@
     # NixOS unstable channel
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
+    # flake-parts for modular flake composition
+    flake-parts = {
+      url = "git+https://github.com/hercules-ci/flake-parts?rev=3107b77cd68437b9a76194f0f7f9c55f2329ca5b&shallow=1";
+      inputs.nixpkgs-lib.follows = "nixpkgs";
+    };
+
     # Home Manager
     home-manager = {
       url = "github:nix-community/home-manager";
@@ -44,131 +50,17 @@
 
     # nix-flatpak for declarative Flatpak management
     nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=v0.7.0";
-
   };
 
   outputs =
-    {
-      nixpkgs,
-      home-manager,
-      disko,
-      impermanence,
-      lanzaboote,
-      sops-nix,
-      nix-flatpak,
-      ...
-    }@inputs:
-    let
-      # Overlay com pacotes customizados não disponíveis no nixpkgs oficial
-      localOverlay = final: _prev: {
-        epson-printer-utility = final.callPackage ./pkgs/epson-printer-utility/package.nix { };
-      };
+    inputs:
+    inputs.flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [
+        ./parts/nixos.nix
+        ./parts/home-manager.nix
+        ./parts/disko.nix
+      ];
 
-      # Helper to build a NixOS configuration for a given host
-      mkHost =
-        hostname: system: extraModules: desktop:
-        nixpkgs.lib.nixosSystem {
-          inherit system;
-          specialArgs = { inherit inputs; };
-          modules = [
-            { nixpkgs.overlays = [ localOverlay ]; }
-            # Seleção de ambiente desktop por variante do flake
-            { my.desktop.environment = desktop; }
-            # Disko module
-            disko.nixosModules.disko
-
-            # Impermanence module
-            impermanence.nixosModules.impermanence
-
-            # Host-specific hardware configuration
-            ./hosts/${hostname}/hardware-configuration.nix
-
-            # Host-specific system configuration
-            ./hosts/${hostname}/configuration.nix
-
-            # sops-nix for secret management
-            sops-nix.nixosModules.sops
-
-            # nix-flatpak for declarative Flatpak management
-            nix-flatpak.nixosModules.nix-flatpak
-          ]
-          ++ extraModules;
-        };
-
-      # Helper to build a standalone Home Manager configuration for a given user/host
-      mkHome =
-        username: system: desktop: extraModules:
-        home-manager.lib.homeManagerConfiguration {
-          pkgs = nixpkgs.legacyPackages.${system};
-          extraSpecialArgs = {
-            inherit inputs desktop;
-          };
-          modules = [
-            # Global Home Manager configuration (common to all users)
-            ./home/common.nix
-            # User identity
-            {
-              home.username = username;
-              home.homeDirectory = "/home/${username}";
-            }
-          ]
-          ++ extraModules;
-        };
-
-      # Hosts and their system architectures
-      allHosts = {
-        barbudus = "x86_64-linux";
-        bigodon = "x86_64-linux";
-      };
-
-      # Generate homeConfigurations entries for a user across all hosts
-      mkHomeAllHosts =
-        username: extraModules:
-        nixpkgs.lib.mapAttrs' (hostname: system: {
-          name = "${username}@${hostname}";
-          value = mkHome username system "plasma" extraModules;
-        }) allHosts;
-
-      mkHomeAllHostsDesktop =
-        username: desktop: extraModules:
-        nixpkgs.lib.mapAttrs' (hostname: system: {
-          name = "${username}@${hostname}-${desktop}";
-          value = mkHome username system desktop extraModules;
-        }) allHosts;
-    in
-    {
-      # NixOS configurations (system-level — run with: nixos-rebuild switch --flake .#<host>)
-      nixosConfigurations = {
-        # Dell Inspiron 14 5490 (Intel i5-10210U, 16GB RAM, Intel + Nvidia MX230)
-        # NOTA: Não há módulo nixos-hardware específico para este modelo.
-        # Se disponível no futuro, adicione em extraModules.
-        # O módulo lanzaboote é incluído apenas para este host (usa Secure Boot)
-        barbudus = mkHost "barbudus" "x86_64-linux" [ lanzaboote.nixosModules.lanzaboote ] "plasma";
-        barbudus-gnome = mkHost "barbudus" "x86_64-linux" [ lanzaboote.nixosModules.lanzaboote ] "gnome";
-        barbudus-plasma = mkHost "barbudus" "x86_64-linux" [ lanzaboote.nixosModules.lanzaboote ] "plasma";
-
-        # Morefine M6 Mini-PC (Intel N200, 16GB RAM, Intel UHD Graphics)
-        bigodon = mkHost "bigodon" "x86_64-linux" [ ] "plasma";
-        bigodon-gnome = mkHost "bigodon" "x86_64-linux" [ ] "gnome";
-        bigodon-plasma = mkHost "bigodon" "x86_64-linux" [ ] "plasma";
-      };
-
-      # Home Manager configurations (user-level — run with: home-manager switch --flake .#<user>@<host>[-<desktop>])
-      # laercio: configuração personalizada (powerlevel10k, git SSH signing, Bitwarden)
-      homeConfigurations =
-        mkHomeAllHosts "laercio" [ ./home/users/laercio/home.nix ]
-        // mkHomeAllHostsDesktop "laercio" "gnome" [ ./home/users/laercio/home.nix ]
-        // mkHomeAllHostsDesktop "laercio" "plasma" [ ./home/users/laercio/home.nix ]
-        // mkHomeAllHosts "roberta" [ ]
-        // mkHomeAllHosts "miguel" [ ]
-        // mkHomeAllHosts "jose" [ ]
-        // mkHomeAllHosts "joao" [ ]
-        // mkHomeAllHosts "maria" [ ];
-
-      # Expose disko configurations for standalone partitioning
-      diskoConfigurations = {
-        barbudus = import ./hosts/barbudus/disko.nix { inherit (nixpkgs) lib; };
-        bigodon = import ./hosts/bigodon/disko.nix { inherit (nixpkgs) lib; };
-      };
+      systems = [ "x86_64-linux" ];
     };
 }
