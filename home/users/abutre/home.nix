@@ -22,7 +22,13 @@ in
     homeDirectory = lib.mkDefault "/home/abutre";
     packages = [ pkgs.github-copilot-cli ] ++ lib.optionals isPlasma [ pkgs.kdePackages.yakuake ];
     # Garante que apps da sessão gráfica (ex: VSCode via launcher) usem o mesmo agent.
-    sessionVariables.SSH_AUTH_SOCK = "$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock";
+    sessionVariables = {
+      SSH_AUTH_SOCK = "$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock";
+    } // lib.optionalAttrs isGnome {
+      GTK_IM_MODULE = "xim";
+      QT_IM_MODULE = "xim";
+      XMODIFIERS = "@im=none";
+    };
 
     # Cursor padrão do GNOME — configura Wayland, XWayland e o link ~/.icons/default
     pointerCursor = lib.mkIf isGnome {
@@ -31,12 +37,20 @@ in
       size = 24;
       gtk.enable = true;
     };
+
   };
 
   xdg.configFile = {
     # Exporta para a sessão systemd do usuário, cobrindo apps GUI iniciados fora do shell.
     "environment.d/90-ssh-auth-sock.conf".text = ''
       SSH_AUTH_SOCK=$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock
+    '';
+  }
+  // lib.optionalAttrs isGnome {
+    "environment.d/95-input-method.conf".text = ''
+      GTK_IM_MODULE=xim
+      QT_IM_MODULE=xim
+      XMODIFIERS=@im=none
     '';
   }
   // lib.optionalAttrs isPlasma {
@@ -88,7 +102,30 @@ in
     fi
   '';
 
+  # Sequências Compose para dead key + espaço → símbolo literal do acento.
+  # Necessário porque libX11 não está instalado no sistema (Wayland puro), então
+  # GTK não encontra as tabelas Compose do sistema. O GTK built-in IM lê este arquivo.
+  home.file.".XCompose" = lib.mkIf isGnome {
+    text = ''
+      <dead_acute>      <space> : "´"   acute
+      <dead_grave>      <space> : "`"   grave
+      <dead_tilde>      <space> : "~"   asciitilde
+      <dead_circumflex> <space> : "^"   asciicircum
+      <dead_diaeresis>  <space> : "¨"   diaeresis
+      <dead_cedilla>    <space> : "¸"   cedilla
+      <dead_breve>      <space> : "˘"   breve
+      <dead_macron>     <space> : "¯"   macron
+      <dead_caron>      <space> : "ˇ"   caron
+    '';
+  };
+
   dconf.settings = lib.mkIf isGnome {
+    "org/gnome/desktop/input-sources" = {
+      sources = [ (lib.hm.gvariant.mkTuple [ "xkb" "br" ]) ];
+      mru-sources = [ (lib.hm.gvariant.mkTuple [ "xkb" "br" ]) ];
+      xkb-model = "abnt2";
+    };
+
     # Terminal (Ptyxis)
     "org/gnome/Ptyxis" = {
       use-system-font = false;
@@ -248,6 +285,22 @@ in
         tag.gpgsign = true;
         safe.directory = [ "/etc/nixos" ];
       };
+    };
+  };
+
+  systemd.user.services = lib.mkIf isGnome {
+    input-method-env-override = {
+      Unit = {
+        Description = "Reaplica variaveis XIM apos o IBus do GNOME iniciar";
+        After = [ "org.freedesktop.IBus.session.GNOME.service" ];
+        PartOf = [ "gnome-session.target" ];
+      };
+      Service = {
+        Type = "oneshot";
+        ExecStart = "${pkgs.systemd}/bin/systemctl --user set-environment GTK_IM_MODULE=xim QT_IM_MODULE=xim XMODIFIERS=@im=none";
+        RemainAfterExit = true;
+      };
+      Install.WantedBy = [ "gnome-session.target" ];
     };
   };
 

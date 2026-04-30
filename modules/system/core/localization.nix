@@ -3,6 +3,15 @@ _:
 
 {
   console.keyMap = "br-abnt2";
+
+  # Necessário mesmo em Wayland: o IBus segue o layout XKB de sistema.
+  # Sem isso, localectl reporta X11 Layout: us e o IBus cai para inglês no relogin.
+  services.xserver.xkb = {
+    layout = "br";
+    variant = "abnt2";
+    model = "abnt2";
+  };
+
   time.timeZone = "America/Sao_Paulo";
 
   i18n = {
@@ -19,7 +28,4 @@ _:
       LC_TIME = "pt_BR.UTF-8";
     };
   };
-
-  # Configuração de teclado em Wayland via console.keyMap (acima)
-  # services.xserver não é necessário para Wayland
 }

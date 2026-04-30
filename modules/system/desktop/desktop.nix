@@ -110,6 +110,41 @@ in
     # Wayland-only: desabilitar servidor X11 (Xorg) completamente
     services.xserver.enable = false;
 
+    programs.dconf = mkIf (cfg.environment == "gnome") {
+      enable = true;
+      profiles.user.databases = [
+        {
+          settings = {
+            "org/gnome/desktop/input-sources" = {
+              sources = [
+                (lib.gvariant.mkTuple [
+                  "xkb"
+                  "br"
+                ])
+              ];
+              mru-sources = [
+                (lib.gvariant.mkTuple [
+                  "xkb"
+                  "br"
+                ])
+              ];
+              xkb-model = "abnt2";
+            };
+          };
+        }
+      ];
+    };
+
+    # Variáveis de método de entrada para apps GTK/Qt sob GNOME/Wayland.
+    # Sem isso, dead key + espaço não produz o símbolo literal do acento.
+    environment.etc = mkIf (cfg.environment == "gnome") {
+      "environment.d/95-input-method.conf".text = ''
+        GTK_IM_MODULE=xim
+        QT_IM_MODULE=xim
+        XMODIFIERS=@im=none
+      '';
+    };
+
     # Excluir pacotes padrão do GNOME que serão substituídos por Nix ou Flatpaks
     environment.gnome.excludePackages = mkIf (cfg.environment == "gnome") (
       with pkgs;
@@ -163,25 +198,6 @@ in
           [ pkgs.xdg-desktop-portal-gnome ]
         else
           [ pkgs.kdePackages.xdg-desktop-portal-kde ];
-    };
-
-    # Aplicar fonte de entrada do GNOME globalmente
-    programs.dconf = mkIf (cfg.environment == "gnome") {
-      enable = true;
-      profiles.user.databases = [
-        {
-          settings = {
-            "org/gnome/desktop/input-sources" = {
-              sources = [
-                (lib.gvariant.mkTuple [
-                  "xkb"
-                  "br"
-                ])
-              ];
-            };
-          };
-        }
-      ];
     };
 
     # Bluetooth
