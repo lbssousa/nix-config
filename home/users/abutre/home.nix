@@ -43,19 +43,11 @@ in
     '';
   }
   // lib.optionalAttrs isGnome {
-    # Arquivo Compose do IBus com override para dead keys ABNT2.
-    # O IBus carrega este arquivo antes de qualquer tabela do sistema;
-    # a diretiva include "%L" puxa a tabela pt_BR.UTF-8 completa e as
-    # entradas seguintes sobrescrevem apenas os mapeamentos divergentes
-    # (dead key + espaço → símbolo do acento, não apóstrofo/vazio).
+    # Arquivo Compose do IBus: força o carregamento da tabela pt_BR.UTF-8
+    # do locale do sistema. Sem este arquivo, o IBus usa en_US como
+    # fallback interno, ignorando o locale do sistema.
     "ibus/Compose".text = ''
       include "%L"
-
-      <dead_acute> <space> : "´" U00B4 # SPACING ACUTE ACCENT
-      <dead_grave> <space> : "`" grave
-      <dead_tilde> <space> : "~" asciitilde
-      <dead_circumflex> <space> : "^" asciicircum
-      <dead_diaeresis> <space> : "¨" U00A8 # DIAERESIS
     '';
   }
   // lib.optionalAttrs isPlasma {

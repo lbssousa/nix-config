@@ -53,22 +53,15 @@ programs.dconf.profiles.user.databases = [{
 
 ### 3. Arquivo Compose do IBus e ajustes dconf — `home/users/abutre/home.nix`
 
-O IBus carrega `~/.config/ibus/Compose` como **primeira e exclusiva** fonte de tabela Compose quando o arquivo existe. A estratégia é incluir a tabela completa do locale e sobrescrever apenas os mapeamentos problemáticos:
+O IBus carrega `~/.config/ibus/Compose` como **primeira e exclusiva** fonte de tabela Compose quando o arquivo existe. Quando nenhum arquivo custom existe, o IBus usa `en_US.UTF-8` como locale interno de fallback — ignorando o locale do sistema. Forçar o load de `%L` (que expande para `pt_BR.UTF-8`) é suficiente para corrigir o comportamento:
 
 ```nix
 xdg.configFile."ibus/Compose".text = ''
   include "%L"
-
-  <dead_acute>      <space> : "´" U00B4
-  <dead_grave>      <space> : "`" grave
-  <dead_tilde>      <space> : "~" asciitilde
-  <dead_circumflex> <space> : "^" asciicircum
-  <dead_diaeresis>  <space> : "¨" U00A8
 '';
 ```
 
-- `include "%L"` expande para a tabela do locale do sistema (`pt_BR.UTF-8/Compose`), carregando todas as combinações de letras acentuadas.
-- As entradas subsequentes têm precedência sobre as entradas do `include`, sobrescrevendo apenas `dead_key + space`.
+`include "%L"` expande para a tabela do locale do sistema (`pt_BR.UTF-8/Compose`), carregando todas as combinações de dead keys ABNT2, incluindo `dead_key + space`.
 
 Também é necessário configurar o IBus para operar corretamente em Wayland puro:
 
@@ -81,14 +74,13 @@ dconf.settings."desktop/ibus/general" = {
 
 ## Comportamento de dead key + espaço
 
-Com o IBus e o arquivo Compose configurado:
+Com o IBus carregando a tabela `pt_BR.UTF-8` via `include "%L"`:
 
 | Sequência | Resultado |
 |---|---|
 | `dead_acute` + letra | letra com acento agudo (`á`, `é`, ...) |
-| `dead_acute` + `dead_acute` | símbolo literal `´` (via tabela pt_BR) |
-| `dead_acute` + `espaço` | `´` U+00B4 (SPACING ACUTE ACCENT) |
-| `dead_grave` + `espaço` | `` ` `` |
+| `dead_acute` + `dead_acute` | símbolo literal `´` |
+| `dead_acute` + `espaço` | apóstrofo `'` (definido na tabela pt_BR) |
 | `dead_tilde` + `espaço` | `~` |
 | `dead_circumflex` + `espaço` | `^` |
 | `dead_diaeresis` + `espaço` | `¨` |
@@ -107,9 +99,10 @@ O arquivo `~/.config/ibus/Compose` entra em vigor no próximo restart do serviç
 
 | Item | Razão |
 |---|---|
-| Drop-in `ConditionPathExists=!/run/current-system` desabilitando IBus | Solução anterior mais agressiva; substituída pelo override do Compose |
+| Drop-in `ConditionPathExists=!/run/current-system` desabilitando IBus | Solução anterior mais agressiva; substituída pelo arquivo `ibus/Compose` |
 | `GTK_IM_MODULE=xim` + serviço `input-method-env-override` | `im-xim.so` não existe no nixpkgs para Wayland |
 | `~/.XCompose` com mapeamentos manuais | O IBus não lê `~/.XCompose` quando `~/.config/ibus/Compose` existe |
+| Overrides explícitos de `dead_key + space` no arquivo Compose | `include "%L"` sozinho já carrega a tabela pt_BR com os mapeamentos corretos |
 | `include` da tabela pt_BR via `GTK_IM_MODULE=xim` | O módulo `im-xim.so` ausente impede esse caminho |
 | `console.keyMap = "br-abnt2"` para GNOME | Afeta apenas o console TTY |
 
