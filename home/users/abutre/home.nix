@@ -27,11 +27,6 @@ in
       ++ lib.optionals isGnome [
         pkgs.gnomeExtensions.ddterm
       ];
-    # Garante que apps da sessão gráfica (ex: VSCode via launcher) usem o mesmo agent.
-    sessionVariables = {
-      SSH_AUTH_SOCK = "$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock";
-    };
-
     # Cursor padrão do GNOME — configura Wayland, XWayland e o link ~/.icons/default
     pointerCursor = lib.mkIf isGnome {
       package = pkgs.adwaita-icon-theme;
@@ -42,13 +37,7 @@ in
 
   };
 
-  xdg.configFile = {
-    # Exporta para a sessão systemd do usuário, cobrindo apps GUI iniciados fora do shell.
-    "environment.d/90-ssh-auth-sock.conf".text = ''
-      SSH_AUTH_SOCK=$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock
-    '';
-  }
-  // lib.optionalAttrs isPlasma {
+  xdg.configFile = lib.optionalAttrs isPlasma {
     "autostart/yakuake.desktop".text = ''
       [Desktop Entry]
       Exec=yakuake
@@ -261,8 +250,7 @@ in
 
     git = {
       signing = {
-        # O prefixo key:: é necessário para indicar que é uma chave inline (não um caminho de arquivo)
-        key = "key::ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILc5RYDDiqlYAyO7xuDJPLFtx5cMEyN2io/qVsmv55N9 GitHub";
+        key = "BAC0B1B569777A733E37447FB10712C404063D38";
         signByDefault = true;
       };
       settings = {
@@ -270,8 +258,6 @@ in
           name = "abutre";
           email = "git@example.com";
         };
-        gpg.format = "ssh";
-        gpg.ssh.program = "/run/current-system/sw/bin/ssh-keygen";
         tag.gpgsign = true;
         safe.directory = [ "/etc/nixos" ];
       };
