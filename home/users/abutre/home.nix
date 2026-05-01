@@ -20,7 +20,12 @@ in
   home = {
     username = lib.mkDefault abutre;
     homeDirectory = lib.mkDefault "/home/abutre";
-    packages = [ pkgs.github-copilot-cli ] ++ lib.optionals isPlasma [ pkgs.kdePackages.yakuake ];
+    packages =
+      [ pkgs.github-copilot-cli ]
+      ++ lib.optionals isPlasma [ pkgs.kdePackages.yakuake ]
+      ++ lib.optionals isGnome [
+        pkgs.gnomeExtensions.ddterm
+      ];
     # Garante que apps da sessão gráfica (ex: VSCode via launcher) usem o mesmo agent.
     sessionVariables = {
       SSH_AUTH_SOCK = "$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock";
@@ -129,6 +134,11 @@ in
     # Layout da barra de título: sem ícone de app, sem minimizar/maximizar
     "org/gnome/desktop/wm/preferences" = {
       button-layout = ":close";
+    };
+
+    # Extensões GNOME habilitadas
+    "org/gnome/shell" = {
+      enabled-extensions = [ "ddterm@amezin.github.com" ];
     };
   };
 
