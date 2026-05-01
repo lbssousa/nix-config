@@ -117,7 +117,7 @@ in
       with pkgs;
       [
         gnome-tour
-        epiphany # Browser padrão do GNOME — usar Brave (Nix)
+        epiphany # Browser padrão do GNOME — usar Google Chrome (Nix)
         gnome-console # Terminal (kgx) — usar Ptyxis (Nix)
         gnome-terminal # Terminal legado — usar Ptyxis (Nix)
         gnome-music
@@ -152,14 +152,15 @@ in
       powerOnBoot = true;
     };
 
-    # Brave e terminal instalados via Nix
+    # Google Chrome e terminal instalados via Nix
     environment.systemPackages =
       with pkgs;
       [
-        brave # Navegador padrão
+        google-chrome # Navegador padrão
       ]
       ++ lib.optionals (cfg.environment == "gnome") [
         ptyxis # Terminal moderno no GNOME
+        gjs # Motor JavaScript para GNOME (GObject Introspection)
       ];
 
     # Fontes essenciais para o desktop
