@@ -1,6 +1,15 @@
 # Suporte de sistema para YubiKey/SmartCard (pcscd)
-{ ... }:
+{ config, lib, ... }:
 
+let
+  wheelUsers = lib.attrNames (
+    lib.filterAttrs (
+      _name: user:
+      (user.isNormalUser or false)
+      && lib.elem "wheel" (user.extraGroups or [ ])
+    ) config.users.users
+  );
+in
 {
   services.pcscd.enable = true;
 
@@ -12,11 +21,34 @@
         cue = true;
         interactive = true;
         # Arquivo de mapeamento global do pam_u2f persistido fora da raiz efêmera.
+        # Cada linha deve começar com o usuário correto (ex.: "laercio:").
         authfile = "/persist/etc/u2f-mappings";
       };
     };
 
-    # Permite autenticar comandos sudo com YubiKey.
-    services.sudo.u2fAuth = true;
+    # Sudo autenticado por YubiKey (pam_u2f), sem fallback para senha/fingerprint.
+    services.sudo = {
+      u2f.enable = true;
+      unixAuth = false;
+      fprintAuth = false;
+    };
+  };
+
+  # Checagem automática no switch/rebuild para evitar lockout em sudo.
+  system.activationScripts.checkPamU2FMapping = {
+    deps = [ "users" ];
+    text = ''
+      authfile="/persist/etc/u2f-mappings"
+
+      if [ ! -f "$authfile" ]; then
+        echo "WARNING: $authfile não existe. O sudo com YubiKey (pam_u2f) vai falhar." >&2
+      else
+        for user in ${lib.concatStringsSep " " (map lib.escapeShellArg wheelUsers)}; do
+          if ! grep -q "^${"$"}user:" "$authfile"; then
+            echo "WARNING: $authfile não possui entrada para '${"$"}user' (grupo wheel)." >&2
+          fi
+        done
+      fi
+    '';
   };
 }
