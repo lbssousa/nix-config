@@ -61,11 +61,18 @@ xdg.configFile."systemd/user/org.freedesktop.IBus.session.GNOME.service.d/disabl
 
 `/run/current-system` sempre existe em NixOS, portanto a condição é sempre falsa e o serviço nunca inicia. O drop-in fica em `~/.config/systemd/user/`, gerenciado pelo Home Manager.
 
-## Por que não usar `include` da tabela Compose do libx11
+## Comportamento de dead key + espaço
 
-A tabela `pt_BR.UTF-8` do `libx11` tem `<dead_acute> <space> : "'" apostrophe` — ou seja, `acento + espaço` produz apóstrofo, não o símbolo literal do acento. Como o GTK built-in IM (usado quando `GTK_IM_MODULE=xim` e `im-xim.so` ausente) processa esse arquivo, o comportamento difere do esperado. Por isso o `include` foi descartado: o problema voltava.
+Com o IM Wayland nativo (Mutter/libxkbcommon), `dead_key + espaço` segue a tabela padrão XKB/pt_BR:
 
-A solução via drop-in (sem IBus) não depende de tabelas Compose e usa o IM Wayland nativo do GTK4 diretamente via Mutter/libxkbcommon.
+| Sequência | Resultado |
+|---|---|
+| `dead_acute` + letra | letra com acento agudo (`á`, `é`, ...) |
+| `dead_acute` + `dead_acute` | símbolo literal `´` |
+| `dead_acute` + `espaço` | apóstrofo `'` (padrão POSIX) |
+| `dead_tilde` + `espaço` | til `~` |
+
+Esse é o comportamento canônico da tabela `pt_BR.UTF-8` do libx11.
 
 ## Fluxo do Home Manager
 
@@ -83,7 +90,7 @@ O drop-in entra em vigor no próximo login (o IBus já está rodando na sessão 
 |---|---|
 | `GTK_IM_MODULE=xim` + `environment.d` + serviço `input-method-env-override` | Removidos junto com o IBus — sem IBus, não há o que rever |
 | `~/.XCompose` com mapeamentos manuais | Desnecessário sem o GTK built-in IM |
-| `include` da tabela `pt_BR.UTF-8` do libx11 | `dead_acute + space → apostrophe` na tabela padrão — comportamento diferente do esperado |
+| `include` da tabela `pt_BR.UTF-8` do libx11 via `GTK_IM_MODULE=xim` | O módulo `im-xim.so` não existe no nixpkgs — o GTK built-in IM substituído não processa o `include` corretamente |
 | `use-system-keyboard-layout = true` via dconf | Padrão do IBus; irrelevante sem IBus |
 | `console.keyMap = "br-abnt2"` para GNOME | Afeta apenas o console TTY |
 
