@@ -19,7 +19,6 @@ let
     "io.github.flattool.Ignition"
     "io.github.flattool.Warehouse"
     "io.gitlab.adhami3310.Impression"
-    "io.missioncenter.MissionCenter"
     "it.mijorus.smile"
     "org.gtk.Gtk3theme.adw-gtk3"
     "org.gtk.Gtk3theme.adw-gtk3-dark"
@@ -30,28 +29,6 @@ let
   gnomeFlatpaks = [
     "com.mattjakeman.ExtensionManager"
     "io.github.kolunmi.Bazaar"
-    "org.gnome.Calculator"
-    "org.gnome.Calendar"
-    "org.gnome.Characters"
-    "org.gnome.Connections"
-    "org.gnome.Contacts"
-    "org.gnome.DejaDup"
-    "org.gnome.FileRoller"
-    "org.gnome.Firmware"
-    "org.gnome.Logs"
-    "org.gnome.Loupe"
-    "org.gnome.Maps"
-    "org.gnome.NautilusPreviewer"
-    "org.gnome.Papers"
-    "org.gnome.Showtime"
-    "org.gnome.SimpleScan"
-    "org.gnome.Snapshot"
-    "org.gnome.SoundRecorder"
-    "org.gnome.TextEditor"
-    "org.gnome.Weather"
-    "org.gnome.baobab"
-    "org.gnome.clocks"
-    "org.gnome.font-viewer"
   ];
 
   # Flatpaks específicos para KDE Plasma
@@ -135,36 +112,15 @@ in
       ];
     };
 
-    # Excluir pacotes padrão do GNOME que serão substituídos por Nix ou Flatpaks
+    # Excluir pacotes padrão do GNOME que serão substituídos por pacotes Nix
     environment.gnome.excludePackages = mkIf (cfg.environment == "gnome") (
       with pkgs;
       [
-        gnome-software # Substituído pelo Bazaar (Flatpak)
         gnome-tour
         epiphany # Browser padrão do GNOME — usar Brave (Nix)
-        evince # PDF viewer — usar Papers (Flatpak)
         gnome-console # Terminal (kgx) — usar Ptyxis (Nix)
         gnome-terminal # Terminal legado — usar Ptyxis (Nix)
-        totem # Player de vídeo — usar Showtime (Flatpak)
-        cheese # Webcam app — usar Snapshot (Flatpak)
-        snapshot # Câmera — usar Snapshot (Flatpak)
-        loupe # Visualizador de imagens — usar Loupe (Flatpak)
         gnome-music
-        gnome-maps # Substituído pelo Maps (Flatpak)
-        gnome-weather # Substituído pelo Weather (Flatpak)
-        gnome-contacts # Substituído pelo Contacts (Flatpak)
-        gnome-calendar # Substituído pelo Calendar (Flatpak)
-        gnome-clocks # Substituído pelo Clocks (Flatpak)
-        gnome-calculator # Substituído pelo Calculator (Flatpak)
-        gnome-characters # Substituído pelo Characters (Flatpak)
-        gnome-connections # Substituído pelo Connections (Flatpak)
-        gnome-logs # Substituído pelo Logs (Flatpak)
-        gnome-system-monitor # Substituído pelo Mission Center (Flatpak)
-        gnome-text-editor # Substituído pelo Text Editor (Flatpak)
-        gnome-font-viewer # Substituído pelo Font Viewer (Flatpak)
-        gnome-sound-recorder # Substituído pelo Sound Recorder (Flatpak)
-        simple-scan # Substituído pelo Simple Scan (Flatpak)
-        baobab # Analisador de disco — usar Baobab (Flatpak)
       ]
     );
 
@@ -205,15 +161,6 @@ in
       ++ lib.optionals (cfg.environment == "gnome") [
         ptyxis # Terminal moderno no GNOME
       ];
-
-    # Definir Brave como browser padrão via xdg-mime
-    xdg.mime.defaultApplications = {
-      "text/html" = "brave-browser.desktop";
-      "x-scheme-handler/http" = "brave-browser.desktop";
-      "x-scheme-handler/https" = "brave-browser.desktop";
-      "x-scheme-handler/about" = "brave-browser.desktop";
-      "x-scheme-handler/unknown" = "brave-browser.desktop";
-    };
 
     # Fontes essenciais para o desktop
     fonts = {
