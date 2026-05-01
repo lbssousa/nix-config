@@ -51,17 +51,37 @@ programs.dconf.profiles.user.databases = [{
 - `sources` e `mru-sources`: garantem que o GNOME use o layout `br`. Sem `mru-sources`, o campo fica vazio e o GNOME pode não lembrar o layout entre sessões.
 - `xkb-model`: sem ele, o GNOME usa o genérico `pc105+inet` em vez de `abnt2`.
 
-### 3. Arquivo Compose do IBus e ajustes dconf — `home/users/abutre/home.nix`
+### 3. Arquivo Compose do IBus — `home/modules/desktop/ibus-compose.nix`
 
-O IBus carrega `~/.config/ibus/Compose` como **primeira e exclusiva** fonte de tabela Compose quando o arquivo existe. Quando nenhum arquivo custom existe, o IBus usa `en_US.UTF-8` como locale interno de fallback — ignorando o locale do sistema. Forçar o load de `%L` (que expande para `pt_BR.UTF-8`) é suficiente para corrigir o comportamento:
+O IBus carrega `~/.config/ibus/Compose` como **primeira e exclusiva** fonte de tabela Compose quando o arquivo existe. Quando nenhum arquivo custom existe, o IBus usa `en_US.UTF-8` como locale interno de fallback — ignorando o locale do sistema. Forçar o load de `%L` (que expande para `pt_BR.UTF-8`) é suficiente para corrigir o comportamento.
+
+A definição foi migrada do módulo per-user (`home/users/abutre/home.nix`) para um módulo compartilhado aplicado a **todos os usuários GNOME** via `home/common.nix`:
 
 ```nix
-xdg.configFile."ibus/Compose".text = ''
-  include "%L"
-'';
+# home/modules/desktop/ibus-compose.nix
+{ lib, desktop ? "gnome", ... }:
+let
+  isGnome = desktop == "gnome";
+in
+{
+  xdg.configFile = lib.mkIf isGnome {
+    "ibus/Compose".text = ''
+      include "%L"
+    '';
+  };
+}
 ```
 
-`include "%L"` expande para a tabela do locale do sistema (`pt_BR.UTF-8/Compose`), carregando todas as combinações de dead keys ABNT2, incluindo `dead_key + space`.
+`include "%L"` expande para a tabela do locale do sistema (`pt_BR.UTF-8/Compose`), carregando todas as combinações de dead keys ABNT2, incluindo `dead_key + space`. O guard `lib.mkIf isGnome` garante que o arquivo só seja criado em sessões GNOME (no-op para KDE Plasma e outros desktops).
+
+O módulo é importado em `home/common.nix`:
+
+```nix
+imports = [
+  ./modules/apps/browsers/google-chrome.nix
+  ./modules/desktop/ibus-compose.nix
+];
+```
 
 Também é necessário configurar o IBus para operar corretamente em Wayland puro:
 
@@ -87,13 +107,15 @@ Com o IBus carregando a tabela `pt_BR.UTF-8` via `include "%L"`:
 
 ## Fluxo do Home Manager
 
-O Home Manager neste repositório é **standalone** — o `nixos-rebuild switch` **não** atualiza o perfil do usuário. Após qualquer mudança em `home/users/abutre/home.nix`, é necessário rodar separadamente:
+O Home Manager neste repositório é **standalone** — o `nixos-rebuild switch` **não** atualiza o perfil do usuário. Após qualquer mudança em módulos Home Manager (ex.: `home/modules/desktop/ibus-compose.nix` ou `home/common.nix`), é necessário rodar separadamente para cada usuário:
 
 ```bash
 home-manager switch --flake /etc/nixosabutre@barbudus-gnome
 ```
 
 O arquivo `~/.config/ibus/Compose` entra em vigor no próximo restart do serviço IBus (ou relogin).
+
+> **Nota:** Como o módulo `ibus-compose.nix` é importado via `home/common.nix`, ele é aplicado automaticamente a **todos os usuários** cadastrados no flake que usem GNOME como desktop. Não é necessário adicionar nada nos módulos per-user.
 
 ## O que foi descartado
 
