@@ -12,6 +12,7 @@ let
 in
 {
   services.pcscd.enable = true;
+  services.gnome.gnome-keyring.enable = true;
 
   security.pam = {
     # Habilita o módulo PAM U2F (pam_u2f) para autenticação com YubiKey.
@@ -35,8 +36,22 @@ in
 
     # Login do usuário com YubiKey.
     # Mantemos fallback de senha para evitar lockout em caso de ausência da chave.
-    services.login.u2f.enable = true;
-    services.plasmalogin.u2f.enable = true;
+    services.login = {
+      u2f.enable = true;
+      enableGnomeKeyring = true;
+    };
+
+    services.plasmalogin = {
+      u2f.enable = true;
+      enableGnomeKeyring = true;
+    };
+
+    # pkexec/polkit autenticado por YubiKey (pam_u2f), sem fallback para senha/fingerprint.
+    services."polkit-1" = {
+      u2f.enable = true;
+      unixAuth = false;
+      fprintAuth = false;
+    };
   };
 
   # Checagem automática no switch/rebuild para evitar lockout em sudo.
