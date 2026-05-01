@@ -6,6 +6,7 @@
 {
   imports = [
     ./modules/apps/browsers/google-chrome.nix
+    ./modules/desktop/ibus-compose.nix
   ];
 
   # Permitir pacotes proprietários/não-livres (ex: github-copilot-cli, vscode, etc.)

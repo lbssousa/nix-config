@@ -42,14 +42,6 @@ in
       SSH_AUTH_SOCK=$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock
     '';
   }
-  // lib.optionalAttrs isGnome {
-    # Arquivo Compose do IBus: força o carregamento da tabela pt_BR.UTF-8
-    # do locale do sistema. Sem este arquivo, o IBus usa en_US como
-    # fallback interno, ignorando o locale do sistema.
-    "ibus/Compose".text = ''
-      include "%L"
-    '';
-  }
   // lib.optionalAttrs isPlasma {
     "autostart/yakuake.desktop".text = ''
       [Desktop Entry]
