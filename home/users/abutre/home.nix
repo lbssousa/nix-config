@@ -3,7 +3,7 @@
   config,
   pkgs,
   lib,
-  desktop ? "plasma",
+  desktop ? "gnome",
   ...
 }:
 
@@ -43,12 +43,19 @@ in
     '';
   }
   // lib.optionalAttrs isGnome {
-    # Drop-in que impede o IBus de iniciar na sessão GNOME.
-    # Sem IBus, o GTK4 usa o IM Wayland nativo (Mutter/libxkbcommon),
-    # que processa dead keys via tabelas XKB sem workarounds adicionais.
-    "systemd/user/org.freedesktop.IBus.session.GNOME.service.d/disable.conf".text = ''
-      [Unit]
-      ConditionPathExists=!/run/current-system
+    # Arquivo Compose do IBus com override para dead keys ABNT2.
+    # O IBus carrega este arquivo antes de qualquer tabela do sistema;
+    # a diretiva include "%L" puxa a tabela pt_BR.UTF-8 completa e as
+    # entradas seguintes sobrescrevem apenas os mapeamentos divergentes
+    # (dead key + espaço → símbolo do acento, não apóstrofo/vazio).
+    "ibus/Compose".text = ''
+      include "%L"
+
+      <dead_acute> <space> : "´" U00B4 # SPACING ACUTE ACCENT
+      <dead_grave> <space> : "`" grave
+      <dead_tilde> <space> : "~" asciitilde
+      <dead_circumflex> <space> : "^" asciicircum
+      <dead_diaeresis> <space> : "¨" U00A8 # DIAERESIS
     '';
   }
   // lib.optionalAttrs isPlasma {
@@ -101,6 +108,13 @@ in
   '';
 
   dconf.settings = lib.mkIf isGnome {
+    # IBus em Wayland puro: delega layout ao sistema (evita setxkbmap) e
+    # carrega a engine BR na inicialização da sessão.
+    "desktop/ibus/general" = {
+      use-system-keyboard-layout = true;
+      preload-engines = [ "xkb:br::por" ];
+    };
+
     "org/gnome/desktop/input-sources" = {
       sources = [ (lib.hm.gvariant.mkTuple [ "xkb" "br" ]) ];
       mru-sources = [ (lib.hm.gvariant.mkTuple [ "xkb" "br" ]) ];

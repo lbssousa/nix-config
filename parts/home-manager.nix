@@ -31,7 +31,7 @@ let
     username: extraModules:
     inputs.nixpkgs.lib.mapAttrs' (hostname: system: {
       name = "${username}@${hostname}";
-      value = mkHome username system "plasma" extraModules;
+      value = mkHome username system "gnome" extraModules;
     }) allHosts;
 
   mkHomeAllHostsDesktop =
