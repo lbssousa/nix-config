@@ -32,6 +32,11 @@ in
       unixAuth = false;
       fprintAuth = false;
     };
+
+    # Login do usuário com YubiKey.
+    # Mantemos fallback de senha para evitar lockout em caso de ausência da chave.
+    services.login.u2f.enable = true;
+    services.plasmalogin.u2f.enable = true;
   };
 
   # Checagem automática no switch/rebuild para evitar lockout em sudo.
