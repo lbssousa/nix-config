@@ -208,6 +208,9 @@
       enableDefaultConfig = false;
       matchBlocks."*" = {
         addKeysToAgent = "yes";
+        controlMaster = "auto";
+        controlPersist = "10m";
+        controlPath = "~/.ssh/cm-%r@%h:%p";
         serverAliveInterval = 60;
         serverAliveCountMax = 3;
       };
