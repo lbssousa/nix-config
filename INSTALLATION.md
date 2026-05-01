@@ -4,7 +4,7 @@ Este guia cobre a instalação do NixOS usando esta configuração baseada em Fl
 
 ## 📋 Pré-requisitos
 
-1. Baixe a ISO do NixOS: https://nixos.org/download.html
+1. Baixe a ISO do NixOS: [https://nixos.org/download.html](https://nixos.org/download.html)
 2. Crie um USB bootável com a ISO
 3. Boot no USB do NixOS
 
@@ -32,7 +32,7 @@ O script irá guiar você por cada etapa, perguntando as informações necessár
 
 #### Opções do script
 
-```
+```text
 Uso:
   bash scripts/install.sh [--host <hostname>] [--desktop <gnome|plasma>] [--disk <device>]
                           [--user "login:Nome Completo:sudo"]
@@ -185,6 +185,7 @@ sudo nix run github:nix-community/disko \
 ```
 
 Este comando irá:
+
 1. Criar partições GPT (EFI 512MB + partição LUKS)
 2. Configurar criptografia LUKS (será solicitada senha durante o processo)
 3. Criar volumes LVM (swap 20GB + volume Btrfs)
@@ -212,6 +213,7 @@ sudo cp /mnt/etc/nixos/hardware-configuration.nix ./hosts/$HOST/hardware-configu
 ```
 
 Após copiar, edite o arquivo para:
+
 1. Manter `import ./disko.nix` nos imports
 2. Adicionar as configurações de `zramSwap`
 3. Manter `fileSystems."/persist".neededForBoot = true`
@@ -236,10 +238,22 @@ nano users/outro-usuario.nix
 # Remova a linha: "wheel" # sudo
 ```
 
-Descomente (ou adicione) as linhas de importação dos usuários em `hosts/$HOST/configuration.nix`:
+Com arquitetura dendrítica, o vínculo de usuários do sistema é centralizado.
+Edite `dendritic/data/users.nix` e adicione os logins na lista `config.dendritic.users`.
+
+Exemplo:
+
 ```nix
-./../../users/seu-usuario.nix
-./../../users/outro-usuario.nix
+config.dendritic.users = [
+  abutre
+  surubi
+  coruja
+  camelo
+  cavalo
+  macaco
+  "seu-usuario"
+  "outro-usuario"
+];
 ```
 
 > ⚠️ **IMPORTANTE — adicionar o arquivo ao índice do git**
@@ -257,7 +271,7 @@ Descomente (ou adicione) as linhas de importação dos usuários em `hosts/$HOST
 
 ### 8. Instalar o NixOS
 
-> **Apenas para `barbudus` (usa Lanzaboote):** crie as chaves Secure Boot *antes* do `nixos-install`. Sem isso, o instalador falha com `Failed to install bootloader`.
+> **Apenas para `barbudus` (usa Lanzaboote):** crie as chaves Secure Boot _antes_ do `nixos-install`. Sem isso, o instalador falha com `Failed to install bootloader`.
 >
 > ```bash
 > sudo mkdir -p /mnt/persist/etc/secureboot
@@ -297,6 +311,7 @@ sudo nixos-install \
 ```
 
 Durante a instalação será solicitado:
+
 - Senha para o usuário root (após a instalação)
 
 ### 9. Configurar senhas
@@ -343,6 +358,7 @@ sudo reboot
 2. **Login**: Use o usuário criado com a senha definida durante a instalação.
    Se nenhuma senha foi definida, use a senha temporária **`nixos`** — o sistema solicitará que você a troque imediatamente.
 3. **Flatpaks** (instalação automática):
+
   Os Flatpaks da lista pré-definida (apps comuns + apps do desktop selecionado) são instalados
    automaticamente pelo serviço `install-system-flatpaks` na primeira vez que o sistema iniciar
    com acesso à internet. Nenhuma ação manual é necessária.
@@ -372,14 +388,15 @@ Opcionalmente, após migrar para KDE, limpe Flatpaks não usados:
 flatpak uninstall --system --unused -y
 ```
 
-   Para acompanhar o status:
-   ```bash
-   systemctl status install-system-flatpaks
-   journalctl -u install-system-flatpaks -f
-   ```
+Para acompanhar o status:
 
-   > **Nota:** O repositório Flathub é pré-configurado pelo `install.sh` durante a instalação.
-   > Se o serviço falhar (sem internet no primeiro boot), ele tentará novamente automaticamente.
+```bash
+systemctl status install-system-flatpaks
+journalctl -u install-system-flatpaks -f
+```
+
+> **Nota:** O repositório Flathub é pré-configurado pelo `install.sh` durante a instalação.
+> Se o serviço falhar (sem internet no primeiro boot), ele tentará novamente automaticamente.
 
 ## 🥾 Menu de Boot (systemd-boot)
 
@@ -391,45 +408,41 @@ mais rápido e sem flickering.
 - **Durante o boot**: mantenha pressionada a tecla **Space** (ou qualquer tecla) imediatamente
   após a tela do firmware UEFI aparecer. O menu do systemd-boot será exibido.
 
-- **Temporariamente via terminal** (define um timeout até o próximo rebuild):
-  ```bash
-  sudo bootctl set-timeout 5
-  ```
+- **Temporariamente via terminal** (define um timeout até o próximo rebuild): `sudo bootctl set-timeout 5`
 
-- **Para reverter ao comportamento silencioso**:
-  ```bash
-  sudo bootctl set-timeout 0
-  ```
+- **Para reverter ao comportamento silencioso**: `sudo bootctl set-timeout 0`
 
 ## 🔒 Configuração do Secure Boot (apenas barbudus)
 
 As chaves PKI do Lanzaboote são criadas automaticamente durante a instalação (passo 9 do script ou manualmente antes do `nixos-install`). O que resta fazer após o primeiro boot é **registrar as chaves no firmware UEFI**.
 
-> ### ⚠️ Lanzaboote vs. MOK/shim — diferença importante
->
-> Esta configuração usa **lanzaboote**, que **NÃO** utiliza shim nem MOK.
-> - **Não haverá** tela azul do MOKmanager durante o boot
-> - **Não será solicitada** nenhuma senha de MOK
-> - O lanzaboote assina os binários EFI (kernel + initrd) diretamente com chaves PKI
->   próprias (PK/KEK/db) que são registradas no firmware UEFI
-> - As chaves ficam em `/persist/etc/secureboot` (configurado via `pkiBundle` no lanzaboote)
->
-> A ausência de uma tela de MOK é **esperada e correta** nesta configuração.
+### ⚠️ Lanzaboote vs. MOK/shim — diferença importante
 
-> ### ⚠️ Pré-requisito: Setup Mode ativo
->
-> Para registrar as chaves PKI, o firmware precisa estar em **Setup Mode** (sem chaves de
-> Secure Boot cadastradas). Se o Setup Mode não estiver ativo, o registro falhará.
->
-> **Como verificar/habilitar o Setup Mode:**
-> 1. Reinicie e acesse a BIOS/UEFI (F2, F12, Del ou Esc durante o boot)
-> 2. Na seção Secure Boot, procure **"Delete All Secure Boot Keys"**, **"Setup Mode"**,
->    **"Clear Secure Boot Keys"** ou opção similar
-> 3. Apague as chaves existentes (isso habilita o Setup Mode)
-> 4. Salve e reinicie para o NixOS com Secure Boot **desabilitado**
->
-> O script `setup-secureboot.sh` verifica automaticamente o Setup Mode e aborta com
-> instruções claras se o firmware não estiver em Setup Mode.
+Esta configuração usa **lanzaboote**, que **NÃO** utiliza shim nem MOK.
+
+- **Não haverá** tela azul do MOKmanager durante o boot
+- **Não será solicitada** nenhuma senha de MOK
+- O lanzaboote assina os binários EFI (kernel + initrd) diretamente com chaves PKI
+  próprias (PK/KEK/db) que são registradas no firmware UEFI
+- As chaves ficam em `/persist/etc/secureboot` (configurado via `pkiBundle` no lanzaboote)
+
+A ausência de uma tela de MOK é **esperada e correta** nesta configuração.
+
+### ⚠️ Pré-requisito: Setup Mode ativo
+
+Para registrar as chaves PKI, o firmware precisa estar em **Setup Mode** (sem chaves de
+Secure Boot cadastradas). Se o Setup Mode não estiver ativo, o registro falhará.
+
+**Como verificar/habilitar o Setup Mode:**
+
+1. Reinicie e acesse a BIOS/UEFI (F2, F12, Del ou Esc durante o boot)
+2. Na seção Secure Boot, procure **"Delete All Secure Boot Keys"**, **"Setup Mode"**,
+   **"Clear Secure Boot Keys"** ou opção similar
+3. Apague as chaves existentes (isso habilita o Setup Mode)
+4. Salve e reinicie para o NixOS com Secure Boot **desabilitado**
+
+O script `setup-secureboot.sh` verifica automaticamente o Setup Mode e aborta com
+instruções claras se o firmware não estiver em Setup Mode.
 
 ### Passo a passo para configurar o Secure Boot
 
@@ -463,11 +476,12 @@ Esta configuração inclui suporte ao desbloqueio automático do volume LUKS uti
 O TPM2 armazena a chave LUKS protegida por **PCRs (Platform Configuration Registers)** — medições do estado do firmware e do boot loader. Se o hardware ou software for adulterado, os PCRs mudam e o TPM2 recusa liberar a chave, exigindo a senha de recuperação.
 
 **PCRs configurados:**
-| PCR | O que mede |
-|-----|-----------|
-| 0   | Firmware UEFI (integridade da BIOS) |
-| 2   | Código de opção UEFI (drivers ROM) |
-| 7   | Estado do Secure Boot |
+
+| PCR | O que mede                            |
+| --- | ------------------------------------- |
+| 0   | Firmware UEFI (integridade da BIOS)   |
+| 2   | Código de opção UEFI (drivers ROM)    |
+| 7   | Estado do Secure Boot                 |
 
 ### Registrar o TPM2 no Volume LUKS
 

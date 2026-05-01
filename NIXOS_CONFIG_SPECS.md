@@ -6,10 +6,23 @@ Serve como referência para manutenção e extensão futura.
 ## Propósito Geral
 
 Propiciar uma experiência de uso similar à do Fedora Silverblue ou do projeto Bluefin, com:
+
 - Sistema base enxuto e declarativo via Nix Flakes
 - Uso massivo de Flatpaks para aplicações GUI
 - Sistema efêmero (impermanence) com raiz limpa a cada boot
 - Dados importantes preservados em subvolumes Btrfs dedicados
+
+## Arquitetura de Composição
+
+- O flake usa flake-parts com padrão dendrítico.
+- Todo módulo Nix não-entrypoint relevante para composição de alto nível está sob `dendritic/`.
+- O inventário de hosts e usuários é centralizado em:
+  - `dendritic/data/hosts.nix`
+  - `dendritic/data/users.nix`
+- As saídas do flake são geradas por módulos dedicados:
+  - `dendritic/flake/nixos-configurations.nix`
+  - `dendritic/flake/home-configurations.nix`
+  - `dendritic/flake/disko-configurations.nix`
 
 ## Particionamento de Disco
 
@@ -24,7 +37,7 @@ Propiciar uma experiência de uso similar à do Fedora Silverblue ou do projeto 
 
 ### Esquema de Partições
 
-```
+```text
 Disco (ex: /dev/nvme0n1)
 ├── Partição 1: ESP (512 MB, FAT32)
 │   └── Mountpoint: /boot
@@ -39,6 +52,7 @@ Disco (ex: /dev/nvme0n1)
 ### Raiz efêmera (tmpfs)
 
 A raiz do sistema (`/`) é um **tmpfs** — filesystem inteiramente em RAM. Isso significa:
+
 - É sempre limpa a cada boot (sem dados acumulados, sem rollback necessário)
 - Qualquer arquivo gravado em `/` é perdido ao reiniciar (exceto os preservados em `/persist`)
 - Simples e confiável: não requer snapshot, rollback ou configuração de initrd
@@ -50,7 +64,7 @@ A raiz do sistema (`/`) é um **tmpfs** — filesystem inteiramente em RAM. Isso
 A convenção `@` é compatível com ferramentas como Timeshift e amplamente adotada pela comunidade.
 
 | Subvolume | Mountpoint | Características |
-|-----------|-----------|-----------------|
+| --------- | ---------- | --------------- |
 | `@home` | `/home` | Preservado — diretórios de usuário |
 | `@nix` | `/nix` | Preservado — Nix store (essencial) |
 | `@persist` | `/persist` | Preservado — dados persistentes do sistema (impermanence) |
@@ -60,10 +74,12 @@ A convenção `@` é compatível com ferramentas como Timeshift e amplamente ado
 | `@snapshots` | `/.snapshots` | Preservado — snapshots Btrfs para backup |
 
 **Opções de montagem globais:**
+
 - `compress=zstd` (exceto `@log`: sem compressão)
 - `noatime`
 
 **Impermanência — estratégia:**
+
 - A raiz tmpfs é sempre "limpa" ao boot — não requer snapshot ou rollback
 - Arquivos importantes são preservados em `/persist` via bind mounts (impermanence)
 - O `/persist` é um subvolume Btrfs persistente entre boots
@@ -71,12 +87,14 @@ A convenção `@` é compatível com ferramentas como Timeshift e amplamente ado
 ### Swap Híbrida
 
 **Por host (16 GB RAM):**
+
 | Componente | Tamanho | Prioridade | Objetivo |
-|-----------|---------|------------|----------|
+| ---------- | ------- | ---------- | -------- |
 | zram (zstd) | 8 GB (50% RAM) | 100 (primária) | Performance diária |
 | Swap em disco | 20 GB | 5 (backup) | Hibernação |
 
 **Comportamento:**
+
 1. Sistema usa zram primeiro (mais rápido, não desgasta SSD)
 2. Quando zram esgota, usa swap em disco
 3. Hibernação usa swap em disco
@@ -151,6 +169,7 @@ A convenção `@` é compatível com ferramentas como Timeshift e amplamente ado
 - Repositório recomendado: Flathub
 
 **Flatpaks recomendados para instalar:**
+
 ```bash
 flatpak install flathub org.gnome.Papers   # GNOME: PDF viewer
 flatpak install flathub org.kde.okular     # KDE: PDF viewer
@@ -187,10 +206,11 @@ flatpak install flathub org.kde.konsole    # KDE: terminal
 
 ## Home Manager
 
-- Integrado como módulo NixOS
-- Usa pacotes globais do sistema (`useGlobalPkgs = true`)
-- Configuração base em `home.nix`
-- Configurações de usuário em `users/<usuario>.nix` (commitados)
+- Usado em modo standalone (fora da avaliação de NixOS)
+- Compartilha a mesma revisão de nixpkgs do flake
+- Configuração base em `home/common.nix`
+- Configuração por usuário em `home/users/<usuario>/home.nix` (quando necessário)
+- Saídas `homeConfigurations` geradas automaticamente a partir do inventário dendrítico
 
 ## Impermanence (Sistema Efêmero)
 

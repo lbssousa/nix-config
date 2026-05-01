@@ -41,16 +41,33 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 
 ## 📁 Estrutura do Projeto
 
-```
+```text
 .
 ├── flake.nix                 # Entrada principal do Flake
 ├── flake.lock                # Lockfile das dependências
+├── dendritic/                # Módulos de topo (padrão dendritic)
+│   ├── imports.nix           # Import automático de todos os módulos dendríticos
+│   ├── options.nix           # Opções do namespace `dendritic.*`
+│   ├── data/
+│   │   ├── hosts.nix         # Inventário de hosts (sistema, desktop padrão, módulos extras)
+│   │   └── users.nix         # Inventário de usuários do sistema/home
+│   ├── features/
+│   │   ├── local-overlay.nix # Overlay local (pacotes customizados)
+│   │   └── nixos-modules.nix # Lista de módulos NixOS compartilhados e módulos de usuários
+│   └── flake/
+│       ├── nixos-configurations.nix # Geração das saídas nixosConfigurations
+│       ├── home-configurations.nix  # Geração das saídas homeConfigurations
+│       └── disko-configurations.nix # Geração das saídas diskoConfigurations
 ├── disko.nix                 # Template Btrfs de particionamento (LUKS+LVM+Btrfs)
 ├── home/                     # Configurações Home Manager (independentes do sistema)
 │   ├── common.nix            # Config HM base — aplicada a todos os usuários
 │   ├── modules/              # Módulos HM reutilizáveis por usuário
-│   │   └── apps/
-│   │       └── brave.nix     # Brave Browser via nixpkgs (alternativa ao Flatpak)
+│   │   ├── apps/
+│   │   │   ├── nix-validation.nix
+│   │   │   └── browsers/
+│   │   │       └── google-chrome.nix
+│   │   └── desktop/
+│   │       └── ibus-compose.nix
 │   └── users/                # Customizações por usuário
 │       └── laercio/
 │           └── home.nix      Config específica do abutre (p10k, git, Bitwarden)
@@ -111,8 +128,8 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 A configuração está organizada em dois planos independentes:
 
 | Plano | Diretórios | Comando |
-|-------|-----------|---------|
-| **Sistema (NixOS)** | `hosts/`, `modules/system/`, `users/` | `sudo nixos-rebuild switch --flake /etc/nixos#<host>` |
+| ----- | ---------- | ------- |
+| **Sistema (NixOS)** | `dendritic/`, `hosts/`, `modules/system/`, `users/` | `sudo nixos-rebuild switch --flake /etc/nixos#<host>` |
 | **Usuário (Home Manager)** | `home/` | `home-manager switch --flake /etc/nixos#<usuario>@<host>` |
 
 - Switches de sistema **não** aplicam configurações de home-manager.
@@ -123,7 +140,7 @@ A configuração está organizada em dois planos independentes:
 
 ### Pré-requisitos
 
-- ISO do NixOS (minimal ou graphical): https://nixos.org/download.html
+- ISO do NixOS (minimal ou graphical): [https://nixos.org/download.html](https://nixos.org/download.html)
 - USB bootável criado com a ISO
 
 ### Instalação
@@ -241,6 +258,7 @@ lbnix home abutre@bigodon
 ```
 
 > **Primeira vez?** Se `home-manager` ainda não está instalado, use:
+>
 > ```bash
 > nix run nixpkgs#home-manager -- switch --flake /etc/nixosabutre@barbudus
 > ```
@@ -260,6 +278,7 @@ sudo nixos-rebuild switch --rollback
 ### 1. Criar a conta do sistema
 
 1. Copie o template de usuário:
+
    ```bash
    cp users/skeleton.nix users/seu-usuario.nix
    ```
@@ -267,19 +286,32 @@ sudo nixos-rebuild switch --rollback
 2. Edite `users/seu-usuario.nix` e substitua `skeleton` pelo nome do usuário.
 
 3. Adicione o arquivo ao índice do git:
+
    ```bash
    git add users/seu-usuario.nix
    ```
 
-4. Importe o arquivo em cada `hosts/<host>/configuration.nix` desejado:
+4. Inclua o usuário no inventário do sistema:
+
+   > Com arquitetura dendrítica, a inclusão é centralizada no inventário.
+   > Adicione o login em `dendritic/data/users.nix`.
+
+   Exemplo:
+
    ```nix
-   imports = [
-     # ...outros módulos...
-     ./../../users/seu-usuario.nix
+   config.dendritic.users = [
+     abutre
+     surubi
+     coruja
+     camelo
+     cavalo
+     macaco
+     "seu-usuario"
    ];
    ```
 
 5. Rebuilde o sistema:
+
    ```bash
    sudo nixos-rebuild switch --flake /etc/nixos#barbudus
    ```
@@ -289,48 +321,50 @@ sudo nixos-rebuild switch --rollback
 Para uma configuração HM personalizada (além da `home/common.nix` padrão):
 
 1. Crie o arquivo de customização do usuário:
+
    ```bash
    mkdir -p home/users/seu-usuario
    cp home/users/abutre/home.nix home/users/seu-usuario/home.nix
    # Edite conforme necessário
    ```
 
-2. Adicione entradas no `flake.nix` dentro de `homeConfigurations`:
-   ```nix
-   // mkHomeAllHosts "seu-usuario" [ ./home/users/seu-usuario/home.nix ]
-   ```
+2. Registre a customização do usuário no builder de Home Manager:
+
+   > Com arquitetura dendrítica, `homeConfigurations` é gerado automaticamente.
+   > Para usuários com customização própria, adicione o import condicional no builder
+   > de Home Manager (ou generalize para múltiplos usuários) em `dendritic/flake/home-configurations.nix`.
 
 3. Aplique:
+
    ```bash
    home-manager switch --flake /etc/nixos#seu-usuario@barbudus
    ```
 
-> **Usuários sem customização** já possuem entradas automáticas em `homeConfigurations`
-> (via `mkHomeAllHosts`), aplicando apenas `home/common.nix`.
+> Usuários sem customização continuam com entradas automáticas em `homeConfigurations`,
+> aplicando apenas `home/common.nix`.
 
 ## 🖥️ Adicionando um Novo Host
 
 1. Crie o diretório `hosts/<novo-host>/` com os arquivos:
-   - `configuration.nix` — importa os módulos de sistema e usuários
+   - `configuration.nix` — configurações específicas do host (sem lista de imports compartilhados)
    - `hardware-configuration.nix` — gerado por `nixos-generate-config`
    - `disko.nix` — parâmetros de particionamento (copie de um host existente)
 
-2. Adicione o host em `flake.nix`:
+2. Adicione o host no inventário dendrítico em `dendritic/data/hosts.nix`:
+
    ```nix
-   nixosConfigurations = {
+   config.dendritic.hosts = {
      # ...hosts existentes...
-     novo-host = mkHost "novo-host" "x86_64-linux" [ ];
+     novo-host = {
+       system = "x86_64-linux";
+       defaultDesktop = "plasma";
+       extraNixosModules = [ ];
+     };
    };
    ```
 
-3. Adicione o host em `allHosts` em `flake.nix` para geração automática dos `homeConfigurations`:
-   ```nix
-   allHosts = {
-     barbudus = "x86_64-linux";
-     bigodon  = "x86_64-linux";
-     novo-host = "x86_64-linux";
-   };
-   ```
+3. Adicione os arquivos do host ao índice do git (`git add`) antes de avaliar o flake,
+   pois flakes ignoram arquivos não rastreados.
 
 ## 📡 Configurando Redes Wi-Fi
 

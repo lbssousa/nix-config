@@ -1,5 +1,5 @@
 # Módulo de pacotes: Ferramentas essenciais do sistema
-{ pkgs, inputs, ... }:
+{ pkgs, ... }:
 
 {
   environment.systemPackages =
@@ -45,11 +45,6 @@
       cryptsetup
       lvm2
       zfs
-    ]
-    ++ [
-      # Home Manager (da mesma versão do flake) — CLI para switches independentes do sistema
-      # Uso: home-manager switch --flake /etc/nixos#<usuario>@<host>
-      inputs.home-manager.packages.${pkgs.stdenv.hostPlatform.system}.default
     ];
 
   # Definir Neovim como editor padrão do sistema

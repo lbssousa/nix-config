@@ -55,11 +55,10 @@
   outputs =
     inputs:
     inputs.flake-parts.lib.mkFlake { inherit inputs; } {
-      imports = [
-        ./parts/nixos.nix
-        ./parts/home-manager.nix
-        ./parts/disko.nix
-      ];
+      imports = import ./dendritic/imports.nix {
+        root = ./dendritic;
+        lib = inputs.nixpkgs.lib;
+      };
 
       systems = [ "x86_64-linux" ];
     };
