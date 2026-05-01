@@ -15,6 +15,7 @@ in
 {
   imports = [
     ../../modules/apps/nix-validation.nix
+    ../../modules/apps/security/yubikey.nix
   ];
 
   home = {
