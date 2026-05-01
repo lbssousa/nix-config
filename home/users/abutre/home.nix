@@ -258,7 +258,6 @@ in
           name = "abutre";
           email = "git@example.com";
         };
-        tag.gpgsign = true;
         safe.directory = [ "/etc/nixos" ];
       };
     };
