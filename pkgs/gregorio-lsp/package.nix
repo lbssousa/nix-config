@@ -36,10 +36,19 @@ buildNpmPackage rec {
   '';
 
   # Substitui o symlink dangling de gregolint no $out pela versão construída
+  # e remove a dependência opcional tree-sitter-gregorio quando ela virar
+  # um symlink quebrado no pacote final. O próprio projeto faz fallback para
+  # o parser TypeScript quando tree-sitter não está disponível.
   postInstall = ''
     local gregolintDest="$out/lib/node_modules/gregorio-lsp/node_modules/gregolint"
+    local treeSitterGregorioDest="$out/lib/node_modules/gregorio-lsp/node_modules/tree-sitter-gregorio"
+
     rm -rf "$gregolintDest"
     cp -r ${gregolint}/lib/node_modules/gregolint "$gregolintDest"
+
+    if [ -L "$treeSitterGregorioDest" ] && [ ! -e "$treeSitterGregorioDest" ]; then
+      rm -f "$treeSitterGregorioDest"
+    fi
   '';
 
   meta = with lib; {
