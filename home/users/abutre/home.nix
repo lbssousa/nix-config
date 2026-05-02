@@ -155,9 +155,11 @@ in
         vim_mode = true;
         hour_format = "hour24";
         buffer_font_family = "ZedMono Nerd Font Mono";
-        buffer_font_size = 14;
-        terminal_font_family = "ZedMono Nerd Font Mono";
-        terminal_font_size = 14;
+        buffer_font_size = 24;
+        terminal = {
+          font_family = "JetBrainsMono Nerd Font Mono";
+          font_size = 24;
+        };
         lsp = {
           nil.binary.path = "${pkgs.nil}/bin/nil";
           nixd.binary.path = "${pkgs.nixd}/bin/nixd";
