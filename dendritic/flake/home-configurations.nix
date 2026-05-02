@@ -10,7 +10,6 @@ let
     inputs.home-manager.lib.homeManagerConfiguration {
       pkgs = inputs.nixpkgs.legacyPackages.${system};
       extraSpecialArgs = {
-        inherit inputs;
         inherit desktop;
       };
       modules = [

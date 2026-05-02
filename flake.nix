@@ -41,8 +41,6 @@
     # nix-flatpak for declarative Flatpak management
     nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=v0.7.0";
 
-    # Zed editor from upstream flake
-    zed.url = "github:zed-industries/zed";
   };
 
   outputs =

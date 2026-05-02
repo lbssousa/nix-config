@@ -3,7 +3,6 @@
   config,
   pkgs,
   lib,
-  inputs,
   desktop ? "gnome",
   ...
 }:
@@ -136,7 +135,7 @@ in
   programs = {
     "zed-editor" = {
       enable = true;
-      package = inputs.zed.packages.${pkgs.system}.default;
+      package = pkgs.zed-editor;
       extensions = [
         "nix"
         "latex"
