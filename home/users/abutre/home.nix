@@ -145,6 +145,7 @@ in
       enable = true;
       package = pkgs.zed-editor;
       extensions = [
+        "gregorio"
         "nix"
         "latex"
       ];
