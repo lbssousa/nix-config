@@ -64,7 +64,8 @@ in
     '';
   };
 
-  xdg.dataFile = lib.optionalAttrs isPlasma {
+  xdg.dataFile =
+    lib.optionalAttrs isPlasma {
     "konsole/default.profile".text = ''
       [Appearance]
       Font=JetBrainsMono Nerd Font Mono,14,-1,5,50,0,0,0,0,0
@@ -75,7 +76,14 @@ in
       TerminalColumns=154
       TerminalRows=32
     '';
-  };
+      }
+      // {
+        # Instala a extensão Zed para notação gregoriana como extensão local
+        "zed/extensions/installed/gregorio" = {
+          source = pkgs.zed-gregorio;
+          recursive = true;
+        };
+      };
 
   # Garante que sobras do Yakuake sejam removidas ao trocar para ambiente não-Plasma.
   home.activation.cleanupYakuakeWhenNotPlasma = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
@@ -145,6 +153,8 @@ in
         nixd
         texlab
         ltex-ls
+          gregolint
+          gregorio-lsp
       ];
       userSettings = {
         theme = {
@@ -165,6 +175,7 @@ in
           nixd.binary.path = "${pkgs.nixd}/bin/nixd";
           texlab.binary.path = "${pkgs.texlab}/bin/texlab";
           "ltex-ls".binary.path = "${pkgs.ltex-ls}/bin/ltex-ls";
+            "gregorio-lsp".binary.path = "${pkgs.gregorio-lsp}/bin/gregorio-lsp";
         };
       };
     };

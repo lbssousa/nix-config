@@ -8,7 +8,7 @@ let
   mkHome =
     username: system: desktop:
     inputs.home-manager.lib.homeManagerConfiguration {
-      pkgs = inputs.nixpkgs.legacyPackages.${system};
+      pkgs = inputs.nixpkgs.legacyPackages.${system}.extend config.dendritic.localOverlay;
       extraSpecialArgs = {
         inherit desktop;
       };
