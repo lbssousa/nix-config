@@ -1,6 +1,6 @@
 # Módulo de usuários: Esqueleto para definição de usuários
-# Os arquivos reais de usuário ficam em users/ e são ignorados pelo git
-# Consulte users/skeleton.nix para criar seu arquivo de usuário
+# Os arquivos reais de usuário ficam em private/users/ (criptografado com git-crypt)
+# Consulte private/users/skeleton.nix para criar seu arquivo de usuário
 {
   config,
   lib,
@@ -28,9 +28,9 @@ in
     wheelNeedsPassword = true;
   };
 
-  # Os usuários reais são definidos em arquivos separados em users/
-  # Exemplo: users/abutre.nix
-  # Para criar um usuário, copie users/skeleton.nix para users/<seu-usuario>.nix
+  # Os usuários reais são definidos em arquivos separados em private/users/
+  # Exemplo: private/users/abutre.nix
+  # Para criar um usuário, copie private/users/skeleton.nix para private/users/<seu-usuario>.nix
   # e descomente/ajuste as configurações
 
   # Configuração de grupos padrão disponíveis

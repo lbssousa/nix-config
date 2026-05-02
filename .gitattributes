@@ -1,0 +1,2 @@
+# Arquivos na área privada são criptografados com git-crypt
+private/** filter=git-crypt diff=git-crypt

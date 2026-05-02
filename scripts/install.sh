@@ -36,10 +36,11 @@
 #                       Pode ser repetido para criar múltiplos usuários.
 #                       "sudo" (padrão) inclui o usuário no grupo wheel (sudo).
 #                       "nosudo" cria o usuário sem permissão de sudo.
-#   --age-keys-backup   Caminho para o backup do arquivo keys.txt da chave age
+#   --age-keys-backup   Caminho para o backup do arquivo key.txt da chave age
 #                       (sops-nix). Copiado para /persist/etc/sops/age/keys.txt
-#                       no sistema instalado. Se omitido, é perguntado
-#                       interativamente (pode ser deixado vazio para pular).
+#                       no sistema instalado. Se omitido, usa por padrão
+#                       private/sops/age/key.txt (quando existir no repositório)
+#                       e, se não existir, pergunta interativamente.
 #   --non-interactive   Não faz perguntas; falha se informações obrigatórias
 #                       não forem fornecidas via flags
 #   --help, -h          Exibe ajuda e sai
@@ -176,10 +177,11 @@ Opções:
                       "sudo" (padrão) inclui o usuário no grupo wheel (sudo).
                       "nosudo" cria o usuário sem permissão de sudo.
                       Se omitido, é perguntado interativamente.
-  --age-keys-backup   Caminho para o backup do arquivo keys.txt da chave age
+  --age-keys-backup   Caminho para o backup do arquivo key.txt da chave age
                       (sops-nix). Copiado para /persist/etc/sops/age/keys.txt
-                      no sistema instalado. Se omitido, é perguntado
-                      interativamente (pode ser deixado vazio para pular).
+                      no sistema instalado. Se omitido, usa por padrão
+                      private/sops/age/key.txt (quando existir no repositório)
+                      e, se não existir, pergunta interativamente.
   --non-interactive   Não faz perguntas; falha se informações obrigatórias
                       não forem fornecidas via flags.
   --help, -h          Exibe esta ajuda e sai.
@@ -260,6 +262,9 @@ echo
 # Detectar o diretório raiz da configuração (onde este script está)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+PRIVATE_DIR="$CONFIG_DIR/private"
+PRIVATE_USERS_DIR="$PRIVATE_DIR/users"
+PRIVATE_AGE_KEY_REPO="$PRIVATE_DIR/sops/age/key.txt"
 
 info "Diretório de configuração: $CONFIG_DIR"
 cd "$CONFIG_DIR"
@@ -499,7 +504,7 @@ USERS_SUDO=()
 
 _create_user_file() {
   local user="$1" full_name="$2" sudo_flag="$3"
-  local user_file="$CONFIG_DIR/users/$user.nix"
+  local user_file="$PRIVATE_USERS_DIR/$user.nix"
 
   if [[ -f "$user_file" ]]; then
     warn "Arquivo $user_file já existe."
@@ -509,7 +514,7 @@ _create_user_file() {
     fi
   fi
 
-  cp "$CONFIG_DIR/users/skeleton.nix" "$user_file"
+  cp "$PRIVATE_USERS_DIR/skeleton.nix" "$user_file"
   sed -i \
     -e "s|users\.users\.skeleton|users.users.$user|g" \
     -e "s|users\.skeleton\b|users.$user|g" \
@@ -528,7 +533,7 @@ _create_user_file() {
 
 # Detectar arquivos de usuário já existentes (excluindo skeleton.nix)
 _EXISTING_USERS=()
-for _f in "$CONFIG_DIR/users/"*.nix; do
+for _f in "$PRIVATE_USERS_DIR/"*.nix; do
   _bname="$(basename "$_f" .nix)"
   [[ "$_bname" == "skeleton" ]] && continue
   [[ "$_bname" == *"-home" ]] && continue
@@ -668,7 +673,7 @@ info "==> Passo 5: Registrar arquivos de usuário no índice do git"
 # causando erros "module not found" no nixos-install.
 # git add garante que o arquivo está no índice e visível ao Nix.
 for _i in "${!USERS_LOGIN[@]}"; do
-  _ufile="$CONFIG_DIR/users/${USERS_LOGIN[$_i]}.nix"
+  _ufile="$PRIVATE_USERS_DIR/${USERS_LOGIN[$_i]}.nix"
   git add "$_ufile"
   success "Arquivo $_ufile adicionado ao índice do git."
 done
@@ -682,7 +687,7 @@ info "==> Passo 6: Configurar importações dos usuários em $CFG_FILE"
 
 for _i in "${!USERS_LOGIN[@]}"; do
   _user="${USERS_LOGIN[$_i]}"
-  USER_IMPORT="./../../users/$_user.nix"
+  USER_IMPORT="./../../private/users/$_user.nix"
 
   if grep -qF "$USER_IMPORT" "$CFG_FILE"; then
     info "Import de $_user.nix já presente em $CFG_FILE."
@@ -767,27 +772,33 @@ echo
 info "==> Passo 6b: Restaurar chave age do sops-nix"
 
 _AGE_KEYS_DST="/mnt/persist/etc/sops/age/keys.txt"
+_DEFAULT_AGE_KEYS_BACKUP="$PRIVATE_AGE_KEY_REPO"
+
+if [[ -z "$OPT_AGE_KEYS_BACKUP" && -f "$_DEFAULT_AGE_KEYS_BACKUP" ]]; then
+  OPT_AGE_KEYS_BACKUP="$_DEFAULT_AGE_KEYS_BACKUP"
+  info "Usando key.txt do repositório por padrão: $OPT_AGE_KEYS_BACKUP"
+fi
 
 if [[ "$OPT_NON_INTERACTIVE" != "true" && -z "$OPT_AGE_KEYS_BACKUP" ]]; then
   info "Se você usa sops-nix com secrets de sistema, copie aqui o backup de"
-  info "keys.txt para /persist/etc/sops/age/keys.txt no sistema instalado."
-  echo -ne "${BOLD}Caminho para o backup de keys.txt (Enter para pular): ${RESET}"
+  info "key.txt para /persist/etc/sops/age/keys.txt no sistema instalado."
+  echo -ne "${BOLD}Caminho para o backup de key.txt (Enter para pular): ${RESET}"
   read -r OPT_AGE_KEYS_BACKUP
 fi
 
 if [[ -n "$OPT_AGE_KEYS_BACKUP" ]]; then
   # Rejeitar caminhos com quebras de linha
   if [[ "$OPT_AGE_KEYS_BACKUP" == *$'\n'* ]]; then
-    die "Caminho inválido para o backup de keys.txt."
+    die "Caminho inválido para o backup de key.txt."
   fi
   if [[ ! -f "$OPT_AGE_KEYS_BACKUP" ]]; then
     die "Arquivo de backup '$OPT_AGE_KEYS_BACKUP' não encontrado."
   fi
-  mkdir -p "$(dirname "$_AGE_KEYS_DST")"
-  install -m 600 "$OPT_AGE_KEYS_BACKUP" "$_AGE_KEYS_DST"
+  install -d -o root -g root -m 700 "$(dirname "$_AGE_KEYS_DST")"
+  install -o root -g root -m 600 "$OPT_AGE_KEYS_BACKUP" "$_AGE_KEYS_DST"
   success "Chave age copiada para $_AGE_KEYS_DST."
 else
-  info "Nenhum backup de keys.txt fornecido. Pulando."
+  info "Nenhum backup de key.txt fornecido. Pulando."
 fi
 
 # ---------------------------------------------------------------------------
@@ -821,7 +832,7 @@ if [[ "$OPT_NON_INTERACTIVE" == "true" ]] || confirm "Copiar configuração para
   #   os arquivos LOCAIS, tornando-os visíveis ao avaliador de flakes do Nix
   #   (que usa o índice git para determinar quais arquivos incluir no flake source).
   for _i in "${!USERS_LOGIN[@]}"; do
-    _ufile_rel="users/${USERS_LOGIN[$_i]}.nix"
+    _ufile_rel="private/users/${USERS_LOGIN[$_i]}.nix"
     if [[ -f "/mnt/etc/nixos/$_ufile_rel" ]]; then
       git -C /mnt/etc/nixos add "$_ufile_rel" 2>/dev/null || true
       success "Arquivo $_ufile_rel re-indexado em /mnt/etc/nixos."

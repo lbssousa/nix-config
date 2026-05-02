@@ -399,7 +399,7 @@ if [[ -d "$ROOT/etc/nixos" ]]; then
       || info "    (não foi possível obter status)"
     # Listar arquivos staged (no índice)
     info "Arquivos no índice git (staged):"
-    git -C "$ROOT/etc/nixos" ls-files 2>/dev/null | grep -E '^(users/|hosts/)' \
+    git -C "$ROOT/etc/nixos" ls-files 2>/dev/null | grep -E '^(private/users/|hosts/)' \
       | sed 's/^/    /' \
       || info "    (não foi possível listar)"
   else
@@ -431,10 +431,10 @@ else
   info "Hosts disponíveis: ${_hosts[*]}"
 fi
 
-# Verificar arquivos de usuário em /etc/nixos/users/
+# Verificar arquivos de usuário em /etc/nixos/private/users/
 echo
-info "==> Arquivos de usuário em /etc/nixos/users/"
-_user_files=$(ls -1 "$ROOT/etc/nixos/users/"*.nix 2>/dev/null \
+info "==> Arquivos de usuário em /etc/nixos/private/users/"
+_user_files=$(ls -1 "$ROOT/etc/nixos/private/users/"*.nix 2>/dev/null \
   | grep -v "skeleton.nix" || true)
 if [[ -n "$_user_files" ]]; then
   ok "Arquivos de usuário encontrados:"
@@ -443,15 +443,15 @@ if [[ -n "$_user_files" ]]; then
     _username="${_fname%.nix}"
     # Verificar se está no índice git
     if [[ -d "$ROOT/etc/nixos/.git" ]]; then
-      if git -C "$ROOT/etc/nixos" ls-files --error-unmatch "users/$_fname" &>/dev/null; then
-        info "  ✔ users/$_fname (indexado no git — visível ao Nix)"
+      if git -C "$ROOT/etc/nixos" ls-files --error-unmatch "private/users/$_fname" &>/dev/null; then
+        info "  ✔ private/users/$_fname (indexado no git — visível ao Nix)"
       else
-        fail "  ✖ users/$_fname (NÃO indexado no git — invisível ao Nix!)"
-        warn "    Execute: git -C $ROOT/etc/nixos add --force users/$_fname"
+        fail "  ✖ private/users/$_fname (NÃO indexado no git — invisível ao Nix!)"
+        warn "    Execute: git -C $ROOT/etc/nixos add --force private/users/$_fname"
         ((_issues++)) || true
       fi
     else
-      info "  → users/$_fname"
+      info "  → private/users/$_fname"
     fi
     # Verificar se o usuário está em /etc/passwd
     if grep -q "^${_username}:" "$ROOT/etc/passwd" 2>/dev/null; then
@@ -462,8 +462,8 @@ if [[ -n "$_user_files" ]]; then
     fi
   done
 else
-  warn "Nenhum arquivo de usuário encontrado em /etc/nixos/users/"
-  info "(Apenas users/skeleton.nix encontrado ou diretório vazio)"
+  warn "Nenhum arquivo de usuário encontrado em /etc/nixos/private/users/"
+  info "(Apenas private/users/skeleton.nix encontrado ou diretório vazio)"
 fi
 
 # Verificar imports em configuration.nix de cada host
@@ -474,7 +474,7 @@ for _host in "${_hosts[@]}"; do
     continue
   fi
   info "==> Imports de usuário em hosts/$_host/configuration.nix:"
-  _user_imports=$(grep -E '^\s+\.\/\.\.\/(\.\.\/)?users/[^.]+\.nix' "$_cfgfile" 2>/dev/null || true)
+  _user_imports=$(grep -E '^\s+\.\/\.\.\/(\.\.\/)?private/users/[^.]+\.nix' "$_cfgfile" 2>/dev/null || true)
   _placeholder=$(grep -E '#.*seu-usuario\.nix|#.*<seu-usuario>' "$_cfgfile" 2>/dev/null || true)
   if [[ -n "$_user_imports" ]]; then
     ok "Imports de usuário encontrados:"
@@ -537,7 +537,7 @@ echo "      passwd --root /mnt <usuario>"
 echo "      passwd --root /mnt root"
 echo "      install -m 640 /mnt/etc/shadow /mnt/persist/etc/shadow"
 echo "  • Se arquivos de usuário não estão indexados:"
-echo "      git -C /mnt/etc/nixos add users/<usuario>.nix"
+echo "      git -C /mnt/etc/nixos add private/users/<usuario>.nix"
 echo "      nixos-install --flake /mnt/etc/nixos#<host>"
 echo "  • Se o sistema ainda não foi instalado:"
 echo "      bash scripts/install.sh"

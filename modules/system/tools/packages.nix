@@ -7,6 +7,7 @@
     [
       # Ferramentas básicas do sistema
       git
+      git-crypt
       wget
       curl
       htop
