@@ -3,6 +3,7 @@
   config,
   pkgs,
   lib,
+  inputs,
   desktop ? "gnome",
   ...
 }:
@@ -133,6 +134,40 @@ in
   };
 
   programs = {
+    "zed-editor" = {
+      enable = true;
+      package = inputs.zed.packages.${pkgs.system}.default;
+      extensions = [
+        "nix"
+        "latex"
+      ];
+      extraPackages = with pkgs; [
+        nil
+        nixd
+        texlab
+        ltex-ls
+      ];
+      userSettings = {
+        theme = {
+          mode = "dark";
+          dark = "One Dark";
+          light = "One Light";
+        };
+        vim_mode = true;
+        hour_format = "hour24";
+        buffer_font_family = "ZedMono Nerd Font Mono";
+        buffer_font_size = 14;
+        terminal_font_family = "ZedMono Nerd Font Mono";
+        terminal_font_size = 14;
+        lsp = {
+          nil.binary.path = "${pkgs.nil}/bin/nil";
+          nixd.binary.path = "${pkgs.nixd}/bin/nixd";
+          texlab.binary.path = "${pkgs.texlab}/bin/texlab";
+          "ltex-ls".binary.path = "${pkgs.ltex-ls}/bin/ltex-ls";
+        };
+      };
+    };
+
     vscode = {
       enable = true;
       profiles.default.extensions =

@@ -28,6 +28,10 @@
     pinentry.package = pkgs.pinentry-gnome3;
   };
 
+  # Agente SSH nativo do OpenSSH como serviço systemd de usuário.
+  # Define SSH_AUTH_SOCK automaticamente para o socket do ssh-agent.
+  services.ssh-agent.enable = true;
+
   home.sessionVariables = {
     U2F_KEYS_FILE = "$HOME/.config/Yubico/u2f_keys";
   };
