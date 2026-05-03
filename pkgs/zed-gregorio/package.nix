@@ -2,13 +2,13 @@
 
 stdenv.mkDerivation rec {
   pname = "zed-gregorio";
-  version = "0.1.0";
+  version = "1.0.0-alpha.1";
 
   src = fetchFromGitHub {
     owner = "AISCGre-BR";
     repo = "zed-gregorio";
-    rev = "1ff3746c9706a3a22b569ea163e0f5f6fcfd900e";
-    hash = "sha256-csEYsSEuhJD67e5IxOywVFMk9joDOIY+JlGnbJ77U/s=";
+    rev = "432735956e23ee8584dbb951c3d48d3578ed1772";
+    hash = "sha256-hgtaaY0oJM5zciL5lC24/rjdZ78d0CRjz0NNKE/x504=";
     # Submódulos (grammars/gregorio, grammars/tree-sitter-gregorio) não são
     # necessários: o grammars/gregorio.wasm já está pré-compilado no repositório.
   };
