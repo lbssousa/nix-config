@@ -28,9 +28,10 @@
     pinentry.package = pkgs.pinentry-gnome3;
   };
 
-  # Agente SSH nativo do OpenSSH como serviço systemd de usuário.
-  # Define SSH_AUTH_SOCK automaticamente para o socket do ssh-agent.
-  services.ssh-agent.enable = true;
+  # O ssh-agent nativo do OpenSSH não suporta chaves ED25519-SK (YubiKey
+  # resident keys) e retorna "agent refused operation" ao tentar usá-las.
+  # Desabilitado para forçar o uso direto das chaves sem intermediário.
+  services.ssh-agent.enable = false;
 
   home.sessionVariables = {
     U2F_KEYS_FILE = "$HOME/.config/Yubico/u2f_keys";

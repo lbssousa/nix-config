@@ -1,19 +1,19 @@
-{ lib, rustPlatform, fetchFromGitHub }:
-
-let
-  src = fetchFromGitHub {
-    owner = "AISCGre-BR";
-    repo = "tree-sitter-gregorio";
-    rev = "002d6b31d8860324a3a51544b245903e34cbdf80";
-    hash = "sha256-Axg0r3pl7WERLSaUL/XRRvXyzJoTPC3lpNAy2T5m0LY=";
-  };
-in
+{
+  lib,
+  rustPlatform,
+  fetchFromGitHub,
+}:
 
 rustPlatform.buildRustPackage {
   pname = "tree-sitter-gregorio";
-  version = "1.0.0-alpha.1";
+  version = "0.5.2";
 
-  inherit src;
+  src = fetchFromGitHub {
+    owner = "AISCGre-BR";
+    repo = "tree-sitter-gregorio";
+    rev = "c9034de8f8c1c1605e9ccde29500f08e72ea51ff";
+    hash = "sha256-olYGpGIKSUp5IV+8jaNwuRDMB6pL6ITeCywfqBuVAp0=";
+  };
 
   cargoLock.lockFile = "${src}/Cargo.lock";
   doCheck = false;
