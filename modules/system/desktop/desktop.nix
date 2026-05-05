@@ -136,6 +136,18 @@ in
       });
     '';
 
+    # Enable running unpatched FHS binaries such as wasi-sdk (downloaded by
+    # Zed to compile tree-sitter grammars). Without nix-ld, dynamically linked
+    # executables intended for generic Linux fail with "stub-ld" errors.
+    programs.nix-ld = {
+      enable = true;
+      # Minimum libraries required by wasi-sdk's clang and typical dev tools.
+      libraries = with pkgs; [
+        stdenv.cc.cc.lib # libstdc++.so.6
+        zlib
+      ];
+    };
+
     # XDG Portal para integração Flatpak com o DE selecionado
     xdg.portal = {
       enable = true;
