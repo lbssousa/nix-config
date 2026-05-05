@@ -33,9 +33,14 @@ stdenv.mkDerivation rec {
     runHook postInstall
   '';
 
+  # NOTE: this package is currently not wired into the overlay and is kept
+  # only as a reference. The bundled extension.wasm and grammars/gregorio.wasm
+  # were removed from the upstream repository (v0.3.0+); this derivation would
+  # need to be rewritten to compile the extension and grammar from source.
   meta = with lib; {
     description = "Zed extension for Gregorio GABC/NABC Gregorian chant notation";
     homepage = "https://github.com/AISCGre-BR/zed-gregorio";
     license = licenses.mit;
+    broken = true;
   };
 }
