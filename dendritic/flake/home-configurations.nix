@@ -13,23 +13,22 @@ let
         inherit desktop;
       };
       modules = [
+        inputs.sops-nix.homeManagerModules.sops
         ../../home/common.nix
         {
           home.username = username;
           home.homeDirectory = "/home/${username}";
         }
-      ] ++ lib.optionals (username == abutre) [ ../../private/home/users/abutre/home.nix ];
+      ]
+      ++ lib.optionals (username == abutre) [ ../../private/home/users/abutre/home.nix ];
     };
 
   mkUserHostEntries =
     username:
-    lib.mapAttrs' (
-      hostname: hostSpec:
-      {
-        name = "${username}@${hostname}";
-        value = mkHome username hostSpec.system "gnome";
-      }
-    ) hosts;
+    lib.mapAttrs' (hostname: hostSpec: {
+      name = "${username}@${hostname}";
+      value = mkHome username hostSpec.system "gnome";
+    }) hosts;
 
   mkUserHostDesktopEntries =
     username:
@@ -45,10 +44,7 @@ let
       ) hosts
     );
 
-  entriesPerUser =
-    username:
-    mkUserHostEntries username
-    // mkUserHostDesktopEntries username;
+  entriesPerUser = username: mkUserHostEntries username // mkUserHostDesktopEntries username;
 in
 {
   flake.homeConfigurations = lib.foldl' lib.recursiveUpdate { } (map entriesPerUser users);
