@@ -64,9 +64,6 @@ in
           ++ lib.optionals (cfg.environment == "plasma") plasmaFlatpaks;
       };
 
-      # Bluetooth
-      blueman.enable = true;
-
       # Impressão (CUPS)
       printing.enable = true;
     };

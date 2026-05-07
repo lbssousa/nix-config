@@ -1,5 +1,6 @@
 # Recursos de YubiKey para Home Manager (usuário)
 {
+  lib,
   pkgs,
   desktop ? "gnome",
   ...
@@ -10,13 +11,34 @@ let
 in
 
 {
-  home.packages = with pkgs; [
-    yubikey-manager # provê o comando ykman
-    yubioath-flutter # Yubico Authenticator
-    pam_u2f # ferramenta pamu2fcfg para registrar chaves U2F
-    yubico-piv-tool # operações PIV (certificados/chaves)
-    gnupg # gpg/gpg-agent CLI
-  ];
+  home = {
+    packages = with pkgs; [
+      yubikey-manager # provê o comando ykman
+      yubioath-flutter # Yubico Authenticator
+      pam_u2f # ferramenta pamu2fcfg para registrar chaves U2F
+      yubico-piv-tool # operações PIV (certificados/chaves)
+      gnupg # gpg/gpg-agent CLI
+    ];
+
+    sessionVariables = {
+      U2F_KEYS_FILE = "$HOME/.config/Yubico/u2f_keys";
+    };
+
+    activation.refreshGpgAgentSockets = lib.hm.dag.entryBefore [ "reloadSystemd" ] ''
+      systemctlUser=${lib.escapeShellArg "${pkgs.systemd}/bin/systemctl --user"}
+
+      # O gpg-agent em modo socket activation precisa reiniciar quando o socket
+      # SSH passa a ser habilitado/desabilitado; caso contrário, o serviço já
+      # ativo recusa o novo gpg-agent-ssh.socket.
+      $systemctlUser stop gpg-agent.service gpg-agent.socket gpg-agent-ssh.socket
+      $systemctlUser reset-failed gpg-agent.service gpg-agent.socket gpg-agent-ssh.socket
+      $systemctlUser start gpg-agent.socket
+
+      if [ "${desktop}" = "plasma" ]; then
+        $systemctlUser start gpg-agent-ssh.socket
+      fi
+    '';
+  };
 
   programs.gpg = {
     enable = true;
@@ -48,10 +70,6 @@ in
   # No Plasma usamos o suporte SSH do gpg-agent; fora dele mantemos sem agente.
   services.ssh-agent.enable = false;
 
-  home.sessionVariables = {
-    U2F_KEYS_FILE = "$HOME/.config/Yubico/u2f_keys";
-  };
-
   xdg.configFile."Yubico/README-pam_u2f.txt".text = ''
     Registro inicial da YubiKey para pam_u2f (por usuário):
 
@@ -62,7 +80,8 @@ in
     2) Para adicionar mais de uma chave, use append:
        pamu2fcfg -n >> ~/.config/Yubico/u2f_keys
 
-    3) Configure o PAM no sistema para usar:
-       authfile=$HOME/.config/Yubico/u2f_keys
+     3) Configure o PAM no sistema para usar:
+        authfile=$HOME/.config/Yubico/u2f_keys
   '';
+
 }
