@@ -41,7 +41,7 @@ modules/
 │   ├── network/     # SSH e rede
 │   ├── security/    # TPM2, Secure Boot
 │   ├── shell/       # Shells (Bash, Fish, Zsh)
-│   ├── tools/       # Pacotes do sistema, lbnix
+│   ├── tools/       # Pacotes do sistema
 │   └── users/       # Definição de usuários, sudo
 └── user/            # Home Manager modules (user-wide)
     ├── apps/        # Aplicativos do usuário (Brave, etc.)

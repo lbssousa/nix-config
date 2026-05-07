@@ -18,11 +18,11 @@ Configurações Home Manager — geridas independentemente do NixOS via `home-ma
 # Standalone (recomendado para o dia a dia):
 home-manager switch --flake /etc/nixos#<usuario>@<host>
 
-# Via lbnix (detecta usuário e host automaticamente):
-lbnix home
+# Via Just (detecta usuário e host automaticamente):
+just home switch
 
 # Especificando usuário/host manualmente:
-lbnix home abutre@barbudus
+just home switch abutre@barbudus
 ```
 
 ### Adicionar customização para um novo usuário

@@ -373,7 +373,7 @@ cd /etc/nixos
 git pull
 
 # Aplicar KDE Plasma no host atual
-sudo lbnix switch "$(hostname)" plasma
+sudo just system switch "$(hostname)" plasma
 
 # Alternativa equivalente com nixos-rebuild:
 # sudo nixos-rebuild switch --flake /etc/nixos#$(hostname)-plasma

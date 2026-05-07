@@ -103,10 +103,10 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 │       ├── shell/
 │       │   └── shells.nix    # Shells disponíveis no sistema (Bash, Fish, Zsh)
 │       ├── tools/
-│       │   ├── lbnix.nix     # Wrapper lbnix (switch, home, update, gc, diff...)
-│       │   └── packages.nix  # Pacotes essenciais (Neovim, Helix, home-manager, etc.)
+│       │   └── packages.nix  # Pacotes essenciais (Neovim, Helix, home-manager, just, etc.)
 │       └── users/
 │           └── users.nix     # Contas de usuário, grupos e política de sudo
+├── justfile                  # Receitas Just para switch, HM e manutenção
 ├── scripts/
 │   ├── install.sh            # Script de instalação automatizada
 │   ├── update.sh             # Atualizar flake inputs + nixos-rebuild switch
@@ -237,11 +237,11 @@ sudo nixos-rebuild switch --flake /etc/nixos#barbudus-plasma
 # Rebuild e ativa GNOME explicitamente:
 sudo nixos-rebuild switch --flake /etc/nixos#barbudus-gnome
 
-# Via lbnix (detecta o host automaticamente):
-sudo lbnix switch
+# Via Just (a partir da raiz do repositório):
+sudo just system switch
 
-# Via lbnix selecionando desktop explicitamente:
-sudo lbnix switch barbudus plasma
+# Via Just selecionando desktop explicitamente:
+sudo just system switch barbudus plasma
 ```
 
 ### Switch do Home Manager (usuário)
@@ -250,11 +250,11 @@ sudo lbnix switch barbudus plasma
 # Aplica a configuração HM do usuário abutre no host barbudus:
 home-manager switch --flake /etc/nixosabutre@barbudus
 
-# Via lbnix (detecta usuário e host automaticamente):
-lbnix home
+# Via Just (detecta usuário e host automaticamente):
+just home switch
 
 # Especificando usuário e/ou host manualmente:
-lbnix home abutre@bigodon
+just home switch abutre@bigodon
 ```
 
 > **Primeira vez?** Se `home-manager` ainda não está instalado, use:
@@ -408,7 +408,7 @@ cd /etc/nixos
 git pull
 
 # 2) Ative a variante KDE Plasma do host atual
-sudo lbnix switch "$(hostname)" plasma
+sudo just system switch "$(hostname)" plasma
 
 # Alternativa equivalente com nixos-rebuild:
 # sudo nixos-rebuild switch --flake /etc/nixos#$(hostname)-plasma
@@ -421,7 +421,7 @@ flatpak uninstall --system --unused -y
 ```
 
 Após o switch, o SDDM + Plasma 6 passam a ser usados neste host.
-Para voltar ao GNOME depois, use `sudo lbnix switch "$(hostname)" gnome`.
+Para voltar ao GNOME depois, use `sudo just system switch "$(hostname)" gnome`.
 
 ## 🔒 Configuração Pós-Instalação
 

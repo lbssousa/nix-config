@@ -9,13 +9,13 @@ This repository does not have a unit-test suite. The smallest repo-native checks
 - **Lint:** `nix run nixpkgs#statix -- check .`
 - **Dead code check:** `nix run nixpkgs#deadnix -- --fail .`
 
-Useful local wrappers from `lbnix`:
+Useful local wrappers from `just`:
 
-- **Format all Nix files:** `lbnix fmt`
-- **Run the full flake check:** `lbnix check`
-- **Build one system target without activating it:** `sudo lbnix build <host> [--gnome|--plasma]`
-- **Test one system target without making it default:** `sudo lbnix test <host> [--gnome|--plasma]`
-- **Apply one Home Manager target:** `lbnix home <user@host> [--gnome|--plasma]`
+- **Format all Nix files:** `just fmt`
+- **Run the full flake check:** `just check`
+- **Build one system target without activating it:** `sudo just system build <host> [gnome|plasma]`
+- **Test one system target without making it default:** `sudo just system test <host> [gnome|plasma]`
+- **Apply one Home Manager target:** `just home switch <user@host> [gnome|plasma]`
 
 ## High-level architecture
 

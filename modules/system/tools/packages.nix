@@ -2,51 +2,50 @@
 { pkgs, ... }:
 
 {
-  environment.systemPackages =
-    with pkgs;
-    [
-      # Ferramentas básicas do sistema
-      git
-      git-crypt
-      wget
-      curl
-      htop
-      btop
-      pciutils
-      usbutils
-      lshw
-      file
-      tree
-      ripgrep
-      fd
-      bat
-      jq
-      unzip
-      zip
-      p7zip
+  environment.systemPackages = with pkgs; [
+    # Ferramentas básicas do sistema
+    git
+    git-crypt
+    wget
+    curl
+    htop
+    btop
+    pciutils
+    usbutils
+    lshw
+    file
+    tree
+    ripgrep
+    fd
+    bat
+    jq
+    just
+    unzip
+    zip
+    p7zip
 
-      # Editores de texto para console
-      neovim # Editor padrão
-      helix # Editor alternativo moderno
+    # Editores de texto para console
+    neovim # Editor padrão
+    helix # Editor alternativo moderno
 
-      # Ferramentas de rede
-      nmap
-      dig
-      traceroute
-      iperf3
+    # Ferramentas de rede
+    nmap
+    dig
+    traceroute
+    iperf3
 
-      # Monitoramento
-      lm_sensors
-      nvtopPackages.full # Monitor de GPU
+    # Monitoramento
+    lm_sensors
+    nvtopPackages.full # Monitor de GPU
 
-      # Utilitários do sistema
-      gptfdisk
-      parted
-      e2fsprogs # fornece chattr
-      cryptsetup
-      lvm2
-      zfs
-    ];
+    # Utilitários do sistema
+    gptfdisk
+    parted
+    e2fsprogs # fornece chattr
+    cryptsetup
+    lvm2
+    zfs
+  ];
 
   # Definir Neovim como editor padrão do sistema
   environment.variables = {

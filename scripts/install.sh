@@ -1044,8 +1044,8 @@ for _user in "${_ALL_PASSWD_USERS[@]}"; do
     success "Configuração Home Manager aplicada para '$_user'."
   else
     warn "Não foi possível aplicar Home Manager para '$_user'."
-    warn "Execute manualmente após o primeiro boot: lbnix home $_user"
-    warn "(lbnix home executa: home-manager switch --flake /etc/nixos#${_user}@${HOST})"
+    warn "Execute manualmente após o primeiro boot: just --justfile /etc/nixos/justfile home $_user"
+    warn "(a receita acima executa: home-manager switch --flake /etc/nixos#${_user}@${HOST})"
   fi
 done
 
