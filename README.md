@@ -237,10 +237,16 @@ sudo nixos-rebuild switch --flake /etc/nixos#barbudus-plasma
 # Rebuild e ativa GNOME explicitamente:
 sudo nixos-rebuild switch --flake /etc/nixos#barbudus-gnome
 
-# Via Just (a partir da raiz do repositório):
+# Via Just (a partir da raiz do repositório; usa o desktop ativo por padrão):
 sudo just system switch
 
-# Via Just selecionando desktop explicitamente:
+# Via Just selecionando desktop explicitamente no host atual:
+sudo just system switch plasma
+
+# Para forçar a saída canônica do flake, sem seguir o desktop ativo:
+sudo just system switch default
+
+# Via Just selecionando host e desktop manualmente:
 sudo just system switch barbudus plasma
 ```
 
@@ -250,8 +256,14 @@ sudo just system switch barbudus plasma
 # Aplica a configuração HM do usuário abutre no host barbudus:
 home-manager switch --flake /etc/nixosabutre@barbudus
 
-# Via Just (detecta usuário e host automaticamente):
+# Via Just (detecta usuário, host e desktop ativos automaticamente):
 just home switch
+
+# Via Just selecionando desktop explicitamente para o usuário/host atuais:
+just home switch plasma
+
+# Para forçar a saída canônica do flake, sem seguir o desktop ativo:
+just home switch default
 
 # Especificando usuário e/ou host manualmente:
 just home switch abutre@bigodon
@@ -408,7 +420,7 @@ cd /etc/nixos
 git pull
 
 # 2) Ative a variante KDE Plasma do host atual
-sudo just system switch "$(hostname)" plasma
+sudo just system switch plasma
 
 # Alternativa equivalente com nixos-rebuild:
 # sudo nixos-rebuild switch --flake /etc/nixos#$(hostname)-plasma
@@ -421,7 +433,7 @@ flatpak uninstall --system --unused -y
 ```
 
 Após o switch, o SDDM + Plasma 6 passam a ser usados neste host.
-Para voltar ao GNOME depois, use `sudo just system switch "$(hostname)" gnome`.
+Para voltar ao GNOME depois, use `sudo just system switch gnome`.
 
 ## 🔒 Configuração Pós-Instalação
 

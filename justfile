@@ -4,7 +4,60 @@ flake_root := env_var_or_default("LBNIX_FLAKE_DIR", justfile_directory())
 justfile_file := justfile_directory() + "/justfile"
 
 [private]
-_run_system action host='' desktop='gnome' *args:
+_active_desktop:
+  #!/usr/bin/env bash
+  set -euo pipefail
+
+  normalize_desktop() {
+    local value="${1:-}"
+    value="${value,,}"
+
+    case "$value" in
+      *plasma*|*kde*)
+        echo plasma
+        return 0
+        ;;
+      *gnome*)
+        echo gnome
+        return 0
+        ;;
+      *)
+        return 1
+        ;;
+    esac
+  }
+
+  for value in "${XDG_CURRENT_DESKTOP:-}" "${XDG_SESSION_DESKTOP:-}" "${DESKTOP_SESSION:-}"; do
+    if desktop_name="$(normalize_desktop "$value")"; then
+      echo "$desktop_name"
+      exit 0
+    fi
+  done
+
+  session_user="${SUDO_USER:-$(id -un)}"
+
+  if command -v loginctl >/dev/null 2>&1; then
+    sessions="$(loginctl show-user "$session_user" --property=Sessions --value 2>/dev/null || true)"
+
+    for session_id in $sessions; do
+      session_state="$(loginctl show-session "$session_id" --property=State --value 2>/dev/null || true)"
+      session_type="$(loginctl show-session "$session_id" --property=Type --value 2>/dev/null || true)"
+
+      if [[ "$session_state" != active && "$session_type" != wayland && "$session_type" != x11 ]]; then
+        continue
+      fi
+
+      if desktop_name="$(normalize_desktop "$(loginctl show-session "$session_id" --property=Desktop --value 2>/dev/null || true)")"; then
+        echo "$desktop_name"
+        exit 0
+      fi
+    done
+  fi
+
+  exit 1
+
+[private]
+_run_system action host='' desktop='' *args:
   #!/usr/bin/env bash
   set -euo pipefail
 
@@ -12,11 +65,28 @@ _run_system action host='' desktop='gnome' *args:
   system_host="{{host}}"
   desktop_name="{{desktop}}"
 
+  if [[ -z "$desktop_name" || "$desktop_name" == default ]]; then
+    case "$system_host" in
+      default|gnome|plasma)
+        desktop_name="$system_host"
+        system_host=""
+        ;;
+    esac
+  fi
+
   system_host="${system_host:-$(hostname)}"
-  desktop_name="${desktop_name:-gnome}"
+
+  if [[ -z "$desktop_name" ]]; then
+    if desktop_name="$(just --justfile "{{justfile_file}}" _active_desktop 2>/dev/null)"; then
+      :
+    else
+      echo "Desktop ativo não detectado; usando a variante padrão do host." >&2
+      desktop_name=default
+    fi
+  fi
 
   case "$desktop_name" in
-    ''|default)
+    default)
       flake_target="$system_host"
       ;;
     gnome|plasma)
@@ -58,14 +128,32 @@ _run_home action target='' desktop='' *args:
   home_target="{{target}}"
   desktop_name="{{desktop}}"
 
+  if [[ -z "$desktop_name" || "$desktop_name" == default ]]; then
+    case "$home_target" in
+      default|gnome|plasma)
+        desktop_name="$home_target"
+        home_target=""
+        ;;
+    esac
+  fi
+
   home_target="${home_target:-$(whoami)@${current_host}}"
+
+  if [[ -z "$desktop_name" ]]; then
+    if desktop_name="$(just --justfile "{{justfile_file}}" _active_desktop 2>/dev/null)"; then
+      :
+    else
+      echo "Desktop ativo não detectado; usando a configuração Home Manager padrão." >&2
+      desktop_name=default
+    fi
+  fi
 
   if [[ "$home_target" != *@* ]]; then
     home_target="${home_target}@${current_host}"
   fi
 
   case "$desktop_name" in
-    ''|default)
+    default)
       ;;
     gnome|plasma)
       home_target="${home_target}-${desktop_name}"
@@ -101,12 +189,17 @@ help:
   @echo ''
   @echo "FLAKE_DIR atual: {{flake_root}}"
   @echo 'Desktop aceito: gnome, plasma ou default'
+  @echo 'Sem desktop explícito, usa o desktop ativo; use default para forçar a saída canônica do flake.'
   @echo 'As receitas no namespace system exigem sudo.'
   @echo ''
   @echo 'Exemplos:'
   @echo '  sudo just system switch'
+  @echo '  sudo just system switch plasma'
+  @echo '  sudo just system switch default'
   @echo '  sudo just system switch-full barbudus plasma'
   @echo '  just home switch'
+  @echo '  just home switch plasma'
+  @echo '  just home switch default'
   @echo '  just home news laercio@bigodon'
   @echo '  just home packages laercio@bigodon plasma'
   @echo ''
@@ -137,7 +230,7 @@ whoami:
   @echo "flake: {{flake_root}}"
 
 [group("system")]
-system action='switch' host='' desktop='gnome' *args:
+system action='switch' host='' desktop='' *args:
   #!/usr/bin/env bash
   set -euo pipefail
 

@@ -18,8 +18,14 @@ Configurações Home Manager — geridas independentemente do NixOS via `home-ma
 # Standalone (recomendado para o dia a dia):
 home-manager switch --flake /etc/nixos#<usuario>@<host>
 
-# Via Just (detecta usuário e host automaticamente):
+# Via Just (detecta usuário, host e desktop ativos automaticamente):
 just home switch
+
+# Via Just selecionando desktop explicitamente para o usuário/host atuais:
+just home switch plasma
+
+# Para forçar a saída canônica do flake, sem seguir o desktop ativo:
+just home switch default
 
 # Especificando usuário/host manualmente:
 just home switch abutre@barbudus
