@@ -4,9 +4,7 @@
 let
   wheelUsers = lib.attrNames (
     lib.filterAttrs (
-      _name: user:
-      (user.isNormalUser or false)
-      && lib.elem "wheel" (user.extraGroups or [ ])
+      _name: user: (user.isNormalUser or false) && lib.elem "wheel" (user.extraGroups or [ ])
     ) config.users.users
   );
 in
@@ -27,30 +25,33 @@ in
       };
     };
 
-    # Sudo autenticado por YubiKey (pam_u2f), sem fallback para senha/fingerprint.
-    services.sudo = {
-      u2f.enable = true;
-      unixAuth = false;
-      fprintAuth = false;
-    };
+    services = {
+      # Sudo autenticado por YubiKey (pam_u2f), sem fallback para senha/fingerprint.
+      sudo = {
+        u2f.enable = true;
+        unixAuth = false;
+        fprintAuth = false;
+      };
 
-    # Login do usuário com YubiKey.
-    # Mantemos fallback de senha para evitar lockout em caso de ausência da chave.
-    services.login = {
-      u2f.enable = true;
-      enableGnomeKeyring = true;
-    };
+      # Login do usuário com YubiKey.
+      # Mantemos fallback de senha para evitar lockout em caso de ausência da chave.
+      login = {
+        u2f.enable = true;
+        enableGnomeKeyring = true;
+      };
 
-    services.plasmalogin = {
-      u2f.enable = true;
-      enableGnomeKeyring = true;
-    };
+      plasmalogin = {
+        u2f.enable = true;
+        enableGnomeKeyring = false;
+        kwallet.enable = true;
+      };
 
-    # pkexec/polkit autenticado por YubiKey (pam_u2f), sem fallback para senha/fingerprint.
-    services."polkit-1" = {
-      u2f.enable = true;
-      unixAuth = false;
-      fprintAuth = false;
+      # pkexec/polkit autenticado por YubiKey (pam_u2f), sem fallback para senha/fingerprint.
+      "polkit-1" = {
+        u2f.enable = true;
+        unixAuth = false;
+        fprintAuth = false;
+      };
     };
   };
 

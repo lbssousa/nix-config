@@ -1,5 +1,13 @@
 # Recursos de YubiKey para Home Manager (usuário)
-{ pkgs, ... }:
+{
+  pkgs,
+  desktop ? "gnome",
+  ...
+}:
+
+let
+  isPlasma = desktop == "plasma";
+in
 
 {
   home.packages = with pkgs; [
@@ -26,16 +34,18 @@
   services.gpg-agent = {
     enable = true;
     enableScDaemon = true;
+    enableSshSupport = isPlasma;
     enableZshIntegration = true;
     enableFishIntegration = true;
     defaultCacheTtl = 1800;
     maxCacheTtl = 7200;
-    pinentry.package = pkgs.pinentry-gnome3;
+    # No Plasma, alinhamos o agente ao stack nativo do desktop (Kleopatra/KWallet + Qt).
+    pinentry.package = if isPlasma then pkgs.pinentry-qt else pkgs.pinentry-gnome3;
   };
 
   # O ssh-agent nativo do OpenSSH não suporta chaves ED25519-SK (YubiKey
   # resident keys) e retorna "agent refused operation" ao tentar usá-las.
-  # Desabilitado para forçar o uso direto das chaves sem intermediário.
+  # No Plasma usamos o suporte SSH do gpg-agent; fora dele mantemos sem agente.
   services.ssh-agent.enable = false;
 
   home.sessionVariables = {
