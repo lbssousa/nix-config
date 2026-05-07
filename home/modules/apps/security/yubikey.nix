@@ -27,15 +27,48 @@ in
     activation.refreshGpgAgentSockets = lib.hm.dag.entryBefore [ "reloadSystemd" ] ''
       systemctlUser=${lib.escapeShellArg "${pkgs.systemd}/bin/systemctl --user"}
 
+      runIfUnitExists() {
+        local action="$1"
+        shift
+
+        local unit loadState
+        for unit in "$@"; do
+          loadState="$($systemctlUser show --property=LoadState --value "$unit" 2>/dev/null || true)"
+
+          if [ -n "$loadState" ] && [ "$loadState" != "not-found" ]; then
+            $systemctlUser "$action" "$unit"
+          fi
+        done
+      }
+
       # O gpg-agent em modo socket activation precisa reiniciar quando o socket
       # SSH passa a ser habilitado/desabilitado; caso contrário, o serviço já
       # ativo recusa o novo gpg-agent-ssh.socket.
-      $systemctlUser stop gpg-agent.service gpg-agent.socket gpg-agent-ssh.socket
-      $systemctlUser reset-failed gpg-agent.service gpg-agent.socket gpg-agent-ssh.socket
-      $systemctlUser start gpg-agent.socket
+      runIfUnitExists stop gpg-agent-ssh.socket gpg-agent.socket gpg-agent.service
+      runIfUnitExists reset-failed gpg-agent-ssh.socket gpg-agent.socket gpg-agent.service
+    '';
+
+    activation.ensureGpgAgentSockets = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
+      systemctlUser=${lib.escapeShellArg "${pkgs.systemd}/bin/systemctl --user"}
+
+      runIfUnitExists() {
+        local action="$1"
+        shift
+
+        local unit loadState
+        for unit in "$@"; do
+          loadState="$($systemctlUser show --property=LoadState --value "$unit" 2>/dev/null || true)"
+
+          if [ -n "$loadState" ] && [ "$loadState" != "not-found" ]; then
+            $systemctlUser "$action" "$unit"
+          fi
+        done
+      }
+
+      runIfUnitExists start gpg-agent.socket
 
       if [ "${desktop}" = "plasma" ]; then
-        $systemctlUser start gpg-agent-ssh.socket
+        runIfUnitExists start gpg-agent-ssh.socket
       fi
     '';
   };
