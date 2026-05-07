@@ -14,7 +14,6 @@ let
       coreutils
       glib
       keepassxc
-      procps
       util-linux
     ];
     text = ''
@@ -23,20 +22,36 @@ let
       username="$1"
       uid="$(id -u "$username")"
       runtime_dir="/run/user/$uid"
+      keepassxc_dbus_name="org.keepassxc.KeePassXC.MainWindow"
 
       if [ ! -S "$runtime_dir/bus" ]; then
         exit 0
       fi
 
-      if ! pgrep -u "$username" -x keepassxc >/dev/null 2>&1; then
-        exit 0
-      fi
+      has_owner="$(
+        runuser -u "$username" -- env \
+          XDG_RUNTIME_DIR="$runtime_dir" \
+          DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime_dir/bus" \
+          gdbus call --session \
+            --dest org.freedesktop.DBus \
+            --object-path /org/freedesktop/DBus \
+            --method org.freedesktop.DBus.NameHasOwner \
+            "$keepassxc_dbus_name" \
+            2>/dev/null || true
+      )"
+
+      case "$has_owner" in
+        *"(true,"*) ;;
+        *)
+          exit 0
+          ;;
+      esac
 
       if runuser -u "$username" -- env \
         XDG_RUNTIME_DIR="$runtime_dir" \
         DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime_dir/bus" \
         gdbus call --session \
-          --dest org.keepassxc.KeePassXC.MainWindow \
+          --dest "$keepassxc_dbus_name" \
           --object-path /keepassxc \
           --method org.keepassxc.KeePassXC.MainWindow.lockAllDatabases \
           >/dev/null 2>&1; then
@@ -47,6 +62,18 @@ let
         XDG_RUNTIME_DIR="$runtime_dir" \
         DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime_dir/bus" \
         keepassxc --lock >/dev/null 2>&1
+    '';
+  };
+
+  keepassxcLockOnYubikeyRemoveAll = pkgs.writeShellApplication {
+    name = "keepassxc-lock-on-yubikey-remove-all";
+    runtimeInputs = [ keepassxcLockOnYubikeyRemove ];
+    text = ''
+      set -eu
+
+      for username in "$@"; do
+        keepassxc-lock-on-yubikey-remove "$username"
+      done
     '';
   };
 in
@@ -60,23 +87,11 @@ in
   };
 
   config = lib.mkIf (cfg.users != [ ]) {
-    systemd.services."keepassxc-lock-on-yubikey-remove@" = {
-      description = "Tranca o KeePassXC na remoção da YubiKey (%i)";
-      serviceConfig = {
-        Type = "oneshot";
-        ExecStart = "${lib.getExe keepassxcLockOnYubikeyRemove} %i";
-      };
-    };
-
-    systemd.targets.keepassxc-lock-on-yubikey-remove = {
-      description = "Tranca instâncias do KeePassXC após remoção da YubiKey";
-      wants = map (user: "keepassxc-lock-on-yubikey-remove@${user}.service") cfg.users;
-    };
-
     services.udev.extraRules = ''
-      # Dispara um alvo systemd fora do contexto do udev, para conseguir falar
-      # com o barramento D-Bus da sessão dos usuários configurados.
-      ACTION=="remove", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="1050", RUN+="${pkgs.systemd}/bin/systemctl --no-block start keepassxc-lock-on-yubikey-remove.target"
+      # Em eventos "remove", propriedades derivadas como ID_VENDOR_ID podem já
+      # não estar disponíveis. O campo bruto PRODUCT continua presente e é o
+      # identificador mais confiável para reconhecer a YubiKey na remoção.
+      ACTION=="remove", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ENV{PRODUCT}=="1050/407/*", RUN+="${pkgs.systemd}/bin/systemd-run --no-block --quiet --collect --service-type=oneshot ${lib.getExe keepassxcLockOnYubikeyRemoveAll} ${lib.escapeShellArgs cfg.users}"
     '';
   };
 }
