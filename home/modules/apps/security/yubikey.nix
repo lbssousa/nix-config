@@ -16,6 +16,11 @@
       keyid-format = "0xlong";
       with-fingerprint = true;
     };
+    # A YubiKey expõe OpenPGP via CCID. Como o sistema já usa pcscd,
+    # forçamos o scdaemon a falar via PC/SC para evitar disputa pelo USB.
+    scdaemonSettings = {
+      disable-ccid = true;
+    };
   };
 
   services.gpg-agent = {
