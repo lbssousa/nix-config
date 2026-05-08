@@ -1,6 +1,6 @@
 { config, ... }:
 let
-  mkUserModule = username: ../../private/users + "/${username}.nix";
+  mkUserModule = username: ../../users + "/${username}.nix";
 in
 {
   config.dendritic.nixos = {

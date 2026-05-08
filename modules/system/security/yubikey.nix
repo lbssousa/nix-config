@@ -20,7 +20,7 @@ in
         cue = true;
         interactive = true;
         # Arquivo de mapeamento global do pam_u2f persistido fora da raiz efêmera.
-        # Cada linha deve começar com o usuário correto (ex.: "laercio:").
+        # Cada linha deve começar com o usuário correto (ex.: "abutre:").
         authfile = "/persist/etc/u2f-mappings";
       };
     };
