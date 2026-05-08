@@ -11,15 +11,15 @@
 
     secrets.wifi_password = {
       sopsFile = inputs.nix-secrets + "/secrets.yaml";
-      key = "wifi.password";
+      key = "wifi/password";
     };
     secrets.wifi_ssid_5g = {
       sopsFile = inputs.nix-secrets + "/secrets.yaml";
-      key = "wifi.ssid_5g";
+      key = "wifi/ssid_5g";
     };
     secrets.wifi_ssid_2_4g = {
       sopsFile = inputs.nix-secrets + "/secrets.yaml";
-      key = "wifi.ssid_2_4g";
+      key = "wifi/ssid_2_4g";
     };
 
     # Perfil NetworkManager — banda 5 GHz

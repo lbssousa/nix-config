@@ -102,11 +102,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1778144356,
-        "narHash": "sha256-dGM+QCstz/DyLB68+JK5GWyMx4QSqmOJEVgZmy63d/g=",
+        "lastModified": 1778248595,
+        "narHash": "sha256-dhFgEjoeJMYN/7OY6xfxS799YB4IjbbYXTjyGIJyLpc=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "e4419d3123b780d5f4c0bceeace450424387638c",
+        "rev": "fdb2ccba9d5e1238d32e0c4a3ec1a277efa80c1d",
         "type": "github"
       },
       "original": {
@@ -191,6 +191,22 @@
         "ref": "v0.7.0",
         "repo": "nix-flatpak",
         "type": "github"
+      }
+    },
+    "nix-secrets": {
+      "locked": {
+        "lastModified": 1778255904,
+        "narHash": "sha256-/MvGhNBIjdxf0CBaurklPZqlH5srci6J2wuQrRTwd4A=",
+        "ref": "refs/heads/main",
+        "rev": "1f9c28b295b0b45ebcbd6a6e7e233aecc43b0b10",
+        "shallow": true,
+        "type": "git",
+        "url": "ssh://git@github.com/lbssousa/nix-secrets"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "ssh://git@github.com/lbssousa/nix-secrets"
       }
     },
     "nixos-hardware": {
@@ -287,6 +303,7 @@
         "impermanence": "impermanence",
         "lanzaboote": "lanzaboote",
         "nix-flatpak": "nix-flatpak",
+        "nix-secrets": "nix-secrets",
         "nixos-hardware": "nixos-hardware",
         "nixpkgs": "nixpkgs_3",
         "sops-nix": "sops-nix"

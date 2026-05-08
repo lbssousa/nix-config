@@ -40,6 +40,13 @@ _:
     };
   };
 
+  # Repassa o socket do agente SSH ao processo sudo, necessário para que
+  # `nixos-rebuild` e `nix run` via sudo possam autenticar-se em entradas
+  # de flake SSH (ex.: nix-secrets via git+ssh://).
+  security.sudo.extraConfig = ''
+    Defaults:%wheel env_keep+=SSH_AUTH_SOCK
+  '';
+
   # Versão do estado do sistema
   system.stateVersion = "25.05";
 }
