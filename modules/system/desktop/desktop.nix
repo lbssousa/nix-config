@@ -75,6 +75,47 @@ in
     };
     services.desktopManager.gnome.enable = mkIf (cfg.environment == "gnome") true;
 
+    # Integrar aplicações Qt ao visual do GNOME.
+    qt = mkIf (cfg.environment == "gnome") {
+      enable = true;
+      platformTheme = "gnome";
+      style = "adwaita";
+    };
+
+    environment = {
+      variables = mkIf (cfg.environment == "gnome") {
+        # No Wayland, Mutter não fornece decorações do lado do servidor.
+        # Forçamos a decoração Adwaita para aproximar a barra de título do
+        # visual padrão do GNOME também em apps Qt.
+        QT_WAYLAND_DECORATION = "adwaita";
+      };
+
+      # Excluir pacotes padrão do GNOME que serão substituídos por pacotes Nix
+      gnome.excludePackages = mkIf (cfg.environment == "gnome") (
+        with pkgs;
+        [
+          gnome-tour
+          epiphany # Browser padrão do GNOME — usar Google Chrome (Nix)
+          gnome-console # Terminal (kgx) — usar Ptyxis (Nix)
+          gnome-terminal # Terminal legado — usar Ptyxis (Nix)
+          gnome-music
+        ]
+      );
+
+      # Google Chrome e terminal instalados via Nix
+      systemPackages =
+        with pkgs;
+        [
+          google-chrome # Navegador padrão
+        ]
+        ++ lib.optionals (cfg.environment == "gnome") [
+          qadwaitadecorations # Decoração Adwaita para apps Qt5 no Wayland
+          qadwaitadecorations-qt6 # Decoração Adwaita para apps Qt6 no Wayland
+          ptyxis # Terminal moderno no GNOME
+          gjs # Motor JavaScript para GNOME (GObject Introspection)
+        ];
+    };
+
     # Sessão KDE Plasma
     services.displayManager.plasma-login-manager = mkIf (cfg.environment == "plasma") {
       enable = true;
@@ -108,18 +149,6 @@ in
         }
       ];
     };
-
-    # Excluir pacotes padrão do GNOME que serão substituídos por pacotes Nix
-    environment.gnome.excludePackages = mkIf (cfg.environment == "gnome") (
-      with pkgs;
-      [
-        gnome-tour
-        epiphany # Browser padrão do GNOME — usar Google Chrome (Nix)
-        gnome-console # Terminal (kgx) — usar Ptyxis (Nix)
-        gnome-terminal # Terminal legado — usar Ptyxis (Nix)
-        gnome-music
-      ]
-    );
 
     # Regra Polkit para permitir instalação de Flatpaks system-wide sem senha
     # Similar ao comportamento do Fedora Silverblue
@@ -160,17 +189,6 @@ in
       enable = true;
       powerOnBoot = true;
     };
-
-    # Google Chrome e terminal instalados via Nix
-    environment.systemPackages =
-      with pkgs;
-      [
-        google-chrome # Navegador padrão
-      ]
-      ++ lib.optionals (cfg.environment == "gnome") [
-        ptyxis # Terminal moderno no GNOME
-        gjs # Motor JavaScript para GNOME (GObject Introspection)
-      ];
 
     # Fontes essenciais para o desktop
     fonts = {
