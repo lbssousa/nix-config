@@ -110,7 +110,7 @@ Com o IBus carregando a tabela `pt_BR.UTF-8` via `include "%L"`:
 O Home Manager neste repositório é **standalone** — o `nixos-rebuild switch` **não** atualiza o perfil do usuário. Após qualquer mudança em módulos Home Manager (ex.: `home/modules/desktop/ibus-compose.nix` ou `home/common.nix`), é necessário rodar separadamente para cada usuário:
 
 ```bash
-home-manager switch --flake /etc/nixosabutre@barbudus-gnome
+home-manager switch --flake /etc/nixos#abutre@barbudus-gnome
 ```
 
 O arquivo `~/.config/ibus/Compose` entra em vigor no próximo restart do serviço IBus (ou relogin).

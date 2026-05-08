@@ -78,8 +78,8 @@ sudo bash scripts/install.sh \
   --host barbudus \
   --desktop plasma \
   --disk /dev/nvme0n1 \
-  --user "joao:cavalo:sudo" \
-  --user "maria:macaco:nosudo" \
+  --user "cavalo:sudo" \
+  --user "macaco:nosudo" \
   --non-interactive
 ```
 
@@ -245,12 +245,12 @@ Exemplo:
 
 ```nix
 config.dendritic.users = [
-  abutre
-  surubi
-  coruja
-  camelo
-  cavalo
-  macaco
+  "abutre"
+  "surubi"
+  "coruja"
+  "camelo"
+  "cavalo"
+  "macaco"
   "seu-usuario"
   "outro-usuario"
 ];

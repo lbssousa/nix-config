@@ -196,8 +196,8 @@ Exemplos:
     --desktop plasma \
     --disk /dev/nvme0n1 \
     --partition-profile btrfs \
-    --user "joao:cavalo:sudo" \
-    --user "maria:macaco:nosudo" \
+    --user "cavalo:sudo" \
+    --user "macaco:nosudo" \
     --non-interactive
 
   # Instalação não-interativa com perfil ZFS:
@@ -206,7 +206,7 @@ Exemplos:
     --desktop gnome \
     --disk /dev/nvme0n1 \
     --partition-profile zfs \
-    --user "joao:cavalo:sudo" \
+    --user "cavalo:sudo" \
     --non-interactive
 
 Este script automatiza os passos descritos em INSTALLATION.md:

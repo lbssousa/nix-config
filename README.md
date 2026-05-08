@@ -69,8 +69,8 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 │   │   └── desktop/
 │   │       └── ibus-compose.nix
 │   └── users/                # Customizações por usuário
-│       └── laercio/
-│           └── home.nix      Config específica do abutre (p10k, git, Bitwarden)
+│       └── abutre/
+│           └── home.nix      # Config específica do abutre (p10k, git, Bitwarden)
 ├── hosts/                    # Configurações específicas por host (NixOS)
 │   ├── barbudus/
 │   │   ├── configuration.nix        # Config específica (NVIDIA, fprintd, etc.)
@@ -114,8 +114,8 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 │   └── setup-secureboot.sh   # Configurar Secure Boot + assinar módulos (barbudus)
 ├── users/                    # Definições de contas de usuário NixOS
 │   ├── skeleton.nix          # Template para criar novo usuário
-│   ├── abutre.nix           # Conta do sistema do laercio
-│   ├── roberta.nix           # Conta do sistema da roberta
+│   ├── abutre.nix            # Conta do sistema do abutre
+│   ├── surubi.nix            # Conta do sistema da surubi
 │   └── ...                   # Demais usuários
 ├── .gitignore                # Ignorar arquivos temporários e chaves
 ├── INSTALLATION.md           # Guia de instalação detalhado
@@ -171,7 +171,7 @@ sudo bash scripts/install.sh \
   --host barbudus \
    --desktop plasma \
   --disk /dev/nvme0n1 \
-  --user "joao:cavalo:sudo" \
+  --user "cavalo:sudo" \
   --non-interactive
 ```
 
@@ -254,7 +254,7 @@ sudo just system switch barbudus plasma
 
 ```bash
 # Aplica a configuração HM do usuário abutre no host barbudus:
-home-manager switch --flake /etc/nixosabutre@barbudus
+home-manager switch --flake /etc/nixos#abutre@barbudus
 
 # Via Just (detecta usuário, host e desktop ativos automaticamente):
 just home switch
@@ -272,7 +272,7 @@ just home switch abutre@bigodon
 > **Primeira vez?** Se `home-manager` ainda não está instalado, use:
 >
 > ```bash
-> nix run nixpkgs#home-manager -- switch --flake /etc/nixosabutre@barbudus
+> nix run nixpkgs#home-manager -- switch --flake /etc/nixos#abutre@barbudus
 > ```
 
 ### Rollback
@@ -312,12 +312,12 @@ sudo nixos-rebuild switch --rollback
 
    ```nix
    config.dendritic.users = [
-     abutre
-     surubi
-     coruja
-     camelo
-     cavalo
-     macaco
+     "abutre"
+     "surubi"
+     "coruja"
+     "camelo"
+     "cavalo"
+     "macaco"
      "seu-usuario"
    ];
    ```

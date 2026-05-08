@@ -1,6 +1,6 @@
 # Módulo de redes Wi-Fi: Configuração de redes Wi-Fi pessoais via NetworkManager.
-# A senha das redes é gerenciada pelo sops-nix e nunca fica em texto simples
-# no repositório.
+# A senha e os SSIDs das redes são gerenciados pelo sops-nix e nunca ficam em
+# texto simples no repositório.
 { config, inputs, ... }:
 
 {
@@ -13,19 +13,27 @@
       sopsFile = inputs.nix-secrets + "/secrets.yaml";
       key = "wifi.password";
     };
+    secrets.wifi_ssid_5g = {
+      sopsFile = inputs.nix-secrets + "/secrets.yaml";
+      key = "wifi.ssid_5g";
+    };
+    secrets.wifi_ssid_2_4g = {
+      sopsFile = inputs.nix-secrets + "/secrets.yaml";
+      key = "wifi.ssid_2_4g";
+    };
 
-    # Perfil NetworkManager — "HOME_WIFI_5G" (banda 5 GHz)
-    templates."HOME_WIFI_5G.nmconnection" = {
+    # Perfil NetworkManager — banda 5 GHz
+    templates."home-wifi-5g.nmconnection" = {
       content = ''
         [connection]
-        id=HOME_WIFI_5G
+        id=${config.sops.placeholder.wifi_ssid_5g}
         uuid=16c9c8f0-5e66-4368-8d26-95b2c6ff810d
         type=wifi
         autoconnect=true
 
         [wifi]
         mode=infrastructure
-        ssid=HOME_WIFI_5G
+        ssid=${config.sops.placeholder.wifi_ssid_5g}
 
         [wifi-security]
         auth-alg=open
@@ -39,24 +47,24 @@
         addr-gen-mode=default
         method=auto
       '';
-      path = "/etc/NetworkManager/system-connections/HOME_WIFI_5G.nmconnection";
+      path = "/etc/NetworkManager/system-connections/home-wifi-5g.nmconnection";
       mode = "0600";
       owner = "root";
       group = "root";
     };
 
-    # Perfil NetworkManager — "HOME_WIFI_2_4G" (banda 2,4 GHz)
-    templates."HOME_WIFI_2_4G.nmconnection" = {
+    # Perfil NetworkManager — banda 2,4 GHz
+    templates."home-wifi-2.4g.nmconnection" = {
       content = ''
         [connection]
-        id=HOME_WIFI_2_4G
+        id=${config.sops.placeholder.wifi_ssid_2_4g}
         uuid=cd867d94-2953-4c4b-87fd-ace0cdacc886
         type=wifi
         autoconnect=true
 
         [wifi]
         mode=infrastructure
-        ssid=HOME_WIFI_2_4G
+        ssid=${config.sops.placeholder.wifi_ssid_2_4g}
 
         [wifi-security]
         auth-alg=open
@@ -70,7 +78,7 @@
         addr-gen-mode=default
         method=auto
       '';
-      path = "/etc/NetworkManager/system-connections/HOME_WIFI_2_4G.nmconnection";
+      path = "/etc/NetworkManager/system-connections/home-wifi-2.4g.nmconnection";
       mode = "0600";
       owner = "root";
       group = "root";
