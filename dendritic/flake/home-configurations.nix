@@ -1,9 +1,7 @@
 { config, inputs, ... }:
 let
   inherit (inputs.nixpkgs) lib;
-
-  hosts = config.dendritic.hosts;
-  users = config.dendritic.users;
+  inherit (config.dendritic) hosts users;
 
   mkHome =
     username: system: desktop:

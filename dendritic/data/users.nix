@@ -1,5 +1,4 @@
-{ ... }:
-{
+_: {
   config.dendritic.users = [
     abutre
     surubi

@@ -1,13 +1,12 @@
 { config, inputs, ... }:
 let
   inherit (inputs.nixpkgs) lib;
-
-  hosts = config.dendritic.hosts;
+  inherit (config.dendritic) hosts;
 
   mkHost =
     hostname: hostSpec: desktop:
     lib.nixosSystem {
-      system = hostSpec.system;
+      inherit (hostSpec) system;
       modules = [
         { nixpkgs.overlays = [ config.dendritic.localOverlay ]; }
         { my.desktop.environment = desktop; }
@@ -33,12 +32,10 @@ let
       ++ hostSpec.extraNixosModules;
     };
 
-  mkCanonical =
-    hostname: hostSpec:
-    {
-      name = hostname;
-      value = mkHost hostname hostSpec hostSpec.defaultDesktop;
-    };
+  mkCanonical = hostname: hostSpec: {
+    name = hostname;
+    value = mkHost hostname hostSpec hostSpec.defaultDesktop;
+  };
 
   mkDesktopVariants =
     hostname: hostSpec:

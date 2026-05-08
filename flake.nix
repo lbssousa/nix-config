@@ -48,7 +48,7 @@
     inputs.flake-parts.lib.mkFlake { inherit inputs; } {
       imports = import ./dendritic/imports.nix {
         root = ./dendritic;
-        lib = inputs.nixpkgs.lib;
+        inherit (inputs.nixpkgs) lib;
       };
 
       systems = [ "x86_64-linux" ];
