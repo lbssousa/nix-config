@@ -11,7 +11,7 @@
 let
   isPlasma = desktop == "plasma";
   isGnome = desktop == "gnome";
-  personalAgeKeySource = "/etc/nixos/private/sops/age/abutre/keys.txt";
+  personalAgeKeySource = "/etc/nixos-keys/sops/age/abutre/keys.txt";
   personalAgeKeyPath = "${config.xdg.configHome}/sops/age/abutre/keys.txt";
   rcloneConfigPath = "${config.xdg.configHome}/rclone/rclone.conf";
   rcloneGoogleDriveInstances = {

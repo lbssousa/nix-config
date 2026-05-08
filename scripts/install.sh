@@ -39,7 +39,7 @@
 #   --age-keys-backup   Caminho para o backup do arquivo key.txt da chave age
 #                       (sops-nix). Copiado para /persist/etc/sops/age/keys.txt
 #                       no sistema instalado. Se omitido, usa por padrão
-#                       private/sops/age/keys.txt (quando existir no repositório)
+#                       ../nix-keys/sops/age/keys.txt (quando existir)
 #                       e, se não existir, pergunta interativamente.
 #   --non-interactive   Não faz perguntas; falha se informações obrigatórias
 #                       não forem fornecidas via flags
@@ -180,7 +180,7 @@ Opções:
   --age-keys-backup   Caminho para o backup do arquivo key.txt da chave age
                       (sops-nix). Copiado para /persist/etc/sops/age/keys.txt
                       no sistema instalado. Se omitido, usa por padrão
-                      private/sops/age/keys.txt (quando existir no repositório)
+                      ../nix-keys/sops/age/keys.txt (quando existir)
                       e, se não existir, pergunta interativamente.
   --non-interactive   Não faz perguntas; falha se informações obrigatórias
                       não forem fornecidas via flags.
@@ -264,7 +264,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PRIVATE_DIR="$CONFIG_DIR/private"
 PRIVATE_USERS_DIR="$PRIVATE_DIR/users"
-PRIVATE_AGE_KEY_REPO="$PRIVATE_DIR/sops/age/keys.txt"
+PRIVATE_AGE_KEY_REPO="$(dirname "$CONFIG_DIR")/nix-keys/sops/age/keys.txt"
 
 info "Diretório de configuração: $CONFIG_DIR"
 cd "$CONFIG_DIR"
@@ -776,7 +776,7 @@ _DEFAULT_AGE_KEYS_BACKUP="$PRIVATE_AGE_KEY_REPO"
 
 if [[ -z "$OPT_AGE_KEYS_BACKUP" && -f "$_DEFAULT_AGE_KEYS_BACKUP" ]]; then
   OPT_AGE_KEYS_BACKUP="$_DEFAULT_AGE_KEYS_BACKUP"
-  info "Usando key.txt do repositório por padrão: $OPT_AGE_KEYS_BACKUP"
+  info "Usando keys.txt do nix-keys por padrão: $OPT_AGE_KEYS_BACKUP"
 fi
 
 if [[ "$OPT_NON_INTERACTIVE" != "true" && -z "$OPT_AGE_KEYS_BACKUP" ]]; then
