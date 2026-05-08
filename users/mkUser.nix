@@ -2,7 +2,7 @@
 # Uso: import ./mkUser.nix { inherit pkgs lib; } { username = ...; ... }
 #
 # NOTA: A configuração do Home Manager é gerida separadamente via homeConfigurations
-# no flake.nix. Consulte private/home/users/<usuario>/home.nix para customizações por usuário.
+# no flake.nix. Consulte home/users/<usuario>/home.nix para customizações por usuário.
 #
 # NOTA: O nome completo (description) foi movido para nix-secrets/secrets.yaml como
 # campo cifrado ({username}.full_name). Não deve ser definido aqui.

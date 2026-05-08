@@ -13,9 +13,9 @@
 #    basta adicionar o nome de usuário à lista.
 #
 # Para configuração Home Manager personalizada (opcional):
-# 6. Crie private/home/users/<seu-usuario>/home.nix (copie de private/home/users/abutre/home.nix)
+# 6. Crie home/users/<seu-usuario>/home.nix (copie de home/users/abutre/home.nix)
 # 7. Adicione a condição em dendritic/flake/home-configurations.nix:
-#      ++ lib.optionals (username == "<seu-usuario>") [ ../../private/home/users/<seu-usuario>/home.nix ]
+#      ++ lib.optionals (username == "<seu-usuario>") [ ../../home/users/<seu-usuario>/home.nix ]
 #    (para usuários sem customização, a entrada já é gerada automaticamente)
 #
 { pkgs, lib, ... }:

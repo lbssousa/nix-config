@@ -1,6 +1,6 @@
 # Configuração Home Manager base — aplicada a todos os usuários
 # Importada automaticamente por cada homeConfiguration no flake.nix.
-# Os arquivos por usuário ficam em private/home/users/<usuario>/home.nix.
+# Os arquivos por usuário ficam em home/users/<usuario>/home.nix.
 { pkgs, lib, ... }:
 
 {

@@ -18,7 +18,7 @@ let
           home.homeDirectory = "/home/${username}";
         }
       ]
-      ++ lib.optionals (username == "abutre") [ ../../private/home/users/abutre/home.nix ];
+      ++ lib.optionals (username == "abutre") [ ../../home/users/abutre/home.nix ];
     };
 
   mkUserHostEntries =

@@ -40,7 +40,7 @@
 
     # Repositório separado com os secrets SOPS/age
     nix-secrets = {
-      url = "path:../nix-secrets";
+      url = "github:lbssousa/nix-secrets";
       flake = true;
     };
 
