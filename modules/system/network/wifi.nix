@@ -11,6 +11,7 @@
 
     secrets.wifi_password = {
       sopsFile = inputs.nix-secrets + "/secrets.yaml";
+      key = "wifi.password";
     };
 
     # Perfil NetworkManager — "HOME_WIFI_5G" (banda 5 GHz)
