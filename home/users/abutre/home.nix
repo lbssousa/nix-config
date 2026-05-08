@@ -666,6 +666,19 @@ in
 
     obs-studio = {
       enable = true;
+      # qgnomeplatform-0.8.4 tem createPlatformSystemTrayIcon() que retorna sempre
+      # nullptr, impedindo o ícone da bandeja. Ao desativar QT_QPA_PLATFORMTHEME, o
+      # Qt6 detecta automaticamente a sessão GNOME e usa QGnomeTheme embutido no
+      # Qt6Gui, que cria corretamente um QDBusTrayIcon via StatusNotifierItem.
+      package = pkgs.symlinkJoin {
+        name = "obs-studio";
+        paths = [ pkgs.obs-studio ];
+        nativeBuildInputs = [ pkgs.makeWrapper ];
+        postBuild = ''
+          wrapProgram $out/bin/obs \
+            --unset QT_QPA_PLATFORMTHEME
+        '';
+      };
     };
 
     # Usar powerlevel10k como tema do Zsh em vez do Starship
