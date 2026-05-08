@@ -453,7 +453,9 @@ in
         name = ${config.sops.placeholder."git-name"}
         email = ${config.sops.placeholder."git-email"}
     '';
-    templates."google-drive-email.env".content = "GOOGLE_DRIVE_EMAIL=${config.sops.placeholder."google-drive-email"}";
+    templates."google-drive-email.env".content = "GOOGLE_DRIVE_EMAIL=${
+      config.sops.placeholder."google-drive-email"
+    }";
   };
 
   dconf.settings = lib.mkIf isGnome {
@@ -660,6 +662,10 @@ in
     direnv = {
       enable = true;
       nix-direnv.enable = true;
+    };
+
+    obs-studio = {
+      enable = true;
     };
 
     # Usar powerlevel10k como tema do Zsh em vez do Starship
