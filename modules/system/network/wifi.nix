@@ -10,7 +10,7 @@
     age.keyFile = "/persist/etc/sops/age/keys.txt";
 
     secrets.wifi_password = {
-      sopsFile = inputs.nix-secrets + "/secrets/wifi.yaml";
+      sopsFile = inputs.nix-secrets + "/secrets.yaml";
     };
 
     # Perfil NetworkManager — "HOME_WIFI_5G" (banda 5 GHz)

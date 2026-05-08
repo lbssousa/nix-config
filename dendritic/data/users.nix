@@ -1,10 +1,12 @@
 _: {
   config.dendritic.users = [
-    abutre
-    surubi
-    coruja
-    camelo
-    cavalo
-    macaco
+    "abutre"
+    "surubi"
+    "coruja"
+    "camelo"
+    "cavalo"
+    "macaco"
+    "gorila"
+    "coelho"
   ];
 }
