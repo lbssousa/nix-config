@@ -39,7 +39,7 @@
 #   --age-keys-backup   Caminho para o backup do arquivo key.txt da chave age
 #                       (sops-nix). Copiado para /persist/etc/sops/age/keys.txt
 #                       no sistema instalado. Se omitido, usa por padrão
-#                       private/sops/age/key.txt (quando existir no repositório)
+#                       private/sops/age/keys.txt (quando existir no repositório)
 #                       e, se não existir, pergunta interativamente.
 #   --non-interactive   Não faz perguntas; falha se informações obrigatórias
 #                       não forem fornecidas via flags
@@ -180,7 +180,7 @@ Opções:
   --age-keys-backup   Caminho para o backup do arquivo key.txt da chave age
                       (sops-nix). Copiado para /persist/etc/sops/age/keys.txt
                       no sistema instalado. Se omitido, usa por padrão
-                      private/sops/age/key.txt (quando existir no repositório)
+                      private/sops/age/keys.txt (quando existir no repositório)
                       e, se não existir, pergunta interativamente.
   --non-interactive   Não faz perguntas; falha se informações obrigatórias
                       não forem fornecidas via flags.
@@ -264,7 +264,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PRIVATE_DIR="$CONFIG_DIR/private"
 PRIVATE_USERS_DIR="$PRIVATE_DIR/users"
-PRIVATE_AGE_KEY_REPO="$PRIVATE_DIR/sops/age/key.txt"
+PRIVATE_AGE_KEY_REPO="$PRIVATE_DIR/sops/age/keys.txt"
 
 info "Diretório de configuração: $CONFIG_DIR"
 cd "$CONFIG_DIR"
