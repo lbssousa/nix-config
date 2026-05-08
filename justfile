@@ -64,6 +64,7 @@ _run_system action host='' desktop='' *args:
   action="{{action}}"
   system_host="{{host}}"
   desktop_name="{{desktop}}"
+  set -- {{args}}
 
   if [[ -z "$desktop_name" || "$desktop_name" == default ]]; then
     case "$system_host" in
@@ -99,8 +100,16 @@ _run_system action host='' desktop='' *args:
   esac
 
   case "$action" in
+    switch|boot|test)
+      if [[ "${EUID}" -ne 0 ]]; then
+        exec sudo nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system "$action" "$system_host" "$desktop_name" "$@"
+      fi
+      ;;
+  esac
+
+  case "$action" in
     switch|boot|test|build)
-      nixos-rebuild "$action" --flake "{{flake_root}}#${flake_target}" {{args}}
+      nixos-rebuild "$action" --flake "{{flake_root}}#${flake_target}" "$@"
       ;;
     diff)
       next_drv="$(
@@ -190,13 +199,15 @@ help:
   @echo "FLAKE_DIR atual: {{flake_root}}"
   @echo 'Desktop aceito: gnome, plasma ou default'
   @echo 'Sem desktop explícito, usa o desktop ativo; use default para forçar a saída canônica do flake.'
-  @echo 'As receitas no namespace system exigem sudo.'
+  @echo 'system switch, boot e test elevam com sudo quando necessário.'
   @echo ''
   @echo 'Exemplos:'
-  @echo '  sudo just system switch'
-  @echo '  sudo just system switch plasma'
-  @echo '  sudo just system switch default'
-  @echo '  sudo just system switch-full barbudus plasma'
+  @echo '  just system switch'
+  @echo '  just system switch plasma'
+  @echo '  just system switch default'
+  @echo '  just switch'
+  @echo '  just switch plasma'
+  @echo '  just system switch-full barbudus plasma'
   @echo '  just home switch'
   @echo '  just home switch plasma'
   @echo '  just home switch default'
@@ -272,6 +283,10 @@ home action='switch' target='' desktop='' *args:
       exit 1
       ;;
   esac
+
+switch desktop='' *args:
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" system switch "{{desktop}}" {{args}}
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" home switch "{{desktop}}" {{args}}
 
 [group("maintenance")]
 update *inputs:
