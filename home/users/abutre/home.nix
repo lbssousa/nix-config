@@ -347,6 +347,18 @@ in
         Environment=SOPS_CLIENT_SECRET_PATH=${config.sops.secrets."rclone-client-secret".path}
         ExecStart=${writeRcloneConfig}
       '';
+
+      # Favoritos do Nautilus (gtk-3.0)
+      "gtk-3.0/bookmarks" = {
+        force = true;
+        text = ''
+          file://${config.home.homeDirectory}/Documentos
+          file://${config.home.homeDirectory}/M%C3%BAsicas
+          file://${config.home.homeDirectory}/Imagens
+          file://${config.home.homeDirectory}/V%C3%ADdeos
+          file://${config.home.homeDirectory}/Downloads
+        '';
+      };
     }
     // lib.mapAttrs' mkRcloneGoogleDriveEnvFile rcloneGoogleDriveInstances;
 
