@@ -38,6 +38,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Repositório separado com os secrets SOPS/age
+    nix-secrets = {
+      url = "path:../nix-secrets";
+      flake = true;
+    };
+
     # nix-flatpak for declarative Flatpak management
     nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=v0.7.0";
 

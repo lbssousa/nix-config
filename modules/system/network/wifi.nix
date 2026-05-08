@@ -1,7 +1,7 @@
 # Módulo de redes Wi-Fi: Configuração de redes Wi-Fi pessoais via NetworkManager.
 # A senha das redes é gerenciada pelo sops-nix e nunca fica em texto simples
 # no repositório.
-{ config, ... }:
+{ config, inputs, ... }:
 
 {
   sops = {
@@ -10,7 +10,7 @@
     age.keyFile = "/persist/etc/sops/age/keys.txt";
 
     secrets.wifi_password = {
-      sopsFile = ../../../secrets/wifi.yaml;
+      sopsFile = inputs.nix-secrets + "/secrets/wifi.yaml";
     };
 
     # Perfil NetworkManager — "HOME_WIFI_5G" (banda 5 GHz)

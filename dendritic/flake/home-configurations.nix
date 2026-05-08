@@ -8,7 +8,7 @@ let
     inputs.home-manager.lib.homeManagerConfiguration {
       pkgs = inputs.nixpkgs.legacyPackages.${system}.extend config.dendritic.localOverlay;
       extraSpecialArgs = {
-        inherit desktop;
+        inherit desktop inputs;
       };
       modules = [
         inputs.sops-nix.homeManagerModules.sops

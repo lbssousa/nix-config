@@ -7,6 +7,7 @@ let
     hostname: hostSpec: desktop:
     lib.nixosSystem {
       inherit (hostSpec) system;
+      specialArgs = { inherit inputs; };
       modules = [
         { nixpkgs.overlays = [ config.dendritic.localOverlay ]; }
         { my.desktop.environment = desktop; }
