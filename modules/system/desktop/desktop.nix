@@ -85,16 +85,16 @@ in
     environment = {
       variables = mkIf (cfg.environment == "gnome") {
         # No Wayland, Mutter não fornece decorações do lado do servidor.
-        # Forçamos a decoração Adwaita para aproximar a barra de título do
-        # visual padrão do GNOME também em apps Qt.
+        # Forçamos a decoração "gnome" para que apps Qt usem o plugin
+        # libqgnomeplatformdecoration.so (do qgnomeplatform, já instalado via
+        # qt.platformTheme = "gnome"), que lê o button-layout de forma síncrona
+        # via GnomeSettings e sempre exibe o botão de fechar corretamente.
         #
-        # Para Qt6, usamos o plugin built-in do qtwayland ("adwaita"), que
-        # implementa requestRepaint() de forma correta. O pacote
-        # qadwaitadecorations-qt6 foi removido porque ele instala um plugin
-        # concorrente (libqadwaitadecorations.so) que usa forceRepaint()
-        # quebrado: após a chamada D-Bus assíncrona que retorna o button-layout,
-        # o repaint nunca ocorre e os botões da barra de título ficam invisíveis.
-        QT_WAYLAND_DECORATION = "adwaita";
+        # Não usamos "adwaita" porque o plugin qadwaitadecorations (Qt5) e o
+        # qadwaitadecorations-qt6 compartilham o mesmo bug: após a chamada D-Bus
+        # assíncrona que retorna o button-layout, forceRepaint() não dispara um
+        # repaint real no Wayland, e os botões da barra de título ficam invisíveis.
+        QT_WAYLAND_DECORATION = "gnome";
       };
 
       # Excluir pacotes padrão do GNOME que serão substituídos por pacotes Nix
@@ -116,7 +116,6 @@ in
           google-chrome # Navegador padrão
         ]
         ++ lib.optionals (cfg.environment == "gnome") [
-          qadwaitadecorations # Decoração Adwaita para apps Qt5 no Wayland
           ptyxis # Terminal moderno no GNOME
           gjs # Motor JavaScript para GNOME (GObject Introspection)
         ];
