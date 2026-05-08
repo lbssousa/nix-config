@@ -704,15 +704,7 @@ in
       ];
     };
 
-    # No GNOME seguimos sem agente para evitar o gnome-keyring no caminho e
-    # continuar acessando resident keys diretamente. No Plasma, o SSH_AUTH_SOCK
-    # passa a apontar para o gpg-agent (stack padrão via Kleopatra).
-    ssh = {
-      enable = true;
-      extraConfig = lib.optionalString (!isPlasma) ''
-        IdentityAgent none
-      '';
-    };
+    ssh.enable = true;
   };
 
 }
