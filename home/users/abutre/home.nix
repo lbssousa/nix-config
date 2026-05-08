@@ -77,9 +77,9 @@ in
 
 {
   imports = [
-    ../../../../home/modules/apps/nix-validation.nix
-    ../../../../home/modules/apps/security/keepassxc.nix
-    ../../../../home/modules/apps/security/yubikey.nix
+    ../../modules/apps/nix-validation.nix
+    ../../modules/apps/security/keepassxc.nix
+    ../../modules/apps/security/yubikey.nix
   ];
 
   home = {
@@ -417,23 +417,23 @@ in
 
     secrets."git-name" = {
       sopsFile = inputs.nix-secrets + "/secrets.yaml";
-      key = "abutre.git.name";
+      key = "abutre/git/name";
     };
     secrets."git-email" = {
       sopsFile = inputs.nix-secrets + "/secrets.yaml";
-      key = "abutre.git.email";
+      key = "abutre/git/email";
     };
     secrets."google-drive-email" = {
       sopsFile = inputs.nix-secrets + "/secrets.yaml";
-      key = "abutre.google_drive.email";
+      key = "abutre/google_drive/email";
     };
     secrets."rclone-client-id" = {
       sopsFile = inputs.nix-secrets + "/secrets.yaml";
-      key = "abutre.google_drive.rclone.client_id";
+      key = "abutre/google_drive/rclone/client_id";
     };
     secrets."rclone-client-secret" = {
       sopsFile = inputs.nix-secrets + "/secrets.yaml";
-      key = "abutre.google_drive.rclone.client_secret";
+      key = "abutre/google_drive/rclone/client_secret";
     };
 
     templates."git-user.ini".content = ''

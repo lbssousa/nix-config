@@ -211,8 +211,8 @@ help:
   @echo '  just home switch'
   @echo '  just home switch plasma'
   @echo '  just home switch default'
-  @echo '  just home news laercio@bigodon'
-  @echo '  just home packages laercio@bigodon plasma'
+  @echo '  just home news abutre@barbudus'
+  @echo '  just home packages abutre@barbudus plasma'
   @echo ''
   @nix run nixpkgs#just -- --justfile "{{justfile_file}}" --list --unsorted
 
