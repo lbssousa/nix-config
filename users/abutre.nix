@@ -2,7 +2,7 @@
 lib.mkMerge [
   (import ./mkUser.nix { inherit pkgs lib; } {
     username = "abutre";
-    uid = 1000;
+    uid = 1006;
     hasSudo = true;
   })
 
