@@ -52,7 +52,7 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 │   │   ├── hosts.nix         # Inventário de hosts (sistema, desktop padrão, módulos extras)
 │   │   └── users.nix         # Inventário de usuários do sistema/home
 │   ├── features/
-│   │   ├── local-overlay.nix # Overlay local (pacotes customizados)
+│   │   ├── local-overlay.nix # Overlay local (importa overlays/default.nix)
 │   │   └── nixos-modules.nix # Lista de módulos NixOS compartilhados e módulos de usuários
 │   └── flake/
 │       ├── nixos-configurations.nix # Geração das saídas nixosConfigurations
@@ -61,13 +61,6 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 ├── disko.nix                 # Template Btrfs de particionamento (LUKS+LVM+Btrfs)
 ├── home/                     # Configurações Home Manager (independentes do sistema)
 │   ├── common.nix            # Config HM base — aplicada a todos os usuários
-│   ├── modules/              # Módulos HM reutilizáveis por usuário
-│   │   ├── apps/
-│   │   │   ├── nix-validation.nix
-│   │   │   └── browsers/
-│   │   │       └── google-chrome.nix
-│   │   └── desktop/
-│   │       └── ibus-compose.nix
 │   └── users/                # Customizações por usuário
 │       └── abutre/
 │           └── home.nix      # Config específica do abutre (p10k, git, Bitwarden)
@@ -80,7 +73,17 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 │       ├── configuration.nix
 │       ├── hardware-configuration.nix
 │       └── disko.nix
-├── modules/                  # Módulos NixOS compartilhados
+├── modules/                  # Módulos compartilhados (sistema e Home Manager)
+│   ├── home/                 # Módulos Home Manager reutilizáveis
+│   │   ├── apps/
+│   │   │   ├── nix-validation.nix
+│   │   │   ├── browsers/
+│   │   │   │   └── google-chrome.nix
+│   │   │   └── security/
+│   │   │       ├── keepassxc.nix
+│   │   │       └── yubikey.nix
+│   │   └── desktop/
+│   │       └── ibus-compose.nix
 │   └── system/               # Módulos de sistema (nixos-rebuild)
 │       ├── audio/
 │       │   └── audio.nix     # PipeWire
@@ -106,6 +109,14 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 │       │   └── packages.nix  # Pacotes essenciais (Neovim, Helix, home-manager, just, etc.)
 │       └── users/
 │           └── users.nix     # Contas de usuário, grupos e política de sudo
+├── overlays/
+│   └── default.nix           # Overlay local: pacotes personalizados adicionados ao nixpkgs
+├── pkgs/                     # Pacotes customizados (fora do nixpkgs oficial)
+│   ├── epson-printer-utility/
+│   ├── gregorio-lsp/
+│   ├── gregolint/
+│   ├── tree-sitter-gregorio/
+│   └── zed-gregorio/
 ├── justfile                  # Receitas Just para switch, HM e manutenção
 ├── scripts/
 │   ├── install.sh            # Script de instalação automatizada
@@ -130,7 +141,7 @@ A configuração está organizada em dois planos independentes:
 | Plano | Diretórios | Comando |
 | ----- | ---------- | ------- |
 | **Sistema (NixOS)** | `dendritic/`, `hosts/`, `modules/system/`, `users/` | `sudo nixos-rebuild switch --flake /etc/nixos#<host>` |
-| **Usuário (Home Manager)** | `home/` | `home-manager switch --flake /etc/nixos#<usuario>@<host>` |
+| **Usuário (Home Manager)** | `home/`, `modules/home/` | `home-manager switch --flake /etc/nixos#<usuario>@<host>` |
 
 - Switches de sistema **não** aplicam configurações de home-manager.
 - Switches de home-manager **não** exigem rebuild do sistema.
@@ -471,3 +482,4 @@ sudo bash scripts/enroll-tpm2.sh
 - [Erase Your Darlings (impermanence concept)](https://grahamc.com/blog/erase-your-darlings/)
 - [Btrfs on NixOS](https://nixos.wiki/wiki/Btrfs)
 - [Arch Wiki — Btrfs](https://wiki.archlinux.org/title/Btrfs)
+- [EmergentMind/nix-config](https://github.com/EmergentMind/nix-config) — referência de organização de repositório NixOS
