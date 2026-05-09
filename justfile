@@ -127,68 +127,6 @@ _run_system action host='' desktop='' *args:
       ;;
   esac
 
-[private]
-_run_home action target='' desktop='' *args:
-  #!/usr/bin/env bash
-  set -euo pipefail
-
-  action="{{action}}"
-  current_host="$(hostname)"
-  home_target="{{target}}"
-  desktop_name="{{desktop}}"
-
-  if [[ -z "$desktop_name" || "$desktop_name" == default ]]; then
-    case "$home_target" in
-      default|gnome|plasma)
-        desktop_name="$home_target"
-        home_target=""
-        ;;
-    esac
-  fi
-
-  home_target="${home_target:-$(whoami)@${current_host}}"
-
-  if [[ -z "$desktop_name" ]]; then
-    if desktop_name="$(just --justfile "{{justfile_file}}" _active_desktop 2>/dev/null)"; then
-      :
-    else
-      echo "Desktop ativo não detectado; usando a configuração Home Manager padrão." >&2
-      desktop_name=default
-    fi
-  fi
-
-  if [[ "$home_target" != *@* ]]; then
-    home_target="${home_target}@${current_host}"
-  fi
-
-  case "$desktop_name" in
-    default)
-      ;;
-    gnome|plasma)
-      home_target="${home_target}-${desktop_name}"
-      ;;
-    *)
-      echo "Desktop inválido: '$desktop_name' (use gnome|plasma|default)" >&2
-      exit 1
-      ;;
-  esac
-
-  case "$action" in
-    switch|news)
-      home-manager "$action" --flake "{{flake_root}}#${home_target}" {{args}}
-      ;;
-    packages)
-      cd "{{flake_root}}"
-      nix eval --json ".#homeConfigurations.\"${home_target}\".config.home.packages" \
-        --apply 'builtins.map (pkg: pkg.name or "<sem-nome>")' \
-        | jq -r '.[]'
-      ;;
-    *)
-      echo "Ação de home inválida: '$action'" >&2
-      exit 1
-      ;;
-  esac
-
 default:
   @nix run nixpkgs#just -- --justfile "{{justfile_file}}" help
 
@@ -200,6 +138,7 @@ help:
   @echo 'Desktop aceito: gnome, plasma ou default'
   @echo 'Sem desktop explícito, usa o desktop ativo; use default para forçar a saída canônica do flake.'
   @echo 'system switch, boot e test elevam com sudo quando necessário.'
+  @echo 'Home Manager é aplicado junto com nixos-rebuild (módulo do sistema).'
   @echo ''
   @echo 'Exemplos:'
   @echo '  just system switch'
@@ -208,11 +147,6 @@ help:
   @echo '  just switch'
   @echo '  just switch plasma'
   @echo '  just system switch-full barbudus plasma'
-  @echo '  just home switch'
-  @echo '  just home switch plasma'
-  @echo '  just home switch default'
-  @echo '  just home news abutre@barbudus'
-  @echo '  just home packages abutre@barbudus plasma'
   @echo ''
   @nix run nixpkgs#just -- --justfile "{{justfile_file}}" --list --unsorted
 
@@ -226,13 +160,6 @@ systems:
   set -euo pipefail
   cd "{{flake_root}}"
   nix eval --json .#nixosConfigurations --apply builtins.attrNames | jq -r '.[]'
-
-[group("info")]
-homes:
-  #!/usr/bin/env bash
-  set -euo pipefail
-  cd "{{flake_root}}"
-  nix eval --json .#homeConfigurations --apply builtins.attrNames | jq -r '.[]'
 
 [group("info")]
 whoami:
@@ -266,27 +193,8 @@ system action='switch' host='' desktop='' *args:
       ;;
   esac
 
-[group("home")]
-home action='switch' target='' desktop='' *args:
-  #!/usr/bin/env bash
-  set -euo pipefail
-
-  action="{{action}}"
-
-  case "$action" in
-    switch|news|packages)
-      nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_home "$action" "{{target}}" "{{desktop}}" {{args}}
-      ;;
-    *)
-      echo "Ação de home inválida: '$action'" >&2
-      echo "Use: switch, news ou packages." >&2
-      exit 1
-      ;;
-  esac
-
 switch desktop='' *args:
   nix run nixpkgs#just -- --justfile "{{justfile_file}}" system switch "{{desktop}}" {{args}}
-  nix run nixpkgs#just -- --justfile "{{justfile_file}}" home switch "{{desktop}}" {{args}}
 
 [group("maintenance")]
 update *inputs:

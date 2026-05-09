@@ -1,12 +1,12 @@
 # IBus Compose shared module for all Home Manager users.
 {
   lib,
-  desktop ? "gnome",
+  osConfig,
   ...
 }:
 
 let
-  isGnome = desktop == "gnome";
+  isGnome = osConfig.my.desktop.environment == "gnome";
 in
 {
   xdg.configFile = lib.mkIf isGnome {

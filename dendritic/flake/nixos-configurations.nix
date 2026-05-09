@@ -12,13 +12,6 @@ let
         { nixpkgs.overlays = [ config.dendritic.localOverlay ]; }
         { my.desktop.environment = desktop; }
 
-        # Modulos cross-cutting de feature no escopo de sistema.
-        {
-          environment.systemPackages = [
-            inputs.home-manager.packages.${hostSpec.system}.default
-          ];
-        }
-
         inputs.disko.nixosModules.disko
         inputs.impermanence.nixosModules.impermanence
         inputs.sops-nix.nixosModules.sops

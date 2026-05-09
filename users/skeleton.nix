@@ -14,9 +14,10 @@
 #
 # Para configuração Home Manager personalizada (opcional):
 # 6. Crie home/users/<seu-usuario>/home.nix (copie de home/users/abutre/home.nix)
-# 7. Adicione a condição em dendritic/flake/home-configurations.nix:
-#      ++ lib.optionals (username == "<seu-usuario>") [ ../../home/users/<seu-usuario>/home.nix ]
-#    (para usuários sem customização, a entrada já é gerada automaticamente)
+# 7. Adicione-o ao índice do git:
+#      git add home/users/<seu-usuario>/home.nix
+#    O módulo home-manager.nix detecta automaticamente o arquivo via
+#    lib.pathExists e o importa sem nenhuma alteração adicional no flake.
 #
 { pkgs, lib, ... }:
 import ./mkUser.nix { inherit pkgs lib; } {

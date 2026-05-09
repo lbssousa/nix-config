@@ -31,7 +31,7 @@
     };
 
     users = lib.mkOption {
-      description = "Usuarios gerenciados pelo Home Manager standalone.";
+      description = "Usuarios do sistema, gerenciados pelo Home Manager como modulo NixOS.";
       type = lib.types.listOf lib.types.str;
       default = [ ];
     };

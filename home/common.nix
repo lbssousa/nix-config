@@ -1,5 +1,5 @@
-# Configuração Home Manager base — aplicada a todos os usuários
-# Importada automaticamente por cada homeConfiguration no flake.nix.
+# Configuração Home Manager base — aplicada a todos os usuários como
+# módulo NixOS (home-manager.nixosModules.home-manager).
 # Os arquivos por usuário ficam em home/users/<usuario>/home.nix.
 { pkgs, lib, ... }:
 
@@ -9,16 +9,7 @@
     ../modules/home/desktop/ibus-compose.nix
   ];
 
-  # Permitir pacotes proprietários/não-livres (ex: github-copilot-cli, vscode, etc.)
-  nixpkgs.config.allowUnfree = true;
-
   home = {
-    # Home Manager precisa conhecer o usuário e o diretório home.
-    # NOTA: Estes valores são sobrescritos pelo mkHome em flake.nix.
-    username = lib.mkDefault "user";
-    homeDirectory = lib.mkDefault "/home/user";
-
-    # Versão do Home Manager (não altere sem verificar as release notes)
     stateVersion = "25.05";
 
     # Pacotes instalados para o usuário
@@ -97,7 +88,6 @@
         nrs = "sudo nixos-rebuild switch --flake /etc/nixos";
         nru = "sudo nix flake update /etc/nixos && sudo nixos-rebuild switch --flake /etc/nixos";
         nrb = "sudo nixos-rebuild boot --flake /etc/nixos";
-        hms = "home-manager switch --flake /etc/nixos#$(whoami)@$(hostname)";
         # Podman/Docker aliases
         dk = "podman";
         dkc = "podman-compose";
@@ -215,8 +205,5 @@
         serverAliveCountMax = 3;
       };
     };
-
-    # Permitir que o Home Manager gerencie o ambiente de sessão
-    home-manager.enable = true;
   };
 }

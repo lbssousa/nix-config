@@ -2,12 +2,12 @@
 {
   lib,
   pkgs,
-  desktop ? "gnome",
+  osConfig,
   ...
 }:
 
 let
-  isPlasma = desktop == "plasma";
+  isPlasma = osConfig.my.desktop.environment == "plasma";
 in
 
 {
@@ -67,7 +67,7 @@ in
 
       runIfUnitExists start gpg-agent.socket
 
-      if [ "${desktop}" = "plasma" ]; then
+      if [ "${osConfig.my.desktop.environment}" = "plasma" ]; then
         runIfUnitExists start gpg-agent-ssh.socket
       fi
     '';

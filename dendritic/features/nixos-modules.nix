@@ -20,9 +20,14 @@ in
       ../../modules/system/shell/shells.nix
       ../../modules/system/tools/packages.nix
       ../../modules/system/users/users.nix
-      # Módulo gerado em tempo de avaliação flake-parts: fecha sobre a lista de
-      # usuários e inputs antes de ser passado ao nixosSystem.
+      # Módulos gerados em tempo de avaliação flake-parts: fecham sobre a lista
+      # de usuários e inputs antes de serem passados ao nixosSystem.
       (import ../../modules/system/users/descriptions.nix {
+        inherit inputs;
+        inherit (config.dendritic) users;
+      })
+      inputs.home-manager.nixosModules.home-manager
+      (import ../../modules/system/users/home-manager.nix {
         inherit inputs;
         inherit (config.dendritic) users;
       })

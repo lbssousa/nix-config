@@ -4,13 +4,13 @@
   pkgs,
   lib,
   inputs,
-  desktop ? "gnome",
+  osConfig,
   ...
 }:
 
 let
-  isPlasma = desktop == "plasma";
-  isGnome = desktop == "gnome";
+  isPlasma = osConfig.my.desktop.environment == "plasma";
+  isGnome = osConfig.my.desktop.environment == "gnome";
   personalAgeKeySource = "${config.home.homeDirectory}/Documentos/lbssousa/nix-keys/sops/age/abutre/keys.txt";
   personalAgeKeyPath = "${config.xdg.configHome}/sops/age/keys.txt";
   rcloneConfigPath = "${config.xdg.configHome}/rclone/rclone.conf";
@@ -83,8 +83,6 @@ in
   ];
 
   home = {
-    username = lib.mkDefault "abutre";
-    homeDirectory = lib.mkDefault "/home/abutre";
     packages = [
       pkgs.github-copilot-cli
       pkgs.gcc
@@ -383,7 +381,7 @@ in
   # Remove sobras mutáveis do Plasma depois do linkGeneration, sem atrapalhar
   # a limpeza normal do Home Manager entre gerações.
   home.activation.cleanupPlasmaArtifactsWhenNotPlasma = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
-    if [ "${desktop}" != "plasma" ]; then
+    if [ "${osConfig.my.desktop.environment}" != "plasma" ]; then
       for path in \
         "${config.xdg.configHome}/autostart/yakuake.desktop" \
         "${config.xdg.configHome}/konsolerc" \
