@@ -122,7 +122,7 @@ _run_system action host='' desktop='' *args:
       nix run nixpkgs#nvd -- diff /run/current-system "$next_drv"
       ;;
     *)
-      echo "Ação de sistema inválida: '$action'" >&2
+      echo "Ação inválida para _run_system: '$action'" >&2
       exit 1
       ;;
   esac
@@ -137,16 +137,16 @@ help:
   @echo "FLAKE_DIR atual: {{flake_root}}"
   @echo 'Desktop aceito: gnome, plasma ou default'
   @echo 'Sem desktop explícito, usa o desktop ativo; use default para forçar a saída canônica do flake.'
-  @echo 'system switch, boot e test elevam com sudo quando necessário.'
+  @echo 'switch, boot e test elevam com sudo quando necessário.'
   @echo 'Home Manager é aplicado junto com nixos-rebuild (módulo do sistema).'
   @echo ''
   @echo 'Exemplos:'
-  @echo '  just system switch'
-  @echo '  just system switch plasma'
-  @echo '  just system switch default'
   @echo '  just switch'
   @echo '  just switch plasma'
-  @echo '  just system switch-full barbudus plasma'
+  @echo '  just switch barbudus plasma'
+  @echo '  just switch-full barbudus plasma'
+  @echo '  just boot'
+  @echo '  just diff'
   @echo ''
   @nix run nixpkgs#just -- --justfile "{{justfile_file}}" --list --unsorted
 
@@ -167,34 +167,28 @@ whoami:
   @echo "usuário: $(whoami)"
   @echo "flake: {{flake_root}}"
 
-[group("system")]
-system action='switch' host='' desktop='' *args:
-  #!/usr/bin/env bash
-  set -euo pipefail
+switch host='' desktop='' *args:
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system switch "{{host}}" "{{desktop}}" {{args}}
 
-  action="{{action}}"
+boot host='' desktop='' *args:
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system boot "{{host}}" "{{desktop}}" {{args}}
 
-  case "$action" in
-    switch|boot|test|build|diff)
-      nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system "$action" "{{host}}" "{{desktop}}" {{args}}
-      ;;
-    switch-full)
-      nix run nixpkgs#just -- --justfile "{{justfile_file}}" system switch "{{host}}" "{{desktop}}" {{args}}
-      nix run nixpkgs#just -- --justfile "{{justfile_file}}" check
-      ;;
-    upgrade)
-      nix run nixpkgs#just -- --justfile "{{justfile_file}}" update
-      nix run nixpkgs#just -- --justfile "{{justfile_file}}" system switch "{{host}}" "{{desktop}}" {{args}}
-      ;;
-    *)
-      echo "Ação de sistema inválida: '$action'" >&2
-      echo "Use: switch, switch-full, boot, test, build, diff ou upgrade." >&2
-      exit 1
-      ;;
-  esac
+test host='' desktop='' *args:
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system test "{{host}}" "{{desktop}}" {{args}}
 
-switch desktop='' *args:
-  nix run nixpkgs#just -- --justfile "{{justfile_file}}" system switch "{{desktop}}" {{args}}
+build host='' desktop='' *args:
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system build "{{host}}" "{{desktop}}" {{args}}
+
+diff host='' desktop='' *args:
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system diff "{{host}}" "{{desktop}}" {{args}}
+
+switch-full host='' desktop='' *args:
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" switch "{{host}}" "{{desktop}}" {{args}}
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" check
+
+upgrade host='' desktop='' *args:
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" update
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" switch "{{host}}" "{{desktop}}" {{args}}
 
 [group("maintenance")]
 update *inputs:
