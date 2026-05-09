@@ -15,13 +15,17 @@ let
     "com.bitwarden.desktop"
     "com.github.PintaProject.Pinta"
     "com.github.tchx84.Flatseal"
+    "com.obsproject.Studio"
     "com.ranfdev.DistroShelf"
+    "dev.zed.Zed"
     "io.github.flattool.Ignition"
     "io.github.flattool.Warehouse"
     "io.gitlab.adhami3310.Impression"
     "it.mijorus.smile"
     "org.gtk.Gtk3theme.adw-gtk3"
     "org.gtk.Gtk3theme.adw-gtk3-dark"
+    "org.keepassxc.KeePassXC"
+    "org.kde.kleopatra"
     "page.tesk.Refine"
   ];
 
@@ -62,6 +66,13 @@ in
           commonFlatpaks
           ++ lib.optionals (cfg.environment == "gnome") gnomeFlatpaks
           ++ lib.optionals (cfg.environment == "plasma") plasmaFlatpaks;
+        # Timer diário que reconcilia os pacotes declarados com os instalados,
+        # reinstalando automaticamente qualquer flatpak removido acidentalmente
+        # (incluindo o Bazaar, que substitui o gnome-software no GNOME).
+        update.auto = {
+          enable = true;
+          onCalendar = "daily";
+        };
       };
 
       # Impressão (CUPS)
@@ -106,6 +117,7 @@ in
           gnome-console # Terminal (kgx) — usar Ptyxis (Nix)
           gnome-terminal # Terminal legado — usar Ptyxis (Nix)
           gnome-music
+          gnome-software # Substituído pelo Bazaar (Flatpak)
         ]
       );
 
@@ -167,12 +179,10 @@ in
       });
     '';
 
-    # Enable running unpatched FHS binaries such as wasi-sdk (downloaded by
-    # Zed to compile tree-sitter grammars). Without nix-ld, dynamically linked
-    # executables intended for generic Linux fail with "stub-ld" errors.
+    # Habilita execução de binários FHS não-patchados (ex.: dev tools distribuídos
+    # como binários genéricos Linux). Sem nix-ld, eles falham com "stub-ld" errors.
     programs.nix-ld = {
       enable = true;
-      # Minimum libraries required by wasi-sdk's clang and typical dev tools.
       libraries = with pkgs; [
         stdenv.cc.cc.lib # libstdc++.so.6
         zlib

@@ -12,8 +12,8 @@ let
     name = "keepassxc-lock-on-yubikey-remove";
     runtimeInputs = with pkgs; [
       coreutils
+      flatpak
       glib
-      keepassxc
       util-linux
     ];
     text = ''
@@ -61,7 +61,7 @@ let
       runuser -u "$username" -- env \
         XDG_RUNTIME_DIR="$runtime_dir" \
         DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime_dir/bus" \
-        keepassxc --lock >/dev/null 2>&1
+        flatpak run org.keepassxc.KeePassXC --lock >/dev/null 2>&1
     '';
   };
 

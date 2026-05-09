@@ -78,7 +78,6 @@ in
 {
   imports = [
     ../../../modules/home/apps/nix-validation.nix
-    ../../../modules/home/apps/security/keepassxc.nix
     ../../../modules/home/apps/security/yubikey.nix
   ];
 
@@ -86,9 +85,14 @@ in
     packages = [
       pkgs.github-copilot-cli
       pkgs.gcc
-      pkgs.kdePackages.kleopatra
+      pkgs.gregolint
+      pkgs.gregorio-lsp
+      pkgs.ltex-ls
+      pkgs.nil
+      pkgs.nixd
       pkgs.rclone
       pkgs.rustup
+      pkgs.texlab
     ]
     ++ lib.optionals isPlasma [ pkgs.kdePackages.yakuake ]
     ++ lib.optionals isGnome [
@@ -507,56 +511,6 @@ in
       package = null;
     };
 
-    "zed-editor" = {
-      enable = true;
-      package = pkgs.zed-editor;
-      # Nota: "gregorio" é instalada localmente via xdg.dataFile + activation abaixo;
-      # não deve estar aqui ou o Zed tentará instalá-la do marketplace e esvaziará
-      # o diretório installed/gregorio/.
-      extensions = [
-        "nix"
-        "latex"
-      ];
-      extraPackages = with pkgs; [
-        direnv
-        nil
-        nixd
-        texlab
-        ltex-ls
-        gregolint
-        gregorio-lsp
-      ];
-      userSettings = {
-        theme = {
-          mode = "dark";
-          dark = "One Dark";
-          light = "One Light";
-        };
-        load_direnv = "direct";
-        soft_wrap = "bounded";
-        autosave = {
-          after_delay = {
-            milliseconds = 1000;
-          };
-        };
-        vim_mode = false;
-        hour_format = "hour24";
-        buffer_font_family = "ZedMono Nerd Font Mono";
-        buffer_font_size = 24;
-        terminal = {
-          font_family = "JetBrainsMono Nerd Font Mono";
-          font_size = 24;
-        };
-        lsp = {
-          nil.binary.path = "${pkgs.nil}/bin/nil";
-          nixd.binary.path = "${pkgs.nixd}/bin/nixd";
-          texlab.binary.path = "${pkgs.texlab}/bin/texlab";
-          "ltex-ls".binary.path = "${pkgs.ltex-ls}/bin/ltex-ls";
-          "gregorio-lsp".binary.path = "${pkgs.gregorio-lsp}/bin/gregorio-lsp";
-        };
-      };
-    };
-
     vscode = {
       enable = true;
       profiles.default.extensions =
@@ -646,60 +600,6 @@ in
       nix-direnv.enable = true;
     };
 
-    obs-studio = {
-      enable = true;
-      # Duas sobreposições de ambiente são necessárias para integração correta com GNOME:
-      #
-      # 1. --unset QT_QPA_PLATFORMTHEME
-      #    qgnomeplatform-0.8.4 tem createPlatformSystemTrayIcon() que retorna sempre
-      #    nullptr, impedindo o ícone da bandeja. Ao desativar QT_QPA_PLATFORMTHEME, o
-      #    Qt6 detecta automaticamente a sessão GNOME e usa QGnomeTheme embutido no
-      #    Qt6Gui, que cria corretamente um QDBusTrayIcon via StatusNotifierItem.
-      #
-      # 2. DCONF_PROFILE apontando para perfil com color-scheme=prefer-dark
-      #    O OBS Studio usa tema próprio sempre escuro, mas a decoração da janela
-      #    (QT_WAYLAND_DECORATION=gnome via qgnomeplatform) lê o color-scheme do
-      #    dconf uma única vez na inicialização e não monitora mudanças. Se o sistema
-      #    estiver no modo claro ao iniciar o OBS, a decoração ficaria clara mesmo com
-      #    o conteúdo escuro. A sobreposição do DCONF_PROFILE força color-scheme=
-      #    prefer-dark exclusivamente para o processo do OBS, sem afetar o resto da
-      #    sessão. Os demais valores do dconf continuam sendo lidos do banco do usuário
-      #    (user-db:user) via encadeamento de perfil.
-      package =
-        let
-          dconfKeyfile = pkgs.writeText "obs-dark-keyfile" ''
-            [org/gnome/desktop/interface]
-            color-scheme='prefer-dark'
-          '';
-          dconfDb =
-            pkgs.runCommand "obs-dconf-db"
-              {
-                nativeBuildInputs = [ pkgs.dconf ];
-              }
-              ''
-                mkdir -p keyfiles
-                cp ${dconfKeyfile} keyfiles/00-obs-dark
-                mkdir $out
-                dconf compile $out/db keyfiles
-              '';
-          dconfProfile = pkgs.writeText "obs-dconf-profile" ''
-            file-db:${dconfDb}/db
-            user-db:user
-          '';
-        in
-        pkgs.symlinkJoin {
-          name = "obs-studio";
-          paths = [ pkgs.obs-studio ];
-          nativeBuildInputs = [ pkgs.makeWrapper ];
-          postBuild = ''
-            wrapProgram $out/bin/obs \
-              --set DCONF_PROFILE ${dconfProfile} \
-              --unset QT_QPA_PLATFORMTHEME
-          '';
-        };
-    };
-
-    # Usar powerlevel10k como tema do Zsh em vez do Starship
     starship.enableZshIntegration = false;
 
     zsh = {
