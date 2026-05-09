@@ -650,19 +650,55 @@ in
 
     obs-studio = {
       enable = true;
-      # qgnomeplatform-0.8.4 tem createPlatformSystemTrayIcon() que retorna sempre
-      # nullptr, impedindo o ícone da bandeja. Ao desativar QT_QPA_PLATFORMTHEME, o
-      # Qt6 detecta automaticamente a sessão GNOME e usa QGnomeTheme embutido no
-      # Qt6Gui, que cria corretamente um QDBusTrayIcon via StatusNotifierItem.
-      package = pkgs.symlinkJoin {
-        name = "obs-studio";
-        paths = [ pkgs.obs-studio ];
-        nativeBuildInputs = [ pkgs.makeWrapper ];
-        postBuild = ''
-          wrapProgram $out/bin/obs \
-            --unset QT_QPA_PLATFORMTHEME
-        '';
-      };
+      # Duas sobreposições de ambiente são necessárias para integração correta com GNOME:
+      #
+      # 1. --unset QT_QPA_PLATFORMTHEME
+      #    qgnomeplatform-0.8.4 tem createPlatformSystemTrayIcon() que retorna sempre
+      #    nullptr, impedindo o ícone da bandeja. Ao desativar QT_QPA_PLATFORMTHEME, o
+      #    Qt6 detecta automaticamente a sessão GNOME e usa QGnomeTheme embutido no
+      #    Qt6Gui, que cria corretamente um QDBusTrayIcon via StatusNotifierItem.
+      #
+      # 2. DCONF_PROFILE apontando para perfil com color-scheme=prefer-dark
+      #    O OBS Studio usa tema próprio sempre escuro, mas a decoração da janela
+      #    (QT_WAYLAND_DECORATION=gnome via qgnomeplatform) lê o color-scheme do
+      #    dconf uma única vez na inicialização e não monitora mudanças. Se o sistema
+      #    estiver no modo claro ao iniciar o OBS, a decoração ficaria clara mesmo com
+      #    o conteúdo escuro. A sobreposição do DCONF_PROFILE força color-scheme=
+      #    prefer-dark exclusivamente para o processo do OBS, sem afetar o resto da
+      #    sessão. Os demais valores do dconf continuam sendo lidos do banco do usuário
+      #    (user-db:user) via encadeamento de perfil.
+      package =
+        let
+          dconfKeyfile = pkgs.writeText "obs-dark-keyfile" ''
+            [org/gnome/desktop/interface]
+            color-scheme='prefer-dark'
+          '';
+          dconfDb =
+            pkgs.runCommand "obs-dconf-db"
+              {
+                nativeBuildInputs = [ pkgs.dconf ];
+              }
+              ''
+                mkdir -p keyfiles
+                cp ${dconfKeyfile} keyfiles/00-obs-dark
+                mkdir $out
+                dconf compile $out/db keyfiles
+              '';
+          dconfProfile = pkgs.writeText "obs-dconf-profile" ''
+            file-db:${dconfDb}/db
+            user-db:user
+          '';
+        in
+        pkgs.symlinkJoin {
+          name = "obs-studio";
+          paths = [ pkgs.obs-studio ];
+          nativeBuildInputs = [ pkgs.makeWrapper ];
+          postBuild = ''
+            wrapProgram $out/bin/obs \
+              --set DCONF_PROFILE ${dconfProfile} \
+              --unset QT_QPA_PLATFORMTHEME
+          '';
+        };
     };
 
     # Usar powerlevel10k como tema do Zsh em vez do Starship
