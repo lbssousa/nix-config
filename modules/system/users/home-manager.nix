@@ -9,6 +9,18 @@
 { inputs, users }:
 { lib, ... }:
 {
+  # O script de ativação do HM (setupVars) exige que o diretório de perfil
+  # do Nix já exista para o usuário antes que home-manager-<user>.service
+  # inicie. Para usuários que nunca rodaram um comando nix (nunca fizeram
+  # login), o nix-daemon não cria esse diretório automaticamente, causando
+  # falha silenciosa. Garantimos a criação aqui como root, antes de "users".
+  system.activationScripts.hmCreateNixProfileDirs = {
+    deps = [ "users" ];
+    text = lib.concatMapStrings (username: ''
+      install -d -m 0755 -o "${username}" /nix/var/nix/profiles/per-user/${username}
+    '') users;
+  };
+
   home-manager = {
     # Reutiliza o pkgs do sistema (inclui overlay local e allowUnfree).
     useGlobalPkgs = true;

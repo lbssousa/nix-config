@@ -56,10 +56,9 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 │   │   └── nixos-modules.nix # Lista de módulos NixOS compartilhados e módulos de usuários
 │   └── flake/
 │       ├── nixos-configurations.nix # Geração das saídas nixosConfigurations
-│       ├── home-configurations.nix  # Geração das saídas homeConfigurations
 │       └── disko-configurations.nix # Geração das saídas diskoConfigurations
 ├── disko.nix                 # Template Btrfs de particionamento (LUKS+LVM+Btrfs)
-├── home/                     # Configurações Home Manager (independentes do sistema)
+├── home/                     # Configurações Home Manager (módulo NixOS, aplicadas no rebuild)
 │   ├── common.nix            # Config HM base — aplicada a todos os usuários
 │   └── users/                # Customizações por usuário
 │       └── abutre/
@@ -134,17 +133,18 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 └── README.md                 # Este arquivo
 ```
 
-### Desacoplamento NixOS ↔ Home Manager
+### Integração NixOS + Home Manager
 
-A configuração está organizada em dois planos independentes:
+O Home Manager é integrado como módulo NixOS — **um único `nixos-rebuild switch` aplica tanto
+as configurações do sistema quanto as de todos os usuários gerenciados**. Não há um plano separado
+de Home Manager: tudo é acionado pelo mesmo rebuild.
 
-| Plano | Diretórios | Comando |
-| ----- | ---------- | ------- |
-| **Sistema (NixOS)** | `dendritic/`, `hosts/`, `modules/system/`, `users/` | `sudo nixos-rebuild switch --flake /etc/nixos#<host>` |
-| **Usuário (Home Manager)** | `home/`, `modules/home/` | `home-manager switch --flake /etc/nixos#<usuario>@<host>` |
+| Diretórios | O que contém |
+| ---------- | ------------ |
+| `dendritic/`, `hosts/`, `modules/system/`, `users/` | Configurações de sistema (NixOS) |
+| `home/`, `modules/home/` | Configurações de usuário (Home Manager, aplicadas via NixOS) |
 
-- Switches de sistema **não** aplicam configurações de home-manager.
-- Switches de home-manager **não** exigem rebuild do sistema.
+- Qualquer mudança em `home/` é aplicada no próximo `sudo nixos-rebuild switch` (ou `just switch`).
 - Ambos usam o mesmo `nixpkgs` (pinado via `flake.lock`).
 
 ## 🚀 Início Rápido
@@ -249,42 +249,34 @@ sudo nixos-rebuild switch --flake /etc/nixos#barbudus-plasma
 sudo nixos-rebuild switch --flake /etc/nixos#barbudus-gnome
 
 # Via Just (a partir da raiz do repositório; usa o desktop ativo por padrão):
-sudo just system switch
+sudo just switch
 
 # Via Just selecionando desktop explicitamente no host atual:
-sudo just system switch plasma
+sudo just switch plasma
 
 # Para forçar a saída canônica do flake, sem seguir o desktop ativo:
-sudo just system switch default
+sudo just switch default
 
 # Via Just selecionando host e desktop manualmente:
-sudo just system switch barbudus plasma
+sudo just switch barbudus plasma
 ```
 
-### Switch do Home Manager (usuário)
+### Switch do sistema (inclui Home Manager)
 
 ```bash
-# Aplica a configuração HM do usuário abutre no host barbudus:
-home-manager switch --flake /etc/nixos#abutre@barbudus
+# Rebuild e ativa o desktop padrão do host (inclui HM de todos os usuários):
+sudo nixos-rebuild switch --flake /etc/nixos#barbudus
 
-# Via Just (detecta usuário, host e desktop ativos automaticamente):
-just home switch
+# Via Just (usa o desktop ativo por padrão):
+sudo just switch
 
-# Via Just selecionando desktop explicitamente para o usuário/host atuais:
-just home switch plasma
-
-# Para forçar a saída canônica do flake, sem seguir o desktop ativo:
-just home switch default
-
-# Especificando usuário e/ou host manualmente:
-just home switch abutre@bigodon
+# Via Just selecionando desktop explicitamente:
+sudo just switch plasma
+sudo just switch barbudus plasma
 ```
 
-> **Primeira vez?** Se `home-manager` ainda não está instalado, use:
->
-> ```bash
-> nix run nixpkgs#home-manager -- switch --flake /etc/nixos#abutre@barbudus
-> ```
+> As configurações de Home Manager de todos os usuários são aplicadas automaticamente
+> a cada rebuild do sistema — não é necessário nenhum comando adicional.
 
 ### Rollback
 
@@ -351,20 +343,16 @@ Para uma configuração HM personalizada (além da `home/common.nix` padrão):
    # Edite conforme necessário
    ```
 
-2. Registre a customização do usuário no builder de Home Manager:
+2. O módulo `modules/system/users/home-manager.nix` detecta automaticamente o arquivo
+   `home/users/<username>/home.nix` e o importa para o usuário correspondente.
 
-   > Com arquitetura dendrítica, `homeConfigurations` é gerado automaticamente.
-   > Para usuários com customização própria, adicione o import condicional no builder
-   > de Home Manager (ou generalize para múltiplos usuários) em `dendritic/flake/home-configurations.nix`.
-
-3. Aplique:
+3. Aplique com um rebuild normal do sistema:
 
    ```bash
-   home-manager switch --flake /etc/nixos#seu-usuario@barbudus
+   sudo just switch
    ```
 
-> Usuários sem customização continuam com entradas automáticas em `homeConfigurations`,
-> aplicando apenas `home/common.nix`.
+> Usuários sem customização continuam recebendo apenas `home/common.nix` automaticamente.
 
 ## 🖥️ Adicionando um Novo Host
 
