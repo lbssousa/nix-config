@@ -37,9 +37,11 @@
         expected_uid="$(id -u "${username}" 2>/dev/null || true)"
         if [ -n "$expected_uid" ]; then
           # Corrige qualquer entrada (recursiva) que não pertença ao usuário.
+          # -xdev: não cruza fronteiras de sistema de arquivos, evitando pontos
+          # de montagem FUSE (rclone, sshfs etc.) que não permitem acesso root.
           # -h: muda o dono do symlink em si (sem seguir o link) para evitar
           # erros de leitura em symlinks que apontam para o Nix store.
-          find "$home_dir" -not -user "${username}" -print0 \
+          find "$home_dir" -xdev -not -user "${username}" -print0 \
             | xargs -r0 chown -h "${username}:users"
         fi
       fi
