@@ -304,7 +304,7 @@ in
         Type=notify
         Environment=PATH=/run/wrappers/bin:${lib.makeBinPath [ pkgs.fuse3 ]}
         EnvironmentFile=%h/.config/systemd/user/rclone-google-drive@%i.env
-        EnvironmentFile=${config.sops.templates."google-drive-email.env".path}
+        EnvironmentFile=${config.xdg.configHome}/rclone/google-drive-email.env
 
         ExecStartPre=-${pkgs.bash}/bin/bash -lc 'exec ${pkgs.coreutils}/bin/mkdir -p "$HOME/Google Drive/$GOOGLE_DRIVE_EMAIL/$MOUNT_DIR"'
 
@@ -360,7 +360,12 @@ in
         '';
       };
     }
-    // lib.mapAttrs' mkRcloneGoogleDriveEnvFile rcloneGoogleDriveInstances;
+    // lib.mapAttrs' mkRcloneGoogleDriveEnvFile rcloneGoogleDriveInstances
+    // {
+      # Env file com o e-mail do Google Drive — não é segredo, vem do flake
+      "rclone/google-drive-email.env".text =
+        "GOOGLE_DRIVE_EMAIL=${inputs.nix-secrets.abutre.googleDriveEmail}";
+    };
 
   xdg.dataFile = lib.optionalAttrs isPlasma {
     "konsole/default.profile".text = ''
@@ -427,18 +432,6 @@ in
   sops = {
     age.keyFile = personalAgeKeyPath;
 
-    secrets."git-name" = {
-      sopsFile = inputs.nix-secrets + "/secrets.yaml";
-      key = "abutre/git/name";
-    };
-    secrets."git-email" = {
-      sopsFile = inputs.nix-secrets + "/secrets.yaml";
-      key = "abutre/git/email";
-    };
-    secrets."google-drive-email" = {
-      sopsFile = inputs.nix-secrets + "/secrets.yaml";
-      key = "abutre/google_drive/email";
-    };
     secrets."rclone-client-id" = {
       sopsFile = inputs.nix-secrets + "/secrets.yaml";
       key = "abutre/google_drive/rclone/client_id";
@@ -447,15 +440,6 @@ in
       sopsFile = inputs.nix-secrets + "/secrets.yaml";
       key = "abutre/google_drive/rclone/client_secret";
     };
-
-    templates."git-user.ini".content = ''
-      [user]
-        name = ${config.sops.placeholder."git-name"}
-        email = ${config.sops.placeholder."git-email"}
-    '';
-    templates."google-drive-email.env".content = "GOOGLE_DRIVE_EMAIL=${
-      config.sops.placeholder."google-drive-email"
-    }";
   };
 
   dconf.settings = lib.mkIf isGnome {
@@ -711,6 +695,8 @@ in
     };
 
     git = {
+      userName = inputs.nix-secrets.abutre.gitName;
+      userEmail = inputs.nix-secrets.abutre.gitEmail;
       signing = {
         key = "BAC0B1B569777A733E37447FB10712C404063D38";
         signByDefault = true;
@@ -718,9 +704,6 @@ in
       settings = {
         safe.directory = [ "/etc/nixos" ];
       };
-      includes = [
-        { path = config.sops.templates."git-user.ini".path; }
-      ];
     };
 
     ssh.enable = true;

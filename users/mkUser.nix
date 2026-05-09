@@ -4,8 +4,8 @@
 # NOTA: A configuração do Home Manager é gerida separadamente via homeConfigurations
 # no flake.nix. Consulte home/users/<usuario>/home.nix para customizações por usuário.
 #
-# NOTA: O nome completo (description) foi movido para nix-secrets/secrets.yaml como
-# campo cifrado ({username}.full_name). Não deve ser definido aqui.
+# NOTA: O nome completo (description) é definido via outputs do flake nix-secrets
+# (inputs.nix-secrets.${username}.fullName). Não deve ser definido aqui.
 { pkgs, lib }:
 {
   username,
