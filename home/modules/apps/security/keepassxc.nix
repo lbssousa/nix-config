@@ -13,13 +13,18 @@
     # sinal SettingChanged do org.freedesktop.portal.Settings e chama
     # updateColors() + forceRepaint() a cada alteração de color-scheme,
     # mantendo a decoração sincronizada com o modo do sistema.
+    #
+    # qadwaitadecorations não é dependência de build do keepassxc no nixpkgs,
+    # então seu diretório de plugin não entra no QT_PLUGIN_PATH do wrapper Qt.
+    # Por isso também prefixamos QT_PLUGIN_PATH aqui.
     package = pkgs.symlinkJoin {
       name = "keepassxc";
       paths = [ pkgs.keepassxc ];
       nativeBuildInputs = [ pkgs.makeWrapper ];
       postBuild = ''
         wrapProgram $out/bin/keepassxc \
-          --set QT_WAYLAND_DECORATION adwaita
+          --set QT_WAYLAND_DECORATION adwaita \
+          --prefix QT_PLUGIN_PATH : ${pkgs.qadwaitadecorations}/lib/qt-${pkgs.qt5.qtbase.version}/plugins
       '';
     };
   };
