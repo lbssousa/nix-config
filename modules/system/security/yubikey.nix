@@ -18,9 +18,11 @@ in
       enable = true;
       settings = {
         cue = true;
-        interactive = true;
-        # Arquivo de mapeamento global do pam_u2f persistido fora da raiz efêmera.
-        # Cada linha deve começar com o usuário correto (ex.: "abutre:").
+        # interactive deliberadamente omitido: sem esse flag, pam_u2f não exige
+        # "pressione Enter" via TTY antes de aguardar o toque na chave. Isso
+        # permite que o agente polkit do GNOME (embutido no gnome-shell) exiba
+        # o dialog gráfico de autenticação — o usuário insere a YubiKey e toca
+        # a chave sem precisar interagir com um terminal.
         authfile = "/persist/etc/u2f-mappings";
       };
     };
