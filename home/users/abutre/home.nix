@@ -731,13 +731,13 @@ in
     };
 
     git = {
-      userName = inputs.nix-secrets.abutre.gitName;
-      userEmail = inputs.nix-secrets.abutre.gitEmail;
       signing = {
         key = "BAC0B1B569777A733E37447FB10712C404063D38";
         signByDefault = true;
       };
       settings = {
+        user.name = inputs.nix-secrets.abutre.gitName;
+        user.email = inputs.nix-secrets.abutre.gitEmail;
         safe.directory = [ "/etc/nixos" ];
       };
 
