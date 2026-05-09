@@ -9,6 +9,9 @@
 { pkgs, lib }:
 {
   username,
+  # UID numérico fixo. SEMPRE defina para evitar reatribuição após adicionar/remover
+  # usuários, o que causaria incompatibilidade de propriedade nos arquivos do $HOME.
+  uid ? null,
   # Define se o usuário pertence ao grupo "wheel" (sudo). Padrão: false.
   hasSudo ? false,
 }:
@@ -20,6 +23,9 @@
 
   users.users.${username} = {
     isNormalUser = true;
+  }
+  // lib.optionalAttrs (uid != null) { inherit uid; }
+  // {
     # Grupos essenciais para desktop com GNOME + containers
     extraGroups = [
       "networkmanager" # Gerenciar conexões de rede
