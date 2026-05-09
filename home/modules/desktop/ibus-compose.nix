@@ -1,5 +1,9 @@
 # IBus Compose shared module for all Home Manager users.
-{ lib, desktop ? "gnome", ... }:
+{
+  lib,
+  desktop ? "gnome",
+  ...
+}:
 
 let
   isGnome = desktop == "gnome";

@@ -12,7 +12,10 @@
             };
 
             defaultDesktop = lib.mkOption {
-              type = lib.types.enum [ "gnome" "plasma" ];
+              type = lib.types.enum [
+                "gnome"
+                "plasma"
+              ];
               description = "Desktop padrao para a saida canonica sem sufixo.";
             };
 
@@ -35,8 +38,16 @@
 
     desktops = lib.mkOption {
       description = "Ambientes desktop suportados para variantes de saida.";
-      type = lib.types.listOf (lib.types.enum [ "gnome" "plasma" ]);
-      default = [ "gnome" "plasma" ];
+      type = lib.types.listOf (
+        lib.types.enum [
+          "gnome"
+          "plasma"
+        ]
+      );
+      default = [
+        "gnome"
+        "plasma"
+      ];
     };
 
     localOverlay = lib.mkOption {

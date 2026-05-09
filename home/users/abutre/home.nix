@@ -740,6 +740,7 @@ in
       settings = {
         safe.directory = [ "/etc/nixos" ];
       };
+
     };
 
     ssh.enable = true;

@@ -24,7 +24,7 @@ in
       # usuários e inputs antes de ser passado ao nixosSystem.
       (import ../../modules/system/users/descriptions.nix {
         inherit inputs;
-        users = config.dendritic.users;
+        inherit (config.dendritic) users;
       })
     ];
 
