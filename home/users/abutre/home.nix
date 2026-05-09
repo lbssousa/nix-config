@@ -77,9 +77,9 @@ in
 
 {
   imports = [
-    ../../modules/apps/nix-validation.nix
-    ../../modules/apps/security/keepassxc.nix
-    ../../modules/apps/security/yubikey.nix
+    ../../../modules/home/apps/nix-validation.nix
+    ../../../modules/home/apps/security/keepassxc.nix
+    ../../../modules/home/apps/security/yubikey.nix
   ];
 
   home = {
