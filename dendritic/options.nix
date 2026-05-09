@@ -11,14 +11,6 @@
               description = "Sistema da arquitetura do host.";
             };
 
-            defaultDesktop = lib.mkOption {
-              type = lib.types.enum [
-                "gnome"
-                "plasma"
-              ];
-              description = "Desktop padrao para a saida canonica sem sufixo.";
-            };
-
             extraNixosModules = lib.mkOption {
               type = lib.types.listOf lib.types.deferredModule;
               default = [ ];
@@ -34,20 +26,6 @@
       description = "Usuarios do sistema, gerenciados pelo Home Manager como modulo NixOS.";
       type = lib.types.listOf lib.types.str;
       default = [ ];
-    };
-
-    desktops = lib.mkOption {
-      description = "Ambientes desktop suportados para variantes de saida.";
-      type = lib.types.listOf (
-        lib.types.enum [
-          "gnome"
-          "plasma"
-        ]
-      );
-      default = [
-        "gnome"
-        "plasma"
-      ];
     };
 
     localOverlay = lib.mkOption {

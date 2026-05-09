@@ -4,13 +4,12 @@ let
   inherit (config.dendritic) hosts;
 
   mkHost =
-    hostname: hostSpec: desktop:
+    hostname: hostSpec:
     lib.nixosSystem {
       inherit (hostSpec) system;
       specialArgs = { inherit inputs; };
       modules = [
         { nixpkgs.overlays = [ config.dendritic.localOverlay ]; }
-        { my.desktop.environment = desktop; }
 
         inputs.disko.nixosModules.disko
         inputs.impermanence.nixosModules.impermanence
@@ -25,23 +24,7 @@ let
       ]
       ++ hostSpec.extraNixosModules;
     };
-
-  mkCanonical = hostname: hostSpec: {
-    name = hostname;
-    value = mkHost hostname hostSpec hostSpec.defaultDesktop;
-  };
-
-  mkDesktopVariants =
-    hostname: hostSpec:
-    lib.listToAttrs (
-      map (desktop: {
-        name = "${hostname}-${desktop}";
-        value = mkHost hostname hostSpec desktop;
-      }) config.dendritic.desktops
-    );
 in
 {
-  flake.nixosConfigurations =
-    lib.mapAttrs' mkCanonical hosts
-    // lib.foldl' lib.recursiveUpdate { } (lib.mapAttrsToList mkDesktopVariants hosts);
+  flake.nixosConfigurations = lib.mapAttrs mkHost hosts;
 }

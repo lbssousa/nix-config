@@ -42,12 +42,6 @@ in
         enableGnomeKeyring = true;
       };
 
-      plasmalogin = {
-        u2f.enable = true;
-        enableGnomeKeyring = false;
-        kwallet.enable = true;
-      };
-
       # pkexec/polkit autenticado por YubiKey (pam_u2f), sem fallback para senha/fingerprint.
       "polkit-1" = {
         u2f.enable = true;

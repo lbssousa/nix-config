@@ -1,6 +1,6 @@
 # nixos-config
 
-Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento declarativo (disko), sistema efêmero (impermanence), swap híbrida e alternância de ambiente desktop (GNOME ou KDE Plasma).
+Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento declarativo (disko), sistema efêmero (impermanence), swap híbrida e desktop GNOME.
 
 ## 🎯 Características
 
@@ -10,7 +10,7 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 - ✅ **Btrfs**: Sistema de arquivos moderno com compressão zstd, subvolumes e snapshots
 - ✅ **Impermanence**: Sistema efêmero com tmpfs na raiz — limpo a cada boot
 - ✅ **Swap híbrida**: zram + swap em disco para máxima performance
-- ✅ **Desktop alternável**: GNOME ou KDE Plasma por variante do flake
+- ✅ **Desktop GNOME**: GNOME com Flatpak, fontes e apps configurados declarativamente
 - ✅ **Flatpak**: Aplicações instaladas system-wide automaticamente após o boot (como Silverblue)
 - ✅ **Podman + Distrobox**: Containers rootless (experiência Silverblue)
 - ✅ **Home Manager**: Gerenciamento de configurações de usuário
@@ -94,7 +94,7 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 │       │   ├── common.nix    # Configurações básicas (locale, nix, Btrfs)
 │       │   └── impermanence.nix # Raiz tmpfs + diretórios persistentes (/persist)
 │       ├── desktop/
-│       │   └── desktop.nix   # GNOME/KDE, Flatpak, fontes, instalação automática de apps
+│       │   └── desktop.nix   # GNOME, Flatpak, fontes, instalação automática de apps
 │       ├── hardware/
 │       │   └── printing.nix  # Impressora Epson ESC-P/R + ecbd.service
 │       ├── network/
@@ -180,7 +180,6 @@ sudo bash scripts/install.sh --help
 ```bash
 sudo bash scripts/install.sh \
   --host barbudus \
-   --desktop plasma \
   --disk /dev/nvme0n1 \
   --user "cavalo:sudo" \
   --non-interactive
@@ -236,43 +235,17 @@ sudo bash scripts/update.sh --update-only
 sudo bash scripts/update.sh --rebuild-only
 ```
 
-### Switch do sistema (NixOS)
-
-```bash
-# Rebuild e ativa o desktop padrão do host (KDE Plasma):
-sudo nixos-rebuild switch --flake /etc/nixos#barbudus
-
-# Rebuild e ativa KDE Plasma:
-sudo nixos-rebuild switch --flake /etc/nixos#barbudus-plasma
-
-# Rebuild e ativa GNOME explicitamente:
-sudo nixos-rebuild switch --flake /etc/nixos#barbudus-gnome
-
-# Via Just (a partir da raiz do repositório; usa o desktop ativo por padrão):
-sudo just switch
-
-# Via Just selecionando desktop explicitamente no host atual:
-sudo just switch plasma
-
-# Para forçar a saída canônica do flake, sem seguir o desktop ativo:
-sudo just switch default
-
-# Via Just selecionando host e desktop manualmente:
-sudo just switch barbudus plasma
-```
-
 ### Switch do sistema (inclui Home Manager)
 
 ```bash
-# Rebuild e ativa o desktop padrão do host (inclui HM de todos os usuários):
+# Rebuild e ativa o sistema (inclui HM de todos os usuários):
 sudo nixos-rebuild switch --flake /etc/nixos#barbudus
 
-# Via Just (usa o desktop ativo por padrão):
+# Via Just (a partir da raiz do repositório):
 sudo just switch
 
-# Via Just selecionando desktop explicitamente:
-sudo just switch plasma
-sudo just switch barbudus plasma
+# Via Just especificando host manualmente:
+sudo just switch barbudus
 ```
 
 > As configurações de Home Manager de todos os usuários são aplicadas automaticamente
@@ -368,7 +341,6 @@ Para uma configuração HM personalizada (além da `home/common.nix` padrão):
      # ...hosts existentes...
      novo-host = {
        system = "x86_64-linux";
-       defaultDesktop = "plasma";
        extraNixosModules = [ ];
      };
    };
@@ -394,10 +366,10 @@ Os Flatpaks padrão do sistema são **instalados automaticamente** via um servi�
 systemd (`install-system-flatpaks`) na primeira inicialização, ou sempre que a
 lista de aplicativos for alterada. Não é necessária nenhuma ação manual.
 
-O repositório Flathub é configurado automaticamente. Os aplicativos instalados
-incluem apps comuns e apps específicos do desktop selecionado (GNOME ou KDE Plasma).
-No perfil GNOME, o Bazaar é instalado por Flatpak e o Ptyxis é instalado via Nix.
-No perfil KDE Plasma, o Bazaar e o Ptyxis não são instalados por padrão.
+O repositório Flathub é configurado automaticamente. Além dos apps comuns,
+os apps GNOME (Bazaar, Extension Manager, Chrome) são instalados via Flatpak.
+O Bazaar (substituto do GNOME Software) é **reinstalado automaticamente** em caso
+de remoção acidental, tanto a cada `nixos-rebuild` quanto via timer diário.
 
 Para instalar aplicativos adicionais manualmente:
 
@@ -408,31 +380,6 @@ flatpak install flathub <app-id>
 # Exemplo:
 flatpak install flathub org.gimp.GIMP
 ```
-
-## 🔄 Migração de GNOME para KDE Plasma
-
-Para alternar uma instalação atual para KDE Plasma:
-
-```bash
-# 1) Atualize o repositório local
-cd /etc/nixos
-git pull
-
-# 2) Ative a variante KDE Plasma do host atual
-sudo just system switch plasma
-
-# Alternativa equivalente com nixos-rebuild:
-# sudo nixos-rebuild switch --flake /etc/nixos#$(hostname)-plasma
-
-# 3) Reinicie a sessão (ou reinicie a máquina)
-sudo reboot
-
-# 4) Opcional: limpar Flatpaks não utilizados após a migração
-flatpak uninstall --system --unused -y
-```
-
-Após o switch, o SDDM + Plasma 6 passam a ser usados neste host.
-Para voltar ao GNOME depois, use `sudo just system switch gnome`.
 
 ## 🔒 Configuração Pós-Instalação
 

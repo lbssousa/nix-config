@@ -4,13 +4,10 @@
   pkgs,
   lib,
   inputs,
-  osConfig,
   ...
 }:
 
 let
-  isPlasma = osConfig.my.desktop.environment == "plasma";
-  isGnome = osConfig.my.desktop.environment == "gnome";
   personalAgeKeySource = "${config.home.homeDirectory}/Documentos/lbssousa/nix-keys/sops/age/abutre/keys.txt";
   personalAgeKeyPath = "${config.xdg.configHome}/sops/age/keys.txt";
   rcloneConfigPath = "${config.xdg.configHome}/rclone/rclone.conf";
@@ -93,9 +90,6 @@ in
       pkgs.rclone
       pkgs.rustup
       pkgs.texlab
-    ]
-    ++ lib.optionals isPlasma [ pkgs.kdePackages.yakuake ]
-    ++ lib.optionals isGnome [
       pkgs.gnomeExtensions.appindicator
       pkgs.gnomeExtensions.ddterm
     ];
@@ -103,7 +97,7 @@ in
     # and to Zed, which calls rustup to compile WASM extensions.
     sessionPath = [ "${config.home.homeDirectory}/.cargo/bin" ];
     # Cursor padrão do GNOME — configura Wayland, XWayland e o link ~/.icons/default
-    pointerCursor = lib.mkIf isGnome {
+    pointerCursor = {
       package = pkgs.adwaita-icon-theme;
       name = "Adwaita";
       size = 24;
@@ -112,294 +106,81 @@ in
 
   };
 
-  xdg.configFile =
-    (lib.optionalAttrs isPlasma {
-      "autostart/yakuake.desktop".text = ''
-        [Desktop Entry]
-        Exec=yakuake
-        Icon=yakuake
-        Name=Yakuake
-        Type=Application
-        X-KDE-StartupNotify=false
-      '';
+  xdg.configFile = {
+    "systemd/user/rclone-google-drive@.service".text = ''
+      [Unit]
+      Description=rclone: Remote FUSE filesystem for Google Drive (%i)
+      Documentation=man:rclone(1)
+      After=network-online.target rclone-write-config.service
+      Wants=network-online.target
+      Requires=rclone-write-config.service
 
-      "konsolerc".text = ''
-        [Desktop Entry]
-        DefaultProfile=default.profile
-      '';
+      [Service]
+      Type=notify
+      Environment=PATH=/run/wrappers/bin:${lib.makeBinPath [ pkgs.fuse3 ]}
+      EnvironmentFile=%h/.config/systemd/user/rclone-google-drive@%i.env
+      EnvironmentFile=${config.xdg.configHome}/rclone/google-drive-email.env
 
-      "yakuakerc".text = ''
-        [Dialogs]
-        FirstRun=false
+      ExecStartPre=-${pkgs.bash}/bin/bash -lc 'exec ${pkgs.coreutils}/bin/mkdir -p "$HOME/Google Drive/$GOOGLE_DRIVE_EMAIL/$MOUNT_DIR"'
 
-        [Window]
-        Height=90
-        KeepOpen=false
-        ShowOnStart=false
-        Width=90
-      '';
+      ExecStart= \
+        ${pkgs.bash}/bin/bash -lc 'exec ${pkgs.rclone}/bin/rclone mount \
+          --config=${rcloneConfigPath} \
+          --cache-dir="$HOME/.cache/rclone/vfs/$CACHE_SLUG" \
+          --dir-cache-time 5000h \
+          --poll-interval 10s \
+          --vfs-cache-mode writes \
+          --vfs-cache-max-size 10G \
+          --vfs-read-chunk-size 120M \
+          --vfs-read-ahead 1G \
+          --vfs-cache-max-age 5000h \
+          --bwlimit-file 100M \
+          --log-level INFO \
+          --log-file /tmp/rclone-google-drive-%i.log \
+          --umask 022 \
+          $EXTRA_FLAGS \
+          "Google Drive:" "$HOME/Google Drive/$GOOGLE_DRIVE_EMAIL/$MOUNT_DIR"'
 
-      "plasma-org.kde.plasma.desktop-appletsrc" = {
-        force = true;
-        text = ''
-          [Containments][2]
-          activityId=
-          formfactor=2
-          immutability=1
-          lastScreen=0
-          location=4
-          plugin=org.kde.panel
-          wallpaperplugin=org.kde.image
+      ExecStop=${pkgs.bash}/bin/bash -lc 'exec /run/wrappers/bin/fusermount3 -uz "$HOME/Google Drive/$GOOGLE_DRIVE_EMAIL/$MOUNT_DIR"'
+      Restart=on-failure
+      RestartSec=10
 
-          [Containments][2][Applets][20]
-          immutability=1
-          plugin=org.kde.plasma.digitalclock
-
-          [Containments][2][Applets][20][Configuration]
-          popupHeight=400
-          popupWidth=560
-
-          [Containments][2][Applets][20][Configuration][Appearance]
-          fontWeight=400
-
-          [Containments][2][Applets][21]
-          immutability=1
-          plugin=org.kde.plasma.showdesktop
-
-          [Containments][2][Applets][26]
-          immutability=1
-          plugin=org.kde.plasma.kickoff
-
-          [Containments][2][Applets][26][Configuration]
-          popupHeight=509
-          popupWidth=629
-
-          [Containments][2][Applets][26][Configuration][General]
-          favoritesPortedToKAstats=true
-
-          [Containments][2][Applets][27]
-          immutability=1
-          plugin=org.kde.plasma.panelspacer
-
-          [Containments][2][Applets][28]
-          immutability=1
-          plugin=org.kde.plasma.panelspacer
-
-          [Containments][2][Applets][4]
-          immutability=1
-          plugin=org.kde.plasma.pager
-
-          [Containments][2][Applets][5]
-          immutability=1
-          plugin=org.kde.plasma.icontasks
-
-          [Containments][2][Applets][5][Configuration][ConfigDialog]
-          DialogHeight=630
-          DialogWidth=810
-
-          [Containments][2][Applets][5][Configuration][General]
-          launchers=applications:systemsettings.desktop,preferred://filemanager,applications:org.kde.konsole.desktop,preferred://browser,applications:code.desktop,applications:chrome-hnpfjngllnobngcgfapefoaidbinmjnm-Default.desktop,applications:chrome-agimnkijcaahngcdmfeangaknmldooml-Default.desktop,applications:chrome-cinhimbnkkaeohfgghhklpknlkffjgod-Default.desktop,applications:dev.zed.Zed.desktop
-          showOnlyCurrentActivity=false
-          showOnlyCurrentDesktop=false
-
-          [Containments][2][Applets][6]
-          immutability=1
-          plugin=org.kde.plasma.marginsseparator
-
-          [Containments][2][Applets][7]
-          activityId=
-          formfactor=0
-          immutability=1
-          lastScreen=-1
-          location=0
-          plugin=org.kde.plasma.systemtray
-          popupHeight=432
-          popupWidth=432
-          wallpaperplugin=org.kde.image
-
-          [Containments][2][Applets][7][Applets][10]
-          immutability=1
-          plugin=org.kde.plasma.devicenotifier
-
-          [Containments][2][Applets][7][Applets][11]
-          immutability=1
-          plugin=org.kde.plasma.manage-inputmethod
-
-          [Containments][2][Applets][7][Applets][12]
-          immutability=1
-          plugin=org.kde.plasma.notifications
-
-          [Containments][2][Applets][7][Applets][13]
-          immutability=1
-          plugin=org.kde.kscreen
-
-          [Containments][2][Applets][7][Applets][14]
-          immutability=1
-          plugin=org.kde.plasma.keyboardindicator
-
-          [Containments][2][Applets][7][Applets][15]
-          immutability=1
-          plugin=org.kde.plasma.keyboardlayout
-
-          [Containments][2][Applets][7][Applets][16]
-          immutability=1
-          plugin=org.kde.plasma.networkmanagement
-
-          [Containments][2][Applets][7][Applets][17]
-          immutability=1
-          plugin=org.kde.plasma.printmanager
-
-          [Containments][2][Applets][7][Applets][18]
-          immutability=1
-          plugin=org.kde.plasma.volume
-
-          [Containments][2][Applets][7][Applets][18][Configuration][General]
-          migrated=true
-
-          [Containments][2][Applets][7][Applets][19]
-          immutability=1
-          plugin=org.kde.plasma.weather
-
-          [Containments][2][Applets][7][Applets][22]
-          immutability=1
-          plugin=org.kde.plasma.battery
-
-          [Containments][2][Applets][7][Applets][23]
-          immutability=1
-          plugin=org.kde.plasma.brightness
-
-          [Containments][2][Applets][7][Applets][24]
-          immutability=1
-          plugin=org.kde.plasma.bluetooth
-
-          [Containments][2][Applets][7][Applets][26]
-          immutability=1
-          plugin=org.kde.plasma.mediacontroller
-
-          [Containments][2][Applets][7][Applets][8]
-          immutability=1
-          plugin=org.kde.plasma.cameraindicator
-
-          [Containments][2][Applets][7][Applets][9]
-          immutability=1
-          plugin=org.kde.plasma.clipboard
-
-          [Containments][2][Applets][7][General]
-          extraItems=org.kde.plasma.cameraindicator,org.kde.plasma.clipboard,org.kde.plasma.devicenotifier,org.kde.plasma.manage-inputmethod,org.kde.plasma.mediacontroller,org.kde.plasma.notifications,org.kde.kscreen,org.kde.plasma.battery,org.kde.plasma.bluetooth,org.kde.plasma.brightness,org.kde.plasma.keyboardindicator,org.kde.plasma.keyboardlayout,org.kde.plasma.networkmanagement,org.kde.plasma.printmanager,org.kde.plasma.volume,org.kde.plasma.weather
-          knownItems=org.kde.plasma.cameraindicator,org.kde.plasma.clipboard,org.kde.plasma.devicenotifier,org.kde.plasma.manage-inputmethod,org.kde.plasma.mediacontroller,org.kde.plasma.notifications,org.kde.kscreen,org.kde.plasma.battery,org.kde.plasma.bluetooth,org.kde.plasma.brightness,org.kde.plasma.keyboardindicator,org.kde.plasma.keyboardlayout,org.kde.plasma.networkmanagement,org.kde.plasma.printmanager,org.kde.plasma.volume,org.kde.plasma.weather
-
-          [Containments][2][General]
-          AppletOrder=4;28;26;5;27;6;7;20;21
-        '';
-      };
-    })
-    // {
-      "systemd/user/rclone-google-drive@.service".text = ''
-        [Unit]
-        Description=rclone: Remote FUSE filesystem for Google Drive (%i)
-        Documentation=man:rclone(1)
-        After=network-online.target rclone-write-config.service
-        Wants=network-online.target
-        Requires=rclone-write-config.service
-
-        [Service]
-        Type=notify
-        Environment=PATH=/run/wrappers/bin:${lib.makeBinPath [ pkgs.fuse3 ]}
-        EnvironmentFile=%h/.config/systemd/user/rclone-google-drive@%i.env
-        EnvironmentFile=${config.xdg.configHome}/rclone/google-drive-email.env
-
-        ExecStartPre=-${pkgs.bash}/bin/bash -lc 'exec ${pkgs.coreutils}/bin/mkdir -p "$HOME/Google Drive/$GOOGLE_DRIVE_EMAIL/$MOUNT_DIR"'
-
-        ExecStart= \
-          ${pkgs.bash}/bin/bash -lc 'exec ${pkgs.rclone}/bin/rclone mount \
-            --config=${rcloneConfigPath} \
-            --cache-dir="$HOME/.cache/rclone/vfs/$CACHE_SLUG" \
-            --dir-cache-time 5000h \
-            --poll-interval 10s \
-            --vfs-cache-mode writes \
-            --vfs-cache-max-size 10G \
-            --vfs-read-chunk-size 120M \
-            --vfs-read-ahead 1G \
-            --vfs-cache-max-age 5000h \
-            --bwlimit-file 100M \
-            --log-level INFO \
-            --log-file /tmp/rclone-google-drive-%i.log \
-            --umask 022 \
-            $EXTRA_FLAGS \
-            "Google Drive:" "$HOME/Google Drive/$GOOGLE_DRIVE_EMAIL/$MOUNT_DIR"'
-
-        ExecStop=${pkgs.bash}/bin/bash -lc 'exec /run/wrappers/bin/fusermount3 -uz "$HOME/Google Drive/$GOOGLE_DRIVE_EMAIL/$MOUNT_DIR"'
-        Restart=on-failure
-        RestartSec=10
-
-        [Install]
-        WantedBy=default.target
-      '';
-
-      "systemd/user/rclone-write-config.service".text = ''
-        [Unit]
-        Description=Escrever config do rclone com credenciais decifradas
-        After=sops-nix.service
-        Requires=sops-nix.service
-
-        [Service]
-        Type=oneshot
-        RemainAfterExit=yes
-        Environment=SOPS_CLIENT_ID_PATH=${config.sops.secrets."rclone-client-id".path}
-        Environment=SOPS_CLIENT_SECRET_PATH=${config.sops.secrets."rclone-client-secret".path}
-        ExecStart=${writeRcloneConfig}
-      '';
-
-      # Favoritos do Nautilus (gtk-3.0)
-      "gtk-3.0/bookmarks" = {
-        force = true;
-        text = ''
-          file://${config.home.homeDirectory}/Documentos
-          file://${config.home.homeDirectory}/M%C3%BAsicas
-          file://${config.home.homeDirectory}/Imagens
-          file://${config.home.homeDirectory}/V%C3%ADdeos
-          file://${config.home.homeDirectory}/Downloads
-        '';
-      };
-    }
-    // lib.mapAttrs' mkRcloneGoogleDriveEnvFile rcloneGoogleDriveInstances
-    // {
-      # Env file com o e-mail do Google Drive — não é segredo, vem do flake
-      "rclone/google-drive-email.env".text =
-        "GOOGLE_DRIVE_EMAIL=${inputs.nix-secrets.abutre.googleDriveEmail}";
-    };
-
-  xdg.dataFile = lib.optionalAttrs isPlasma {
-    "konsole/default.profile".text = ''
-      [Appearance]
-      Font=JetBrainsMono Nerd Font Mono,14,-1,5,50,0,0,0,0,0
-
-      [General]
-      Name=Default
-      Parent=FALLBACK/
-      TerminalColumns=154
-      TerminalRows=32
+      [Install]
+      WantedBy=default.target
     '';
-  };
 
-  # Remove sobras mutáveis do Plasma depois do linkGeneration, sem atrapalhar
-  # a limpeza normal do Home Manager entre gerações.
-  home.activation.cleanupPlasmaArtifactsWhenNotPlasma = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
-    if [ "${osConfig.my.desktop.environment}" != "plasma" ]; then
-      for path in \
-        "${config.xdg.configHome}/autostart/yakuake.desktop" \
-        "${config.xdg.configHome}/konsolerc" \
-        "${config.xdg.configHome}/yakuakerc" \
-        "${config.xdg.configHome}/plasma-org.kde.plasma.desktop-appletsrc" \
-        "${config.xdg.configHome}/systemd/user/gpg-agent-ssh.socket" \
-        "${config.xdg.configHome}/systemd/user/sockets.target.wants/gpg-agent-ssh.socket" \
-        "${config.xdg.dataHome}/konsole/default.profile"; do
-        if [ -L "$path" ] || [ -e "$path" ]; then
-          rm -f "$path"
-        fi
-      done
-    fi
-  '';
+    "systemd/user/rclone-write-config.service".text = ''
+      [Unit]
+      Description=Escrever config do rclone com credenciais decifradas
+      After=sops-nix.service
+      Requires=sops-nix.service
+
+      [Service]
+      Type=oneshot
+      RemainAfterExit=yes
+      Environment=SOPS_CLIENT_ID_PATH=${config.sops.secrets."rclone-client-id".path}
+      Environment=SOPS_CLIENT_SECRET_PATH=${config.sops.secrets."rclone-client-secret".path}
+      ExecStart=${writeRcloneConfig}
+    '';
+
+    # Favoritos do Nautilus (gtk-3.0)
+    "gtk-3.0/bookmarks" = {
+      force = true;
+      text = ''
+        file://${config.home.homeDirectory}/Documentos
+        file://${config.home.homeDirectory}/M%C3%BAsicas
+        file://${config.home.homeDirectory}/Imagens
+        file://${config.home.homeDirectory}/V%C3%ADdeos
+        file://${config.home.homeDirectory}/Downloads
+      '';
+    };
+  }
+  // lib.mapAttrs' mkRcloneGoogleDriveEnvFile rcloneGoogleDriveInstances
+  // {
+    # Env file com o e-mail do Google Drive — não é segredo, vem do flake
+    "rclone/google-drive-email.env".text =
+      "GOOGLE_DRIVE_EMAIL=${inputs.nix-secrets.abutre.googleDriveEmail}";
+  };
 
   home.activation.installPersonalSopsAgeKey = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     if [ ! -f ${lib.escapeShellArg personalAgeKeySource} ]; then
@@ -444,7 +225,7 @@ in
     };
   };
 
-  dconf.settings = lib.mkIf isGnome {
+  dconf.settings = {
     # IBus em Wayland puro: delega layout ao sistema (evita setxkbmap) e
     # carrega a engine BR na inicialização da sessão.
     "desktop/ibus/general" = {

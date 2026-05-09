@@ -4,117 +4,32 @@ flake_root := env_var_or_default("LBNIX_FLAKE_DIR", justfile_directory())
 justfile_file := justfile_directory() + "/justfile"
 
 [private]
-_active_desktop:
-  #!/usr/bin/env bash
-  set -euo pipefail
-
-  normalize_desktop() {
-    local value="${1:-}"
-    value="${value,,}"
-
-    case "$value" in
-      *plasma*|*kde*)
-        echo plasma
-        return 0
-        ;;
-      *gnome*)
-        echo gnome
-        return 0
-        ;;
-      *)
-        return 1
-        ;;
-    esac
-  }
-
-  for value in "${XDG_CURRENT_DESKTOP:-}" "${XDG_SESSION_DESKTOP:-}" "${DESKTOP_SESSION:-}"; do
-    if desktop_name="$(normalize_desktop "$value")"; then
-      echo "$desktop_name"
-      exit 0
-    fi
-  done
-
-  session_user="${SUDO_USER:-$(id -un)}"
-
-  if command -v loginctl >/dev/null 2>&1; then
-    sessions="$(loginctl show-user "$session_user" --property=Sessions --value 2>/dev/null || true)"
-
-    for session_id in $sessions; do
-      session_state="$(loginctl show-session "$session_id" --property=State --value 2>/dev/null || true)"
-      session_type="$(loginctl show-session "$session_id" --property=Type --value 2>/dev/null || true)"
-
-      if [[ "$session_state" != active && "$session_type" != wayland && "$session_type" != x11 ]]; then
-        continue
-      fi
-
-      if desktop_name="$(normalize_desktop "$(loginctl show-session "$session_id" --property=Desktop --value 2>/dev/null || true)")"; then
-        echo "$desktop_name"
-        exit 0
-      fi
-    done
-  fi
-
-  exit 1
-
-[private]
-_run_system action host='' desktop='' *args:
+_run_system action host='' *args:
   #!/usr/bin/env bash
   set -euo pipefail
 
   action="{{action}}"
   system_host="{{host}}"
-  desktop_name="{{desktop}}"
   set -- {{args}}
 
-  if [[ -z "$desktop_name" || "$desktop_name" == default ]]; then
-    case "$system_host" in
-      default|gnome|plasma)
-        desktop_name="$system_host"
-        system_host=""
-        ;;
-    esac
-  fi
-
   system_host="${system_host:-$(hostname)}"
-
-  if [[ -z "$desktop_name" ]]; then
-    if desktop_name="$(just --justfile "{{justfile_file}}" _active_desktop 2>/dev/null)"; then
-      :
-    else
-      echo "Desktop ativo não detectado; usando a variante padrão do host." >&2
-      desktop_name=default
-    fi
-  fi
-
-  case "$desktop_name" in
-    default)
-      flake_target="$system_host"
-      ;;
-    gnome|plasma)
-      flake_target="${system_host}-${desktop_name}"
-      ;;
-    *)
-      echo "Desktop inválido: '$desktop_name' (use gnome|plasma|default)" >&2
-      exit 1
-      ;;
-  esac
 
   case "$action" in
     switch|boot|test)
       if [[ "${EUID}" -ne 0 ]]; then
-        exec sudo nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system "$action" "$system_host" "$desktop_name" "$@"
+        exec sudo nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system "$action" "$system_host" "$@"
       fi
       ;;
   esac
 
   case "$action" in
     switch|boot|test|build)
-      nixos-rebuild "$action" --flake "{{flake_root}}#${flake_target}" "$@"
+      nixos-rebuild "$action" --flake "{{flake_root}}#${system_host}" "$@"
       ;;
     diff)
       next_drv="$(
         nix build \
-          "{{flake_root}}#nixosConfigurations.${flake_target}.config.system.build.toplevel" \
+          "{{flake_root}}#nixosConfigurations.${system_host}.config.system.build.toplevel" \
           --no-link \
           --print-out-paths \
           2>/dev/null
@@ -135,16 +50,13 @@ help:
   @echo 'Receitas Just para operar este flake NixOS'
   @echo ''
   @echo "FLAKE_DIR atual: {{flake_root}}"
-  @echo 'Desktop aceito: gnome, plasma ou default'
-  @echo 'Sem desktop explícito, usa o desktop ativo; use default para forçar a saída canônica do flake.'
   @echo 'switch, boot e test elevam com sudo quando necessário.'
   @echo 'Home Manager é aplicado junto com nixos-rebuild (módulo do sistema).'
   @echo ''
   @echo 'Exemplos:'
   @echo '  just switch'
-  @echo '  just switch plasma'
-  @echo '  just switch barbudus plasma'
-  @echo '  just switch-full barbudus plasma'
+  @echo '  just switch barbudus'
+  @echo '  just switch-full barbudus'
   @echo '  just boot'
   @echo '  just diff'
   @echo ''
@@ -167,28 +79,28 @@ whoami:
   @echo "usuário: $(whoami)"
   @echo "flake: {{flake_root}}"
 
-switch host='' desktop='' *args:
-  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system switch "{{host}}" "{{desktop}}" {{args}}
+switch host='' *args:
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system switch "{{host}}" {{args}}
 
-boot host='' desktop='' *args:
-  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system boot "{{host}}" "{{desktop}}" {{args}}
+boot host='' *args:
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system boot "{{host}}" {{args}}
 
-test host='' desktop='' *args:
-  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system test "{{host}}" "{{desktop}}" {{args}}
+test host='' *args:
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system test "{{host}}" {{args}}
 
-build host='' desktop='' *args:
-  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system build "{{host}}" "{{desktop}}" {{args}}
+build host='' *args:
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system build "{{host}}" {{args}}
 
-diff host='' desktop='' *args:
-  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system diff "{{host}}" "{{desktop}}" {{args}}
+diff host='' *args:
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system diff "{{host}}" {{args}}
 
-switch-full host='' desktop='' *args:
-  nix run nixpkgs#just -- --justfile "{{justfile_file}}" switch "{{host}}" "{{desktop}}" {{args}}
+switch-full host='' *args:
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" switch "{{host}}" {{args}}
   nix run nixpkgs#just -- --justfile "{{justfile_file}}" check
 
-upgrade host='' desktop='' *args:
+upgrade host='' *args:
   nix run nixpkgs#just -- --justfile "{{justfile_file}}" update
-  nix run nixpkgs#just -- --justfile "{{justfile_file}}" switch "{{host}}" "{{desktop}}" {{args}}
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" switch "{{host}}" {{args}}
 
 [group("maintenance")]
 update *inputs:

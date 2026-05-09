@@ -2,13 +2,8 @@
 {
   lib,
   pkgs,
-  osConfig,
   ...
 }:
-
-let
-  isPlasma = osConfig.my.desktop.environment == "plasma";
-in
 
 {
   home = {
@@ -66,10 +61,6 @@ in
       }
 
       runIfUnitExists start gpg-agent.socket
-
-      if [ "${osConfig.my.desktop.environment}" = "plasma" ]; then
-        runIfUnitExists start gpg-agent-ssh.socket
-      fi
     '';
   };
 
@@ -89,18 +80,16 @@ in
   services.gpg-agent = {
     enable = true;
     enableScDaemon = true;
-    enableSshSupport = isPlasma;
+    enableSshSupport = false;
     enableZshIntegration = true;
     enableFishIntegration = true;
     defaultCacheTtl = 1800;
     maxCacheTtl = 7200;
-    # No Plasma, alinhamos o agente ao stack nativo do desktop (Kleopatra/KWallet + Qt).
-    pinentry.package = if isPlasma then pkgs.pinentry-qt else pkgs.pinentry-gnome3;
+    pinentry.package = pkgs.pinentry-gnome3;
   };
 
   # O ssh-agent nativo do OpenSSH não suporta chaves ED25519-SK (YubiKey
   # resident keys) e retorna "agent refused operation" ao tentar usá-las.
-  # No Plasma usamos o suporte SSH do gpg-agent; fora dele mantemos sem agente.
   services.ssh-agent.enable = false;
 
   xdg.configFile."Yubico/README-pam_u2f.txt".text = ''
