@@ -6,7 +6,7 @@
 { inputs, users }:
 { lib, ... }:
 {
-  users.users = lib.genAttrs users (
-    username: { description = inputs.nix-secrets.${username}.fullName; }
-  );
+  users.users = lib.genAttrs users (username: {
+    description = inputs.nix-secrets.${username}.fullName;
+  });
 }

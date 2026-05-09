@@ -3,8 +3,7 @@
 { config, inputs, ... }:
 
 let
-  ssid5g = inputs.nix-secrets.wifi.ssid5g;
-  ssid24g = inputs.nix-secrets.wifi.ssid24g;
+  inherit (inputs.nix-secrets.wifi) ssid5g ssid24g;
 in
 
 {
