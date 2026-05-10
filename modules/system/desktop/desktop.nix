@@ -27,11 +27,10 @@ let
     "org.gnome.Calculator"
     "org.gnome.Calendar"
     "org.gnome.Characters"
-    "org.gnome.Clocks"
+    "org.gnome.clocks"
     "org.gnome.Connections"
     "org.gnome.Contacts"
     "org.gnome.Decibels"
-    "org.gnome.DiskUtility"
     "org.gnome.font-viewer"
     "org.gnome.Logs"
     "org.gnome.Loupe"
@@ -41,7 +40,6 @@ let
     "org.gnome.Showtime"
     "org.gnome.SimpleScan"
     "org.gnome.Snapshot"
-    "org.gnome.SystemMonitor"
     "org.gnome.TextEditor"
     "org.gnome.Weather"
     # Temas GTK3 para compatibilidade com apps legados
@@ -118,16 +116,14 @@ in
       gnome-calculator # → org.gnome.Calculator
       gnome-calendar # → org.gnome.Calendar
       gnome-characters # → org.gnome.Characters
-      gnome-clocks # → org.gnome.Clocks
+      gnome-clocks # → org.gnome.clocks
       gnome-connections # → org.gnome.Connections
       gnome-contacts # → org.gnome.Contacts
-      gnome-disk-utility # → org.gnome.DiskUtility (desabilita programs.gnome-disks automaticamente)
       gnome-font-viewer # → org.gnome.font-viewer
       gnome-logs # → org.gnome.Logs
       gnome-maps # → org.gnome.Maps
       gnome-music # → org.gnome.Music
       gnome-software # → substituído pelo Bazaar (Flatpak)
-      gnome-system-monitor # → org.gnome.SystemMonitor
       gnome-text-editor # → org.gnome.TextEditor
       gnome-weather # → org.gnome.Weather
       loupe # → org.gnome.Loupe

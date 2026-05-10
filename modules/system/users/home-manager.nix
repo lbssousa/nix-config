@@ -17,34 +17,9 @@
   system.activationScripts.hmCreateNixProfileDirs = {
     deps = [
       "users"
-      "hmFixHomeOwnership"
     ];
     text = lib.concatMapStrings (username: ''
       install -d -m 0755 -o "${username}" /nix/var/nix/profiles/per-user/${username}
-    '') users;
-  };
-
-  # Corrige a propriedade de qualquer arquivo/diretório dentro de $HOME que
-  # não pertence ao usuário correto. Isso é necessário quando UIDs mudam
-  # entre gerações do sistema (p.ex., ao adicionar/remover usuários sem UIDs
-  # fixos) — o btrfs @home persiste e mantém a propriedade antiga, causando
-  # falha silenciosa no home-manager ao criar symlinks em gcroots.
-  system.activationScripts.hmFixHomeOwnership = {
-    deps = [ "users" ];
-    text = lib.concatMapStrings (username: ''
-      home_dir="/home/${username}"
-      if [ -d "$home_dir" ]; then
-        expected_uid="$(id -u "${username}" 2>/dev/null || true)"
-        if [ -n "$expected_uid" ]; then
-          # Corrige qualquer entrada (recursiva) que não pertença ao usuário.
-          # -xdev: não cruza fronteiras de sistema de arquivos, evitando pontos
-          # de montagem FUSE (rclone, sshfs etc.) que não permitem acesso root.
-          # -h: muda o dono do symlink em si (sem seguir o link) para evitar
-          # erros de leitura em symlinks que apontam para o Nix store.
-          find "$home_dir" -xdev -not -user "${username}" -print0 \
-            | xargs -r0 chown -h "${username}:users"
-        fi
-      fi
     '') users;
   };
 
