@@ -106,7 +106,6 @@ in
       # Tour de boas-vindas — sem substituto Flatpak
       gnome-tour
       # Navegador Web → substituído pelo Google Chrome (Flatpak)
-      epiphany
       # Terminais → substituídos pelo Ptyxis (Nix)
       gnome-console
       gnome-terminal
@@ -137,6 +136,7 @@ in
     systemPackages = with pkgs; [
       ptyxis # Terminal moderno para GNOME
       gjs # Motor JavaScript para GNOME (GObject Introspection)
+      epiphany # Navegador GNOME Web
     ];
   };
 
