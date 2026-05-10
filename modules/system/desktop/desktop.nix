@@ -7,6 +7,7 @@
 
 let
   flatpaks = [
+    # Aplicações de terceiros
     "com.bitwarden.desktop"
     "com.github.PintaProject.Pinta"
     "com.github.tchx84.Flatseal"
@@ -20,8 +21,33 @@ let
     "io.github.kolunmi.Bazaar"
     "io.gitlab.adhami3310.Impression"
     "it.mijorus.smile"
+    # Aplicações GNOME — excluídas do Nix, instaladas via Flatpak para
+    # receber atualizações independentes do ciclo de releases do sistema.
+    "org.gnome.baobab"
+    "org.gnome.Calculator"
+    "org.gnome.Calendar"
+    "org.gnome.Characters"
+    "org.gnome.Clocks"
+    "org.gnome.Connections"
+    "org.gnome.Contacts"
+    "org.gnome.Decibels"
+    "org.gnome.DiskUtility"
+    "org.gnome.font-viewer"
+    "org.gnome.Logs"
+    "org.gnome.Loupe"
+    "org.gnome.Maps"
+    "org.gnome.Music"
+    "org.gnome.Papers"
+    "org.gnome.Showtime"
+    "org.gnome.SimpleScan"
+    "org.gnome.Snapshot"
+    "org.gnome.SystemMonitor"
+    "org.gnome.TextEditor"
+    "org.gnome.Weather"
+    # Temas GTK3 para compatibilidade com apps legados
     "org.gtk.Gtk3theme.adw-gtk3"
     "org.gtk.Gtk3theme.adw-gtk3-dark"
+    # Segurança
     "org.keepassxc.KeePassXC"
     "org.kde.kleopatra"
     "page.tesk.Refine"
@@ -78,12 +104,37 @@ in
     };
 
     gnome.excludePackages = with pkgs; [
+      # Tour de boas-vindas — sem substituto Flatpak
       gnome-tour
-      epiphany # Substituído pelo Google Chrome (Flatpak)
-      gnome-console # Substituído pelo Ptyxis (Nix)
-      gnome-terminal # Terminal legado — usar Ptyxis (Nix)
-      gnome-music
-      gnome-software # Substituído pelo Bazaar (Flatpak)
+      # Navegador Web → substituído pelo Google Chrome (Flatpak)
+      epiphany
+      # Terminais → substituídos pelo Ptyxis (Nix)
+      gnome-console
+      gnome-terminal
+      # Aplicações GNOME → instaladas via Flatpak (atualizações independentes do sistema)
+      baobab # → org.gnome.baobab
+      decibels # → org.gnome.Decibels
+      gnome-calculator # → org.gnome.Calculator
+      gnome-calendar # → org.gnome.Calendar
+      gnome-characters # → org.gnome.Characters
+      gnome-clocks # → org.gnome.Clocks
+      gnome-connections # → org.gnome.Connections
+      gnome-contacts # → org.gnome.Contacts
+      gnome-disk-utility # → org.gnome.DiskUtility (desabilita programs.gnome-disks automaticamente)
+      gnome-font-viewer # → org.gnome.font-viewer
+      gnome-logs # → org.gnome.Logs
+      gnome-maps # → org.gnome.Maps
+      gnome-music # → org.gnome.Music
+      gnome-software # → substituído pelo Bazaar (Flatpak)
+      gnome-system-monitor # → org.gnome.SystemMonitor
+      gnome-text-editor # → org.gnome.TextEditor
+      gnome-weather # → org.gnome.Weather
+      loupe # → org.gnome.Loupe
+      papers # → org.gnome.Papers
+      showtime # → org.gnome.Showtime
+      simple-scan # → org.gnome.SimpleScan
+      snapshot # → org.gnome.Snapshot
+      yelp # Ajuda GNOME — sem substituto Flatpak relevante
     ];
 
     systemPackages = with pkgs; [
