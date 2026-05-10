@@ -3,6 +3,11 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 flake_root := env_var_or_default("LBNIX_FLAKE_DIR", justfile_directory())
 justfile_file := justfile_directory() + "/justfile"
 
+# Quando "true", commit e push do flake.lock são feitos automaticamente após
+# update/upgrade, caso o arquivo tenha sido modificado.
+# Uso: just auto_commit=true update   ou   LBNIX_AUTO_COMMIT=true just update
+auto_commit := env_var_or_default("LBNIX_AUTO_COMMIT", "false")
+
 [private]
 _run_system action host='' *args:
   #!/usr/bin/env bash
@@ -54,6 +59,9 @@ help:
   @echo 'Home Manager é aplicado junto com nixos-rebuild (módulo do sistema).'
   @echo ''
   @echo 'Exemplos:'
+  @echo '  just update'
+  @echo '  just auto_commit=true update'
+  @echo '  just auto_commit=true upgrade'
   @echo '  just switch'
   @echo '  just switch barbudus'
   @echo '  just switch-full barbudus'
@@ -99,7 +107,7 @@ switch-full host='' *args:
   nix run nixpkgs#just -- --justfile "{{justfile_file}}" check
 
 upgrade host='' *args:
-  nix run nixpkgs#just -- --justfile "{{justfile_file}}" update
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" auto_commit="{{auto_commit}}" update
   nix run nixpkgs#just -- --justfile "{{justfile_file}}" switch "{{host}}" {{args}}
 
 [group("maintenance")]
@@ -108,6 +116,11 @@ update *inputs:
   set -euo pipefail
   cd "{{flake_root}}"
   nix flake update "$@"
+  if [[ "{{auto_commit}}" == "true" ]] && ! git diff --quiet flake.lock; then
+    git add flake.lock
+    git commit -m "flake: atualiza flake.lock"
+    git push
+  fi
 
 [group("maintenance")]
 gc period='30d':
