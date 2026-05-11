@@ -64,7 +64,7 @@ in
         enable = true;
         onCalendar = "daily";
       };
-      overrides."dev.zed.Zed".Environment.ZED_FLATPAK_NO_ESCAPE = "1";
+
     };
 
     # Impressão (CUPS)
