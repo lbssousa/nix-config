@@ -115,6 +115,19 @@ in
     cryptsetup
     lvm2
     zfs
+
+    # Pacotes GStreamer e multimédia (úteis para navegadores)
+    gst_all_1.gst-libav
+    gst_all_1.gst-plugins-good
+    gst_all_1.gst-plugins-bad
+    gst_all_1.gst-plugins-ugly
+    gst_all_1.gst-vaapi
+    ffmpeg
+    libva
+    # Drivers VA-API (Intel/NVIDIA)
+    intel-media-driver
+    intel-vaapi-driver
+    nvidia-vaapi-driver
   ];
 
   # Definir Neovim como editor padrão do sistema
