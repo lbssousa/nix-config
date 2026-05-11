@@ -15,7 +15,6 @@ let
     "com.mattjakeman.ExtensionManager"
     "com.obsproject.Studio"
     "com.ranfdev.DistroShelf"
-    "dev.zed.Zed"
     "io.github.flattool.Ignition"
     "io.github.flattool.Warehouse"
     "io.github.kolunmi.Bazaar"
