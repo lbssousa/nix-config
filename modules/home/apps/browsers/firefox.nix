@@ -53,10 +53,9 @@ in
     enable = true;
     package = pkgs.firefox;
     languagePacks = [ "pt-BR" ];
-    # Mantém o caminho legado explicitamente para preservar os dados existentes
-    # do perfil em ~/.mozilla/firefox. Sem esta linha, HM 26.05 usaria o novo
-    # padrão XDG (~/.config/mozilla/firefox) e o Firefox abriria um perfil vazio.
-    configPath = "${config.home.homeDirectory}/.mozilla/firefox";
+    # Usa o caminho XDG (padrão do HM 26.05). Os dados do perfil foram migrados
+    # manualmente de ~/.mozilla/firefox/default/ para este caminho.
+    configPath = "${config.xdg.configHome}/mozilla/firefox";
 
     profiles.default = {
       isDefault = true;
