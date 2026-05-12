@@ -76,6 +76,7 @@ in
   imports = [
     ../../../modules/home/apps/nix-validation.nix
     ../../../modules/home/apps/security/yubikey.nix
+    ../../../modules/home/apps/editors/zed.nix
   ];
 
   home = {
@@ -284,56 +285,6 @@ in
     cargo = {
       enable = true;
       package = null;
-    };
-
-    "zed-editor" = {
-      enable = true;
-      package = inputs.nixpkgs-unstable.legacyPackages.${pkgs.stdenv.hostPlatform.system}.zed-editor;
-      # Nota: "gregorio" é instalada localmente via xdg.dataFile + activation abaixo;
-      # não deve estar aqui ou o Zed tentará instalá-la do marketplace e esvaziará
-      # o diretório installed/gregorio/.
-      extensions = [
-        "nix"
-        "latex"
-      ];
-      extraPackages = with pkgs; [
-        direnv
-        nil
-        nixd
-        texlab
-        ltex-ls
-        gregolint
-        gregorio-lsp
-      ];
-      userSettings = {
-        theme = {
-          mode = "dark";
-          dark = "One Dark";
-          light = "One Light";
-        };
-        load_direnv = "direct";
-        soft_wrap = "bounded";
-        autosave = {
-          after_delay = {
-            milliseconds = 1000;
-          };
-        };
-        vim_mode = false;
-        hour_format = "hour24";
-        buffer_font_family = "ZedMono Nerd Font Mono";
-        buffer_font_size = 24;
-        terminal = {
-          font_family = "JetBrainsMono Nerd Font Mono";
-          font_size = 24;
-        };
-        lsp = {
-          nil.binary.path = "${pkgs.nil}/bin/nil";
-          nixd.binary.path = "${pkgs.nixd}/bin/nixd";
-          texlab.binary.path = "${pkgs.texlab}/bin/texlab";
-          "ltex-ls".binary.path = "${pkgs.ltex-ls}/bin/ltex-ls";
-          "gregorio-lsp".binary.path = "${pkgs.gregorio-lsp}/bin/gregorio-lsp";
-        };
-      };
     };
 
     vscode = {
