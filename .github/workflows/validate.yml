@@ -80,6 +80,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup SSH for nix-secrets
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.NIX_SECRETS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
       - name: Install Nix
         uses: cachix/install-nix-action@v30
         with:
