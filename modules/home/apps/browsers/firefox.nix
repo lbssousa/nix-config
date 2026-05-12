@@ -53,9 +53,10 @@ in
     enable = true;
     package = pkgs.firefox;
     languagePacks = [ "pt-BR" ];
-    # Adota o novo caminho XDG padrão do HM 26.05 explicitamente para
-    # silenciar o warning de migração em todos os perfis de usuário.
-    configPath = "${config.xdg.configHome}/mozilla/firefox";
+    # Mantém o caminho legado explicitamente para preservar os dados existentes
+    # do perfil em ~/.mozilla/firefox. Sem esta linha, HM 26.05 usaria o novo
+    # padrão XDG (~/.config/mozilla/firefox) e o Firefox abriria um perfil vazio.
+    configPath = "${config.home.homeDirectory}/.mozilla/firefox";
 
     profiles.default = {
       isDefault = true;
