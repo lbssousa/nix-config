@@ -52,9 +52,14 @@ in
   programs.firefox = {
     enable = true;
     package = pkgs.firefox;
+    languagePacks = [ "pt-BR" ];
 
     profiles.default = {
       isDefault = true;
+      settings = {
+        "intl.locale.requested" = "pt-BR";
+        "intl.accept_languages" = "pt-BR, pt, en-US, en";
+      };
       extensions.packages = [
         keepassxcBrowser
         multiAccountContainers
