@@ -5,6 +5,9 @@
     # NixOS unstable channel
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
+    # nixpkgs unstable channel (para pacotes como zed-editor)
+    nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+
     # flake-parts for modular flake composition
     flake-parts = {
       url = "git+https://github.com/hercules-ci/flake-parts?rev=3107b77cd68437b9a76194f0f7f9c55f2329ca5b&shallow=1";
