@@ -6,10 +6,12 @@ let
   mkHost =
     hostname: hostSpec:
     lib.nixosSystem {
-      inherit (hostSpec) system;
       specialArgs = { inherit inputs; };
       modules = [
-        { nixpkgs.overlays = [ config.dendritic.localOverlay ]; }
+        {
+          nixpkgs.hostPlatform.system = hostSpec.system;
+          nixpkgs.overlays = [ config.dendritic.localOverlay ];
+        }
 
         inputs.disko.nixosModules.disko
         inputs.impermanence.nixosModules.impermanence
