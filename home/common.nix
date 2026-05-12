@@ -1,5 +1,5 @@
-# Configuração Home Manager base — aplicada a todos os usuários como
-# módulo NixOS (home-manager.nixosModules.home-manager).
+# Configuração Home Manager base — compartilhada por todos os usuários
+# no modo standalone do Home Manager.
 # Os arquivos por usuário ficam em home/users/<usuario>/home.nix.
 { pkgs, lib, ... }:
 
@@ -91,6 +91,7 @@
         nrs = "run0 --setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK nixos-rebuild switch --flake /etc/nixos";
         nru = "run0 --setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK sh -c \"nix flake update /etc/nixos && nixos-rebuild switch --flake /etc/nixos\"";
         nrb = "run0 --setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK nixos-rebuild boot --flake /etc/nixos";
+        hms = "home-manager switch --flake /etc/nixos#$(whoami)@$(hostname)";
         # Podman/Docker aliases
         dk = "podman";
         dkc = "podman-compose";

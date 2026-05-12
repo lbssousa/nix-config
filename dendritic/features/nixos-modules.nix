@@ -27,11 +27,15 @@ in
         inherit inputs;
         inherit (config.dendritic) users;
       })
-      inputs.home-manager.nixosModules.home-manager
-      (import ../../modules/system/users/home-manager.nix {
-        inherit inputs;
-        inherit (config.dendritic) users;
-      })
+      # Expõe o CLI do home-manager standalone como pacote de sistema.
+      (
+        { pkgs, inputs, ... }:
+        {
+          environment.systemPackages = [
+            inputs.home-manager.packages.${pkgs.system}.default
+          ];
+        }
+      )
     ];
 
     userModules = map mkUserModule config.dendritic.users;

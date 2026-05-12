@@ -9,7 +9,7 @@ justfile_file := justfile_directory() + "/justfile"
 auto_commit := env_var_or_default("LBNIX_AUTO_COMMIT", "false")
 
 [private]
-_run_system action host='' *args:
+_run_nixos action host='' *args:
   #!/usr/bin/env bash
   set -euo pipefail
 
@@ -22,7 +22,7 @@ _run_system action host='' *args:
   case "$action" in
     switch|boot|test)
       if [[ "${EUID}" -ne 0 ]]; then
-        exec run0 --setenv=SSH_AUTH_SOCK="${SSH_AUTH_SOCK:-}" nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system "$action" "$system_host" "$@"
+        exec run0 --setenv=SSH_AUTH_SOCK="${SSH_AUTH_SOCK:-}" nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_nixos "$action" "$system_host" "$@"
       fi
       ;;
   esac
@@ -42,7 +42,28 @@ _run_system action host='' *args:
       nix run nixpkgs#nvd -- diff /run/current-system "$next_drv"
       ;;
     *)
-      echo "Ação inválida para _run_system: '$action'" >&2
+      echo "Ação inválida para nixos: '$action'" >&2
+      exit 1
+      ;;
+  esac
+
+[private]
+_run_home action user='' *args:
+  #!/usr/bin/env bash
+  set -euo pipefail
+
+  action="{{action}}"
+  user_host="{{user}}"
+  set -- {{args}}
+
+  user_host="${user_host:-$(whoami)@$(hostname)}"
+
+  case "$action" in
+    switch|build)
+      home-manager "$action" --flake "{{flake_root}}#${user_host}" "$@"
+      ;;
+    *)
+      echo "Ação inválida para home: '$action'. Use: switch, build" >&2
       exit 1
       ;;
   esac
@@ -56,17 +77,18 @@ help:
   @echo ''
   @echo "FLAKE_DIR atual: {{flake_root}}"
   @echo 'switch, boot e test elevam com run0 (polkit/YubiKey) quando necessário.'
-  @echo 'Home Manager é aplicado junto com nixos-rebuild (módulo do sistema).'
+  @echo 'Home Manager é standalone: aplique separadamente com just home switch.'
   @echo ''
   @echo 'Exemplos:'
   @echo '  just update'
   @echo '  just auto_commit=true update'
   @echo '  just auto_commit=true upgrade'
-  @echo '  just switch'
-  @echo '  just switch barbudus'
+  @echo '  just nixos switch'
+  @echo '  just nixos switch barbudus'
+  @echo '  just nixos diff'
+  @echo '  just home switch'
+  @echo '  just home switch abutre@barbudus'
   @echo '  just switch-full barbudus'
-  @echo '  just boot'
-  @echo '  just diff'
   @echo ''
   @nix run nixpkgs#just -- --justfile "{{justfile_file}}" --list --unsorted
 
@@ -87,23 +109,30 @@ whoami:
   @echo "usuário: $(whoami)"
   @echo "flake: {{flake_root}}"
 
+nixos action='' host='' *args:
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_nixos "{{action}}" "{{host}}" {{args}}
+
+home action='' user='' *args:
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_home "{{action}}" "{{user}}" {{args}}
+
 switch host='' *args:
-  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system switch "{{host}}" {{args}}
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_nixos switch "{{host}}" {{args}}
 
 boot host='' *args:
-  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system boot "{{host}}" {{args}}
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_nixos boot "{{host}}" {{args}}
 
 test host='' *args:
-  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system test "{{host}}" {{args}}
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_nixos test "{{host}}" {{args}}
 
 build host='' *args:
-  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system build "{{host}}" {{args}}
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_nixos build "{{host}}" {{args}}
 
 diff host='' *args:
-  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system diff "{{host}}" {{args}}
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_nixos diff "{{host}}" {{args}}
 
 switch-full host='' *args:
-  nix run nixpkgs#just -- --justfile "{{justfile_file}}" switch "{{host}}" {{args}}
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" nixos switch "{{host}}" {{args}}
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" home switch {{args}}
   nix run nixpkgs#just -- --justfile "{{justfile_file}}" check
 
 upgrade host='' *args:
