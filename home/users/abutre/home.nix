@@ -288,7 +288,7 @@ in
 
     "zed-editor" = {
       enable = true;
-      package = pkgs.zed-editor;
+      package = inputs.nixpkgs-unstable.legacyPackages.${pkgs.stdenv.hostPlatform.system}.zed-editor;
       # Nota: "gregorio" é instalada localmente via xdg.dataFile + activation abaixo;
       # não deve estar aqui ou o Zed tentará instalá-la do marketplace e esvaziará
       # o diretório installed/gregorio/.

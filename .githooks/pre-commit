@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+FLAKE_ROOT="$(git rev-parse --show-toplevel)"
+cd "$FLAKE_ROOT"
+
+# Coleta apenas os arquivos .nix staged para commit
+STAGED_NIX=$(git diff --cached --name-only --diff-filter=ACMR | grep '\.nix$' || true)
+
+if [[ -z "$STAGED_NIX" ]]; then
+  exit 0
+fi
+
+echo "🔍 Verificando arquivos Nix staged..."
+
+# 1. Formatação
+echo "  → nixfmt-rfc-style (formato)"
+# shellcheck disable=SC2086
+if ! nix run nixpkgs#nixfmt-rfc-style -- --check $STAGED_NIX 2>&1; then
+  echo ""
+  echo "❌ Arquivos com formatação incorreta. Execute para corrigir:"
+  echo "   nix run nixpkgs#nixfmt-rfc-style -- $STAGED_NIX"
+  echo "   (ou: just fmt)"
+  exit 1
+fi
+
+# 2. Lint estático
+echo "  → statix (lint)"
+if ! nix run nixpkgs#statix -- check . 2>&1; then
+  echo ""
+  echo "❌ Erros de lint (statix). Execute para ver detalhes:"
+  echo "   just lint"
+  exit 1
+fi
+
+# 3. Código morto
+echo "  → deadnix (código morto)"
+if ! nix run nixpkgs#deadnix -- --fail . 2>&1; then
+  echo ""
+  echo "❌ Código morto detectado (deadnix). Execute para ver detalhes:"
+  echo "   just deadcode"
+  exit 1
+fi
+
+echo "✅ Validações Nix aprovadas."

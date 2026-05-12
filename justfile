@@ -167,6 +167,11 @@ fmt-check:
   nix run nixpkgs#nixfmt-rfc-style -- --check $(find . -name '*.nix' -not -path './.git/*')
 
 [group("verification")]
+hooks:
+  git config core.hooksPath .githooks
+  @echo "✅ Git hooks configurados em .githooks/"
+
+[group("verification")]
 validate:
   nix run nixpkgs#just -- --justfile "{{justfile_file}}" fmt-check
   nix run nixpkgs#just -- --justfile "{{justfile_file}}" lint
