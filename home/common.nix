@@ -85,10 +85,12 @@
         gc = "git commit";
         gp = "git push";
         gl = "git pull";
-        # NixOS shortcuts
-        nrs = "sudo nixos-rebuild switch --flake /etc/nixos";
-        nru = "sudo nix flake update /etc/nixos && sudo nixos-rebuild switch --flake /etc/nixos";
-        nrb = "sudo nixos-rebuild boot --flake /etc/nixos";
+        # NixOS shortcuts (run0: eleva via polkit/YubiKey sem setuid;
+        # --setenv=SSH_AUTH_SOCK repassa o socket do agente SSH para que
+        # nixos-rebuild acesse entradas de flake SSH, ex.: nix-secrets)
+        nrs = "run0 --setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK nixos-rebuild switch --flake /etc/nixos";
+        nru = "run0 --setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK sh -c \"nix flake update /etc/nixos && nixos-rebuild switch --flake /etc/nixos\"";
+        nrb = "run0 --setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK nixos-rebuild boot --flake /etc/nixos";
         # Podman/Docker aliases
         dk = "podman";
         dkc = "podman-compose";

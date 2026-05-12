@@ -232,8 +232,8 @@ unlock_efivarfs_immutables() {
 # ---------------------------------------------------------------------------
 
 if [[ $EUID -ne 0 ]]; then
-  info "Este script deve ser executado como root. Reexecutando com sudo..."
-  exec sudo -E bash "${BASH_SOURCE[0]}" "$@"
+  info "Este script deve ser executado como root. Reexecutando com run0..."
+  exec run0 bash "${BASH_SOURCE[0]}" "$@"
 fi
 
 # ---------------------------------------------------------------------------
@@ -265,14 +265,14 @@ Passos para configurar o Secure Boot:
   1. Inicialize o sistema com o Secure Boot DESATIVADO (Setup Mode na UEFI)
      (para ativar o Setup Mode: BIOS → Secure Boot → apagar chaves existentes)
   2. Execute este script para assinar binários e registrar chaves:
-       sudo bash scripts/setup-secureboot.sh
+       run0 bash scripts/setup-secureboot.sh
      O script:
        a) Assina todos os binários EFI com as chaves PKI (sign-all)
        b) Verifica que TODOS os binários estão assinados (obrigatório)
        c) Registra as chaves no firmware UEFI (enroll-keys --microsoft)
   3. Reinicie e ative o Secure Boot na UEFI/BIOS
   4. Verifique se tudo está correto:
-       sudo bash scripts/setup-secureboot.sh --verify-only
+       run0 bash scripts/setup-secureboot.sh --verify-only
 
 NOTA IMPORTANTE — Lanzaboote vs. MOK/shim:
   Esta configuração usa lanzaboote, que NÃO utiliza shim nem MOK.
@@ -384,18 +384,18 @@ if [[ "$OPT_ENROLL_ONLY" != "true" && "$OPT_VERIFY_ONLY" != "true" ]]; then
         error "Há binários EFI sem assinatura válida após tentativa de correção automática."
         warn "O Secure Boot falhará se o firmware for configurado agora."
         warn "Execute os seguintes comandos para corrigir e tente novamente:"
-        warn "  1. sudo nixos-rebuild switch   (regenera e assina os stubs lanzaboote)"
-        warn "  2. sudo sbctl sign-all         (assina binários adicionais)"
-        warn "  3. sudo bash scripts/setup-secureboot.sh   (execute este script novamente)"
+        warn "  1. run0 nixos-rebuild switch   (regenera e assina os stubs lanzaboote)"
+        warn "  2. run0 sbctl sign-all         (assina binários adicionais)"
+        warn "  3. run0 bash scripts/setup-secureboot.sh   (execute este script novamente)"
         die "Assinaturas incompletas. Corrija antes de registrar as chaves no firmware."
       fi
     else
       error "Há binários EFI sem assinatura válida."
       warn "O Secure Boot falhará se o firmware for configurado agora."
       warn "Execute os seguintes comandos para corrigir e tente novamente:"
-      warn "  1. sudo nixos-rebuild switch   (regenera e assina os stubs lanzaboote)"
-      warn "  2. sudo sbctl sign-all         (assina binários adicionais)"
-      warn "  3. sudo bash scripts/setup-secureboot.sh   (execute este script novamente)"
+      warn "  1. run0 nixos-rebuild switch   (regenera e assina os stubs lanzaboote)"
+      warn "  2. run0 sbctl sign-all         (assina binários adicionais)"
+      warn "  3. run0 bash scripts/setup-secureboot.sh   (execute este script novamente)"
       die "Assinaturas incompletas. Corrija antes de registrar as chaves no firmware."
     fi
   fi
@@ -521,7 +521,7 @@ if [[ "$OPT_ENROLL_ONLY" != "true" && "$OPT_SIGN_ONLY" != "true" ]]; then
     echo
     warn "Alguns binários EFI não estão assinados (verificação pós-registro)."
     warn "Execute 'nixos-rebuild switch' para regenerar e assinar os binários,"
-    warn "em seguida, execute 'sudo sbctl sign-all' para assinar os pendentes."
+    warn "em seguida, execute 'run0 sbctl sign-all' para assinar os pendentes."
   fi
   echo
 fi
@@ -539,8 +539,8 @@ if [[ "$OPT_VERIFY_ONLY" != "true" ]]; then
   echo "  2. Acesse a UEFI/BIOS e ATIVE o Secure Boot"
   echo "  3. Salve e reinicie novamente"
   echo "  4. Verifique o estado com:"
-  echo "       sudo sbctl status"
-  echo "       sudo bash scripts/setup-secureboot.sh --verify-only"
+  echo "       run0 sbctl status"
+  echo "       run0 bash scripts/setup-secureboot.sh --verify-only"
   echo
   warn "Se o sistema não inicializar com o Secure Boot ativo, desative-o"
   warn "na UEFI e execute este script novamente."

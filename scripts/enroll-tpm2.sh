@@ -46,8 +46,8 @@ die()     { error "$*"; exit 1; }
 # ---------------------------------------------------------------------------
 
 if [[ $EUID -ne 0 ]]; then
-  info "Este script deve ser executado como root. Reexecutando com sudo..."
-  exec sudo -E bash "${BASH_SOURCE[0]}" "$@"
+  info "Este script deve ser executado como root. Reexecutando com run0..."
+  exec run0 bash "${BASH_SOURCE[0]}" "$@"
 fi
 
 # ---------------------------------------------------------------------------
@@ -81,19 +81,19 @@ Opções:
 
 Exemplos:
   # Inscrição padrão (PCRs 0+2+7, recomendado com Secure Boot):
-  sudo bash scripts/enroll-tpm2.sh
+  run0 bash scripts/enroll-tpm2.sh
 
   # Sem Secure Boot (apenas firmware e código de opção):
-  sudo bash scripts/enroll-tpm2.sh --pcrs 0+2
+  run0 bash scripts/enroll-tpm2.sh --pcrs 0+2
 
   # Reinscrever após atualização de firmware:
-  sudo bash scripts/enroll-tpm2.sh --wipe
+  run0 bash scripts/enroll-tpm2.sh --wipe
 
   # Partição LUKS alternativa:
-  sudo bash scripts/enroll-tpm2.sh --device /dev/nvme0n1p2
+  run0 bash scripts/enroll-tpm2.sh --device /dev/nvme0n1p2
 
 Para revogar o acesso TPM2 (ex: antes de vender o hardware):
-  sudo systemd-cryptenroll --wipe-slot=tpm2 /dev/disk/by-partlabel/luks
+  run0 systemd-cryptenroll --wipe-slot=tpm2 /dev/disk/by-partlabel/luks
 EOF
       exit 0 ;;
     *) die "Opção desconhecida: $1. Use --help para ver as opções disponíveis." ;;
@@ -190,4 +190,4 @@ warn "  • Mudanças nas configurações do Secure Boot"
 warn "  • Troca de hardware (placa-mãe, chip TPM)"
 echo
 info "Para revogar o acesso TPM2:"
-echo "  sudo systemd-cryptenroll --wipe-slot=tpm2 $DEVICE"
+echo "  run0 systemd-cryptenroll --wipe-slot=tpm2 $DEVICE"

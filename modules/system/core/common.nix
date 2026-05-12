@@ -40,9 +40,10 @@ _:
     };
   };
 
-  # Repassa o socket do agente SSH ao processo sudo, necessário para que
-  # `nixos-rebuild` e `nix run` via sudo possam autenticar-se em entradas
-  # de flake SSH (ex.: nix-secrets via git+ssh://).
+  # Repassa o socket do agente SSH ao processo sudo.
+  # Mantido para compatibilidade com scripts (ex.: setup-secureboot.sh,
+  # enroll-tpm2.sh) que ainda usam `sudo -E`. O uso interativo preferencial
+  # é run0 com --setenv=SSH_AUTH_SOCK (ver aliases nrs/nru/nrb em home/).
   security.sudo.extraConfig = ''
     Defaults:%wheel env_keep+=SSH_AUTH_SOCK
   '';
