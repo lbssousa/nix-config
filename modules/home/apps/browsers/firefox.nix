@@ -1,5 +1,5 @@
 # Módulo de usuário: Firefox com extensões via módulo nativo do Home Manager
-{ pkgs, ... }:
+{ config, pkgs, ... }:
 
 let
   buildFirefoxXpiAddon =
@@ -53,12 +53,20 @@ in
     enable = true;
     package = pkgs.firefox;
     languagePacks = [ "pt-BR" ];
+    # Adota o novo caminho XDG padrão do HM 26.05 explicitamente para
+    # silenciar o warning de migração em todos os perfis de usuário.
+    configPath = "${config.xdg.configHome}/mozilla/firefox";
 
     profiles.default = {
       isDefault = true;
       settings = {
         "intl.locale.requested" = "pt-BR";
         "intl.accept_languages" = "pt-BR, pt, en-US, en";
+        # Habilitar decodificação de vídeo por hardware via VA-API.
+        # Necessário para transmissões ao vivo do YouTube (H.264/VP9)
+        # e para reduzir o uso de CPU em vídeos em geral no Wayland.
+        "media.ffmpeg.vaapi.enabled" = true;
+        "media.hardware-video-decoding.enabled" = true;
       };
       extensions.packages = [
         keepassxcBrowser

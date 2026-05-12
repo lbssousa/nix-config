@@ -116,18 +116,14 @@ in
     lvm2
     zfs
 
-    # Pacotes GStreamer e multimédia (úteis para navegadores)
+    # Pacotes GStreamer e multimédia (úteis para navegadores e apps GNOME)
     gst_all_1.gst-libav
     gst_all_1.gst-plugins-good
     gst_all_1.gst-plugins-bad
     gst_all_1.gst-plugins-ugly
     gst_all_1.gst-vaapi
     ffmpeg
-    libva
-    # Drivers VA-API (Intel/NVIDIA)
-    intel-media-driver
-    intel-vaapi-driver
-    nvidia-vaapi-driver
+    libva # biblioteca VA-API + utilitário vainfo para diagnóstico
   ];
 
   # Definir Neovim como editor padrão do sistema

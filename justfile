@@ -22,7 +22,7 @@ _run_system action host='' *args:
   case "$action" in
     switch|boot|test)
       if [[ "${EUID}" -ne 0 ]]; then
-        exec sudo nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system "$action" "$system_host" "$@"
+        exec pkexec nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_system "$action" "$system_host" "$@"
       fi
       ;;
   esac
@@ -55,7 +55,7 @@ help:
   @echo 'Receitas Just para operar este flake NixOS'
   @echo ''
   @echo "FLAKE_DIR atual: {{flake_root}}"
-  @echo 'switch, boot e test elevam com sudo quando necessário.'
+  @echo 'switch, boot e test elevam com pkexec quando necessário.'
   @echo 'Home Manager é aplicado junto com nixos-rebuild (módulo do sistema).'
   @echo ''
   @echo 'Exemplos:'

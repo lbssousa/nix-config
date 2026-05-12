@@ -45,11 +45,20 @@ in
   # - Helper: run-with-nvidia <app>   (alias com melhor UX)
   # - Verificar: glxinfo | grep "NVIDIA" ou nvidia-smi
 
-  # Habilitar suporte OpenGL/Vulkan
+  # Habilitar suporte OpenGL/Vulkan e VA-API
   hardware.graphics = {
     enable = true;
     enable32Bit = true;
+    extraPackages = with pkgs; [
+      intel-media-driver # iHD driver para Intel UHD 620 (Comet Lake)
+      intel-vaapi-driver # i965 driver (fallback para conteúdo legado)
+      nvidia-vaapi-driver # VA-API via NVDEC para GeForce MX230
+    ];
   };
+
+  # Forçar iHD como driver VA-API padrão (evita que o i965 seja escolhido
+  # automaticamente, o que limitaria os formatos suportados)
+  environment.sessionVariables.LIBVA_DRIVER_NAME = "iHD";
 
   # Driver NVIDIA proprietary
   hardware.nvidia = {

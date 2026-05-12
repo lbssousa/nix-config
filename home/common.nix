@@ -11,7 +11,7 @@
   ];
 
   home = {
-    stateVersion = "25.05";
+    stateVersion = "26.05";
 
     # Pacotes instalados para o usuário
     packages = with pkgs; [
