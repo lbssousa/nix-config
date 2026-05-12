@@ -17,6 +17,7 @@ in
       ../../modules/system/security/keepassxc-yubikey-lock.nix
       ../../modules/system/security/tpm2.nix
       ../../modules/system/security/yubikey.nix
+      ../../modules/system/security/yubikey-notify.nix
       ../../modules/system/shell/shells.nix
       ../../modules/system/tools/packages.nix
       ../../modules/system/users/users.nix
