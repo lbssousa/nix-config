@@ -49,14 +49,24 @@ in
   security.pam.services.sudo.rules.auth.yubikeyNotify = {
     control = "optional";
     modulePath = "${pkgs.linux-pam}/lib/security/pam_exec.so";
-    args = [ "${notifyScript}" ];
+    # seteuid: executa o script com UID efetivo (root) em vez do UID real
+    # (o usuário invocante). Necessário para que runuser possa trocar de
+    # usuário — sem seteuid, pam_exec roda o script como o usuário real e
+    # runuser recusa a chamada por falta de privilégio.
+    args = [
+      "seteuid"
+      "${notifyScript}"
+    ];
     order = 10850; # Imediatamente antes do pam_u2f (order 10900)
   };
 
   security.pam.services."polkit-1".rules.auth.yubikeyNotify = {
     control = "optional";
     modulePath = "${pkgs.linux-pam}/lib/security/pam_exec.so";
-    args = [ "${notifyScript}" ];
+    args = [
+      "seteuid"
+      "${notifyScript}"
+    ];
     order = 10850;
   };
 }
