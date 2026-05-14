@@ -6,6 +6,10 @@
 }:
 
 {
+  imports = [
+    ../../../modules/home/apps/terminals/ghostty.nix
+  ];
+
   home = {
     packages = [
       pkgs.gnomeExtensions.appindicator
