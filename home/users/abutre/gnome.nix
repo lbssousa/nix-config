@@ -9,7 +9,8 @@
   home = {
     packages = [
       pkgs.gnomeExtensions.appindicator
-      pkgs.gnomeExtensions.ddterm
+      pkgs.gnomeExtensions.quake-terminal
+      pkgs.ghostty
     ];
 
     # Cursor padrão do GNOME — configura Wayland, XWayland e o link ~/.icons/default
@@ -43,8 +44,15 @@
     "org/gnome/shell" = {
       enabled-extensions = [
         "appindicatorsupport@rgcjonas.gmail.com"
-        "ddterm@amezin.github.com"
+        "quake-terminal@diegodario88.github.io"
       ];
+    };
+
+    # Quake Terminal
+    "org/gnome/shell/extensions/quake-terminal" = {
+      terminal-id = "com.mitchellh.ghostty.desktop";
+      terminal-shortcut = [ "F12" ];
+      vertical-size = 75;
     };
   };
 }
