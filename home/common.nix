@@ -4,11 +4,7 @@
 { pkgs, lib, ... }:
 
 {
-  imports = [
-    ../modules/home/apps/browsers/google-chrome.nix
-    ../modules/home/apps/browsers/firefox.nix
-    ../modules/home/desktop/ibus-compose.nix
-  ];
+  imports = [ ];
 
   home = {
     stateVersion = "26.05";

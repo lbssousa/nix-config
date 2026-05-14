@@ -133,14 +133,30 @@ in
     ];
 
     systemPackages = with pkgs; [
+      firefox # Navegador padrão do sistema — disponível a todos os usuários
       ptyxis # Terminal moderno para GNOME
       gjs # Motor JavaScript para GNOME (GObject Introspection)
       epiphany # Navegador GNOME Web
     ];
+
+    # Navegador padrão do sistema: Firefox (Nix), disponível a todos os
+    # usuários. Usuários que preferirem outro navegador podem sobrescrever
+    # via xdg.mimeApps (home-manager) ou gsettings.
+    etc."xdg/mimeapps.list".text = ''
+      [Default Applications]
+      text/html=firefox.desktop
+      x-scheme-handler/http=firefox.desktop
+      x-scheme-handler/https=firefox.desktop
+      x-scheme-handler/about=firefox.desktop
+      x-scheme-handler/unknown=firefox.desktop
+    '';
   };
 
   programs.dconf = {
     enable = true;
+    # Perfil de sistema: define padrões que valem para todos os usuários
+    # (inclusive os que não usam home-manager). Valores de usuário (dconf.settings
+    # no HM ou gsettings manual) sobrescrevem estes padrões normalmente.
     profiles.user.databases = [
       {
         settings = {
@@ -159,10 +175,50 @@ in
             ];
             xkb-model = "abnt2";
           };
+
+          # IBus: delega layout ao XKB do sistema (corrige dead keys em apps
+          # gráficos) e pré-carrega a engine BR na inicialização da sessão.
+          "desktop/ibus/general" = {
+            use-system-keyboard-layout = true;
+            preload-engines = [ "xkb:br::por" ];
+          };
+
+          # Interface visual padrão do GNOME.
+          # Fonte ligeiramente maior que o padrão (12 pt vs 11 pt) para melhor
+          # legibilidade, e cursor/ícone Adwaita para evitar resquícios do Plasma.
+          "org/gnome/desktop/interface" = {
+            icon-theme = "Adwaita";
+            cursor-theme = "Adwaita";
+            cursor-size = lib.gvariant.mkInt32 24;
+            font-name = "Adwaita Regular 12";
+            monospace-font-name = "Adwaita Mono 12";
+            document-font-name = "Adwaita Regular 12";
+          };
+
+          # Tema de sons padrão do freedesktop (compatível com GNOME).
+          "org/gnome/desktop/sound" = {
+            theme-name = "freedesktop";
+          };
+
+          # Layout da barra de título: apenas botão de fechar, sem minimizar
+          # nem maximizar (padrão GNOME moderno).
+          "org/gnome/desktop/wm/preferences" = {
+            button-layout = ":close";
+          };
         };
       }
     ];
   };
+
+  # Cria ~/.config/ibus/Compose para todos os usuários ao iniciar a sessão,
+  # garantindo que o IBus use a tabela de composição do locale do sistema
+  # (corrige digitação de ~, ', `, acentos etc.) independentemente do
+  # uso de home-manager. A diretiva 'f' só cria o arquivo se ainda não existir,
+  # preservando customizações manuais. '%%L' em tmpfiles.d vira '%L' no arquivo
+  # final (placeholder de locale do IBus Compose).
+  systemd.user.tmpfiles.rules = [
+    ''f %h/.config/ibus/Compose 0644 - - - include "%%L"''
+  ];
 
   # Regra Polkit para permitir instalação de Flatpaks system-wide sem senha
   security.polkit.extraConfig = ''
