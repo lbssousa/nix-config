@@ -13,6 +13,7 @@
   home = {
     packages = [
       pkgs.gnomeExtensions.appindicator
+      pkgs.gnomeExtensions.caffeine
       pkgs.gnomeExtensions.quake-terminal
       pkgs.ghostty
     ];
@@ -48,6 +49,7 @@
     "org/gnome/shell" = {
       enabled-extensions = [
         "appindicatorsupport@rgcjonas.gmail.com"
+        "caffeine@patapon.info"
         "quake-terminal@diegodario88.github.io"
       ];
     };
@@ -57,6 +59,7 @@
       terminal-id = "com.mitchellh.ghostty.desktop";
       terminal-shortcut = [ "F12" ];
       vertical-size = 75;
+      skip-taskbar = true;
     };
   };
 }

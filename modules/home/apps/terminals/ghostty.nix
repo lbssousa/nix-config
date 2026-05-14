@@ -21,8 +21,8 @@ _:
     # a janela a qualquer momento
     confirm-close-surface = false
 
-    # Opacidade da janela (80%)
-    background-opacity = 0.8
+    # Opacidade da janela (85%)
+    background-opacity = 0.85
 
     # Paleta GNOME (padrão do Ptyxis) — tema escuro
     background = 171421
