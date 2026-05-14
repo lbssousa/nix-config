@@ -35,6 +35,6 @@ jobs:
 
       - name: Pre-download validation tools
         run: |
-          nix run nixpkgs#nixfmt-rfc-style -- --version
+          nix run nixpkgs#nixfmt -- --version
           nix run nixpkgs#statix -- --version
           nix run nixpkgs#deadnix -- --version

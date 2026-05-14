@@ -5,7 +5,7 @@
 This repository does not have a unit-test suite. The smallest repo-native checks are the individual CI validation steps:
 
 - **Full validation:** `nix flake check --show-trace .`
-- **Format check (CI-equivalent):** `nix run nixpkgs#nixfmt-rfc-style -- --check $(find . -name '*.nix' -not -path './.git/*')`
+- **Format check (CI-equivalent):** `nix run nixpkgs#nixfmt -- --check $(find . -name '*.nix' -not -path './.git/*')`
 - **Lint:** `nix run nixpkgs#statix -- check .`
 - **Dead code check:** `nix run nixpkgs#deadnix -- --fail .`
 

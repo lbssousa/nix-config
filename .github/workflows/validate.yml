@@ -31,7 +31,7 @@ jobs:
 
       - name: Check formatting with nixfmt
         run: |
-          nix run nixpkgs#nixfmt-rfc-style -- --check $(find . -name '*.nix' -not -path './.git/*')
+          nix run nixpkgs#nixfmt -- --check $(find . -name '*.nix' -not -path './.git/*')
 
   lint:
     name: Lint with statix

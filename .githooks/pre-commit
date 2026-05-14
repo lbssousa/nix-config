@@ -14,12 +14,12 @@ fi
 echo "🔍 Verificando arquivos Nix staged..."
 
 # 1. Formatação
-echo "  → nixfmt-rfc-style (formato)"
+echo "  → nixfmt (formato)"
 # shellcheck disable=SC2086
-if ! nix run nixpkgs#nixfmt-rfc-style -- --check $STAGED_NIX 2>&1; then
+if ! nix run nixpkgs#nixfmt -- --check $STAGED_NIX 2>&1; then
   echo ""
   echo "❌ Arquivos com formatação incorreta. Execute para corrigir:"
-  echo "   nix run nixpkgs#nixfmt-rfc-style -- $STAGED_NIX"
+  echo "   nix run nixpkgs#nixfmt -- $STAGED_NIX"
   echo "   (ou: just fmt)"
   exit 1
 fi

@@ -186,14 +186,14 @@ fmt:
   #!/usr/bin/env bash
   set -euo pipefail
   cd "{{flake_root}}"
-  nix run nixpkgs#nixfmt-rfc-style -- $(find . -name '*.nix' -not -path './.git/*')
+  nix run nixpkgs#nixfmt -- $(find . -name '*.nix' -not -path './.git/*')
 
 [group("verification")]
 fmt-check:
   #!/usr/bin/env bash
   set -euo pipefail
   cd "{{flake_root}}"
-  nix run nixpkgs#nixfmt-rfc-style -- --check $(find . -name '*.nix' -not -path './.git/*')
+  nix run nixpkgs#nixfmt -- --check $(find . -name '*.nix' -not -path './.git/*')
 
 [group("verification")]
 hooks:
