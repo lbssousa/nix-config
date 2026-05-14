@@ -6,16 +6,16 @@
 
 rustPlatform.buildRustPackage rec {
   pname = "gregorio-lsp";
-  version = "0.5.0";
+  version = "0.6.0";
 
   src = fetchFromGitHub {
     owner = "AISCGre-BR";
     repo = "gregorio-lsp";
-    rev = "4078e21c14911fdcda699af823c7008ec5da8a27";
-    hash = "sha256-Y+2pblV2ceAScK21jXHoDgFfGdNmluATF36RQtVo6Z0=";
+    rev = "b7221ba8d17e1fc4719b41e7efb33de54a3cee55";
+    hash = "sha256-N+kh7DdxpA/qvIU9JOlZalfPWF1oWrA7TbnoGalslQA=";
   };
 
-  cargoHash = "sha256-jozJEpJAtLxPoF6l7FVbWwEUnE7Va5DQboGlpchCe2k=";
+  cargoHash = "sha256-2iifKbDTLcbLRLW1CV6pGX+V7I5gixdtdX1XnhpbsEM=";
 
   meta = with lib; {
     description = "Language Server Protocol for Gregorio GABC/NABC notation";

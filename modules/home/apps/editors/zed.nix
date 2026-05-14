@@ -22,7 +22,7 @@
       nixd
       texlab
       ltex-ls
-      gregolint
+      grelint
       gregorio-lsp
     ];
     userSettings = {
@@ -32,7 +32,9 @@
         light = "One Light";
       };
       load_direnv = "direct";
-      soft_wrap = "bounded";
+      soft_wrap = "preferred_line_length";
+      preferred_line_length = 80;
+      wrap_guides = [ 80 ];
       autosave = {
         after_delay = {
           milliseconds = 1000;
