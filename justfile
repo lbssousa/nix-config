@@ -77,7 +77,8 @@ help:
   @echo ''
   @echo "FLAKE_DIR atual: {{flake_root}}"
   @echo 'switch, boot e test elevam com run0 (polkit/YubiKey) quando necessário.'
-  @echo 'Home Manager é standalone: aplique separadamente com just home switch.'
+  @echo 'just switch aplica nixos switch e home switch em sequência.'
+  @echo 'just upgrade atualiza os inputs e em seguida aplica switch (nixos + home).'
   @echo ''
   @echo 'Exemplos:'
   @echo '  just update'
@@ -117,6 +118,7 @@ home action='' user='' *args:
 
 switch host='' *args:
   nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_nixos switch "{{host}}" {{args}}
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_home switch
 
 boot host='' *args:
   nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_nixos boot "{{host}}" {{args}}
@@ -131,8 +133,7 @@ diff host='' *args:
   nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_nixos diff "{{host}}" {{args}}
 
 switch-full host='' *args:
-  nix run nixpkgs#just -- --justfile "{{justfile_file}}" nixos switch "{{host}}" {{args}}
-  nix run nixpkgs#just -- --justfile "{{justfile_file}}" home switch {{args}}
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" switch "{{host}}" {{args}}
   nix run nixpkgs#just -- --justfile "{{justfile_file}}" check
 
 upgrade host='' *args:

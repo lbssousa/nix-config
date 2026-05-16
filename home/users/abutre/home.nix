@@ -14,6 +14,7 @@ in
 
 {
   imports = [
+    ../../../modules/home/apps/browsers/brave.nix
     ../../../modules/home/apps/browsers/firefox.nix
     ../../../modules/home/apps/browsers/microsoft-edge.nix
     ../../../modules/home/apps/nix-validation.nix
