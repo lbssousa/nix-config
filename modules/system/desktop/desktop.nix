@@ -139,9 +139,9 @@ in
       epiphany # Navegador GNOME Web
     ];
 
-    # Navegador padrão do sistema: Firefox (Nix), disponível a todos os
-    # usuários. Usuários que preferirem outro navegador podem sobrescrever
-    # via xdg.mimeApps (home-manager) ou gsettings.
+    # Padrão de sistema: Firefox como fallback para usuários sem preferência
+    # definida. Cada usuário escolhe o navegador preferido dinamicamente via
+    # Configurações do GNOME → Aplicativos padrão.
     etc."xdg/mimeapps.list".text = ''
       [Default Applications]
       text/html=firefox.desktop
