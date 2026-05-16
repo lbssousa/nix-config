@@ -62,8 +62,11 @@ _run_home action user='' *args:
     switch|build)
       home-manager "$action" --flake "{{flake_root}}#${user_host}" "$@"
       ;;
+    news)
+      home-manager news --flake "{{flake_root}}#${user_host}" "$@"
+      ;;
     *)
-      echo "Ação inválida para home: '$action'. Use: switch, build" >&2
+      echo "Ação inválida para home: '$action'. Use: switch, build, news" >&2
       exit 1
       ;;
   esac
@@ -89,6 +92,7 @@ help:
   @echo '  just nixos diff'
   @echo '  just home switch'
   @echo '  just home switch abutre@barbudus'
+  @echo '  just home news'
   @echo '  just switch-full barbudus'
   @echo ''
   @nix run nixpkgs#just -- --justfile "{{justfile_file}}" --list --unsorted

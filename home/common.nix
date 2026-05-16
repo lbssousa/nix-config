@@ -88,6 +88,7 @@
         nru = "run0 --setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK sh -c \"nix flake update /etc/nixos && nixos-rebuild switch --flake /etc/nixos\"";
         nrb = "run0 --setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK nixos-rebuild boot --flake /etc/nixos";
         hms = "home-manager switch --flake /etc/nixos#$(whoami)@$(hostname)";
+        hmn = "home-manager news --flake /etc/nixos#$(whoami)@$(hostname)";
         # Podman/Docker aliases
         dk = "podman";
         dkc = "podman-compose";
