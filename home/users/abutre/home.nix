@@ -15,6 +15,7 @@ in
 {
   imports = [
     ../../../modules/home/apps/browsers/firefox.nix
+    ../../../modules/home/apps/browsers/microsoft-edge.nix
     ../../../modules/home/apps/nix-validation.nix
     ../../../modules/home/apps/security/yubikey.nix
     ../../../modules/home/apps/editors/zed.nix
@@ -27,6 +28,7 @@ in
     packages = [
       pkgs.github-copilot-cli
       pkgs.gcc
+      pkgs.grelint
       pkgs.rustup
     ];
     # ~/.cargo/bin exposes rustup-managed shims (cargo, rustc, etc.) to the shell
