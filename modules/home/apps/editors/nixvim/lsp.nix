@@ -37,16 +37,6 @@
               desc = "Formatar arquivo";
             };
           };
-          diagnostic = {
-            "[d" = {
-              action = "goto_prev";
-              desc = "Diagnóstico anterior";
-            };
-            "]d" = {
-              action = "goto_next";
-              desc = "Próximo diagnóstico";
-            };
-          };
         };
 
         servers = {

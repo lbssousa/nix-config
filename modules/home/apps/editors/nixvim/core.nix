@@ -225,10 +225,10 @@ _:
 
       # Terminal
       {
-        key = "<leader>gg";
-        action = "<cmd>terminal lazygit<CR>";
+        key = "<leader>ft";
+        action = "<cmd>terminal<CR>";
         mode = "n";
-        options.desc = "Abrir lazygit";
+        options.desc = "Abrir terminal";
       }
     ];
 
