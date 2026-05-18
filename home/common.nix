@@ -171,12 +171,14 @@
       enableBashIntegration = lib.mkDefault true;
     };
 
-    # Configuração do Neovim básica
+    # Configuração do Neovim básica (padrão para todos os usuários)
+    # Usuários que importam modules/home/apps/editors/nixvim/ substituem esta
+    # configuração pelo nixvim declarativo.
     neovim = {
-      enable = true;
-      defaultEditor = true;
-      viAlias = true;
-      vimAlias = true;
+      enable = lib.mkDefault true;
+      defaultEditor = lib.mkDefault true;
+      viAlias = lib.mkDefault true;
+      vimAlias = lib.mkDefault true;
       withRuby = false;
       withPython3 = false;
       extraConfig = ''

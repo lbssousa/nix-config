@@ -20,6 +20,7 @@ in
     ../../../modules/home/apps/nix-validation.nix
     ../../../modules/home/apps/security/yubikey.nix
     ../../../modules/home/apps/editors/zed.nix
+    ../../../modules/home/apps/editors/nixvim
     ./gnome.nix
     ./rclone.nix
     ./vscode.nix
@@ -62,6 +63,14 @@ in
     direnv = {
       enable = true;
       nix-direnv.enable = true;
+    };
+
+    # rust-analyzer via nixvim: não instala cargo/rustc próprio pois o abutre
+    # usa rustup para gerenciar o toolchain Rust.
+    nixvim.plugins.lsp.servers.rust_analyzer = {
+      enable = true;
+      installCargo = false;
+      installRustc = false;
     };
 
     starship.enableZshIntegration = false;

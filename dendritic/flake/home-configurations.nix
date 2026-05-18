@@ -18,6 +18,7 @@ let
       extraSpecialArgs = { inherit inputs; };
       modules = [
         inputs.sops-nix.homeManagerModules.sops
+        inputs.nixvim.homeManagerModules.nixvim
         ../../home/common.nix
         {
           home.username = lib.mkDefault username;
