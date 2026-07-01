@@ -1,0 +1,113 @@
+name: Validate Nix Files
+
+on:
+  push:
+    branches: ["main", "master"]
+    paths:
+      - "**.nix"
+      - "flake.lock"
+  pull_request:
+    paths:
+      - "**.nix"
+      - "flake.lock"
+  workflow_dispatch:
+
+jobs:
+  format:
+    name: Check Nix formatting (nixfmt)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v30
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Check formatting with nixfmt
+        run: |
+          nix run nixpkgs#nixfmt -- --check $(find . -name '*.nix' -not -path './.git/*')
+
+  lint:
+    name: Lint with statix
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v30
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Run statix check
+        run: nix run nixpkgs#statix -- check .
+
+  deadcode:
+    name: Check for dead code (deadnix)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v30
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Run deadnix
+        run: nix run nixpkgs#deadnix -- --fail .
+
+  flake-check:
+    name: Evaluate flake outputs (nix flake check)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup SSH for nix-secrets
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.NIX_SECRETS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v30
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            # Use Nix community binary cache to speed up builds
+            substituters = https://cache.nixos.org https://nix-community.cachix.org
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCUSeBs=
+
+      - name: Setup Cachix
+        uses: cachix/cachix-action@v15
+        with:
+          name: nix-community
+          skipPush: true
+
+      - name: Check flake
+        # Evaluate the flake and allow store path realization from substituters.
+        # Note: --no-build is intentionally omitted because lanzaboote (used for Secure Boot
+        # on barbudus) uses crane which calls builtins.pathExists on derivation output paths
+        # during evaluation. With --no-build, all store path realization is blocked, causing
+        # evaluation to fail. Without it, Nix fetches needed sources from nix-community.cachix.org.
+        # nixosConfigurations are always only evaluated (not built) by nix flake check.
+        run: nix flake check --show-trace .

@@ -1,0 +1,118 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Common Commands
+
+All commands run from the repo root (typically `/etc/nixos` on deployed systems, or the development checkout). Use `run0` instead of `sudo` for privilege escalation.
+
+```bash
+# Apply NixOS system + Home Manager (most common operation)
+just switch                        # current host
+just switch barbudus               # specific host
+
+# Home Manager only (standalone, without system rebuild)
+just home switch                   # current user@host
+just home switch abutre@barbudus   # specific user@host
+just home news                     # check HM changelog for current user@host
+
+# NixOS subcommands
+just nixos switch [host]           # apply system config
+just nixos test [host]             # activate without adding to boot menu (ephemeral)
+just nixos boot [host]             # stage for next boot only
+just nixos diff [host]             # preview changes vs current system (uses nvd)
+just build [host]                  # build without activating
+
+# Update flake inputs
+just update                        # update all inputs, auto-commits flake.lock
+just auto_commit=false update      # update without committing
+just upgrade [host]                # update inputs + switch
+
+# Validation (run before committing)
+just fmt          # format all .nix files with nixfmt
+just lint         # statix static analysis
+just deadcode     # deadnix dead-code check
+just check        # full nix flake check (slow)
+just validate     # fmt-check + lint + deadcode + check
+
+# Info
+just systems      # list all nixosConfigurations in the flake
+
+# Garbage collection
+just gc           # delete generations older than 30d
+just gc full      # delete all old generations
+```
+
+The pre-commit hook automatically runs `nixfmt --check`, `statix`, and `deadnix` on staged `.nix` files. Activate it once with `just hooks`.
+
+`just update` auto-commits and pushes `flake.lock` when the file changes. Suppress with `just auto_commit=false update`.
+
+## Architecture
+
+### Flake Composition (dendritic pattern)
+
+`flake.nix` is intentionally thin — it delegates to `flake-parts` and the `dendritic/` layer. `dendritic/imports.nix` auto-imports every `.nix` file under `dendritic/` (except itself), so adding a new file there is enough to wire it in.
+
+The two central inventories drive all flake outputs:
+
+- **`dendritic/data/hosts.nix`** — host registry. Each entry produces `nixosConfigurations.<host>` and `diskoConfigurations.<host>`.
+- **`dendritic/data/users.nix`** — user list. Each username maps to `users/<name>.nix` (NixOS account) and, if it exists, `home/users/<name>/home.nix` (HM override).
+
+### How NixOS configurations are assembled
+
+`dendritic/flake/nixos-configurations.nix` builds each host by stacking:
+1. Shared flake inputs modules (disko, preservation, sops-nix)
+2. All modules in `dendritic/nixos.sharedModules` (defined in `dendritic/features/nixos-modules.nix`)
+3. All user account modules from `users/<name>.nix`
+4. Host-specific: `hosts/<host>/hardware-configuration.nix` + `hosts/<host>/configuration.nix`
+5. `hostSpec.extraNixosModules` (e.g., lanzaboote for barbudus)
+
+`hosts/<host>/configuration.nix` should only contain host-specific overrides — shared behavior belongs in `modules/system/`.
+
+### flake-parts modules in `dendritic/flake/`
+
+Beyond configuration assembly, several files in `dendritic/flake/` are flake-parts modules that contribute to shared NixOS config or export flake packages:
+
+- **`gnome-wrapper.nix`** — adds a GNOME NixOS module to `dendritic.nixos.sharedModules` (GDM, GNOME desktop, Flatpak declarations, dconf defaults, QT/XKB env vars) and exports `packages.gnome-extensions` (PaperWM + Appindicator + Caffeine).
+- **`helix-wrapper.nix`** — builds and exports `packages.helix`: Helix editor wrapped with GABC/Gregorio tree-sitter grammar, texlab + ltex-ls + gregorio-lsp in PATH, and the full editor/LSP/keybindings config baked in via `nix-wrapper-modules`.
+- **`pkgs.nix`** — wires the local overlay into `_module.args.pkgs` for all `perSystem` modules.
+
+### Home Manager is standalone
+
+`dendritic/flake/home-configurations.nix` generates `homeConfigurations.<user>@<host>` for every user/host combination. It always imports `home/common.nix` (shell config, git, neovim, starship, fzf, zoxide) and adds `home/users/<user>/home.nix` when present. HM changes require `just home switch` separately from `just nixos switch` (or use `just switch` which runs both).
+
+### Local packages and overlay
+
+`overlays/default.nix` defines a nixpkgs overlay with packages that are not (yet) in upstream nixpkgs:
+
+- **Gregorio/GABC** tools: `gregorio-lsp`, `grefmt`, `grelint`, `tree-sitter-gregorio`, `tree-sitter-gregorio-nvim`, `gregorio-nvim`
+- **Fingerprint** (Goodix sensor 27c6:538d on barbudus): `libfprint-goodix`, `fprintd-goodix`, `goodix-fp-dump`
+- **Brave Origin**: `brave-origin-beta`, `brave-origin-nightly` (simplified Brave without rewards/wallet/AI)
+
+`dendritic/features/local-overlay.nix` wires this overlay into all `nixosConfigurations` and `homeConfigurations`. New packages go in `pkgs/<name>/package.nix` and are registered in `overlays/default.nix`.
+
+### Preservation
+
+`/` is a **tmpfs** — wiped clean at every boot. Durable state lives under `/persist` (a Btrfs subvolume). If a change needs to survive reboot, check `modules/system/core/preservation.nix` before assuming normal filesystem persistence. `/home`, `/nix`, `/var/log`, `/var/lib/containers`, and `/var/lib/flatpak` are separate persistent Btrfs subvolumes.
+
+### Secrets
+
+Managed via `sops-nix`. The age key lives at `/persist/etc/sops/age/keys.txt`. The `nix-secrets` flake input (`git+ssh://git@github.com/lbssousa/nix-secrets`) is a private SSH-accessed repo that supplies user full names (referenced as `inputs.nix-secrets.${username}.fullName` in `modules/system/users/descriptions.nix`) and any other sensitive values. Follow the pattern in `modules/system/network/wifi.nix`: declare `sops.secrets.*` entries and inject `config.sops.placeholder.<name>` into generated files — never put secrets in plain Nix values.
+
+## Key Conventions
+
+- **Language**: Keep comments, docs, and help text in **Portuguese** unless the file is already clearly English-first.
+- **Privilege escalation**: Use `run0` (not `sudo`) for all privileged commands — this system uses systemd's `run0`.
+- **Git tracking**: Nix flakes only see files tracked by git. Always `git add` new files (e.g., `users/<name>.nix`, `home/users/<name>/home.nix`) before evaluating or installing.
+- **Adding a user**: (1) copy `users/skeleton.nix` → `users/<name>.nix`, (2) add to `dendritic/data/users.nix`, (3) `git add` both files, (4) rebuild. The initial password is `"nixos"` and users are forced to change it on first login. User descriptions (full names) come from `nix-secrets`, not from the user files.
+- **Adding a host**: (1) create `hosts/<host>/{configuration,hardware-configuration,disko}.nix`, (2) register in `dendritic/data/hosts.nix`, (3) `git add` all new files.
+- **User accounts use `mkUser.nix`**: `import ./mkUser.nix { inherit pkgs lib; } { username = "..."; uid = NNN; hasSudo = false; }` — always set a fixed `uid` to avoid ownership issues.
+- **Secure Boot**: `barbudus` only. PKI bundle lives at `/persist/etc/secureboot`. Do not change these paths — they are assumed in the host config, install script, and post-install flow.
+- **Shadow persistence**: `/etc/shadow` is NOT managed by preservation directly. `modules/system/users/users.nix` uses an activation script (`restoreShadow`) plus a `persistShadow` systemd path unit to keep passwords durable across reboots despite the tmpfs root.
+
+## Hosts
+
+| Host | Hardware | Notes |
+|------|----------|-------|
+| `barbudus` | Dell Inspiron 14 5490 — Intel i5-10210U, NVIDIA GeForce MX230 | Secure Boot (lanzaboote), NVIDIA PRIME offload, Goodix fingerprint sensor |
+| `bigodon` | Morefine M6 Mini-PC — Intel N200, Intel UHD Graphics | No discrete GPU, no Secure Boot |

@@ -1,0 +1,3 @@
+-- Autocmds adicionais.
+-- O LazyVim já define autocmds para highlight on yank, auto-resize, etc.
+-- Adicione aqui apenas o que for específico desta configuração.
