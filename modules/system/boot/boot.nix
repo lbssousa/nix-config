@@ -1,8 +1,10 @@
 # Módulo de boot: systemd-boot + Plymouth para experiência flicker-free
-{ lib, ... }:
+{ lib, pkgs, ... }:
 
 {
   boot = {
+    # Kernel Linux mais recente (não-LTS)
+    kernelPackages = lib.mkDefault pkgs.linuxPackages_latest;
     # systemd-boot como gerenciador de boot padrão
     # Nota: No host barbudus, o lanzaboote substitui o systemd-boot para Secure Boot
     loader = {
