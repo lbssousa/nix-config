@@ -10,13 +10,8 @@ _:
     "application/x-ext-pdf" = "org.gnome.Papers.desktop";
   };
 
-  dconf.settings = {
-    # Quake Terminal — usa o perfil sem decorações definido em ghostty.nix
-    "org/gnome/shell/extensions/quake-terminal" = {
-      terminal-id = "ghostty-no-decorations.desktop";
-      terminal-shortcut = [ "F12" ];
-      vertical-size = 75;
-      skip-taskbar = true;
-    };
-  };
+  # Nota: configurações dconf não são declaradas aqui com dconf.settings.
+  # Com home efêmero, dconf.settings escreve em ~/.config/dconf/user apenas
+  # no home-manager switch — perdendo-se no próximo reboot.
+  # Declarar em programs.dconf.profiles.*.databases no NixOS (ver gnome-wrapper.nix).
 }

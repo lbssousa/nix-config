@@ -85,7 +85,12 @@
       ".config/autostart" # Autostart dos Flatpaks (monitorado pelo fix-autostart)
 
       # ── Estado GNOME / desktop ─────────────────────────────────────────
-      ".config/dconf" # Configurações GNOME manuais (papel de parede, atalhos)
+      # Nota: .config/dconf NÃO é preservado intencionalmente.
+      # Configurações dconf que devem sobreviver ao reboot devem ser declaradas
+      # via programs.dconf.profiles.*.databases no NixOS (gravadas em /etc/dconf/,
+      # que é gerenciado pelo sistema e independe do home). O dconf.settings do
+      # Home Manager escreve em ~/.config/dconf/user apenas na ativação —
+      # não use-o para settings que devem persistir em home efêmero.
       ".local/share/keyrings" # GNOME keyring: senhas de Wi-Fi e apps
       ".local/share/applications" # Arquivos .desktop do usuário e de Flatpaks
 

@@ -20,12 +20,12 @@ _: {
             flatpak = {
               enable = true;
               packages = [
-                "com.bitwarden.desktop"            # Gestão de senhas
-                "com.github.tchx84.Flatseal"      # Gerenciador de permissões Flatpak
-                "com.ranfdev.DistroShelf"          # Gerenciador de distros em contêineres
-                "io.github.flattool.Ignition"      # Gerenciador de autostart de Flatpaks
-                "io.github.flattool.Warehouse"     # Gerenciador de apps Flatpak
-                "io.github.kolunmi.Bazaar"         # Loja de apps GNOME
+                "com.bitwarden.desktop" # Gestão de senhas
+                "com.github.tchx84.Flatseal" # Gerenciador de permissões Flatpak
+                "com.ranfdev.DistroShelf" # Gerenciador de distros em contêineres
+                "io.github.flattool.Ignition" # Gerenciador de autostart de Flatpaks
+                "io.github.flattool.Warehouse" # Gerenciador de apps Flatpak
+                "io.github.kolunmi.Bazaar" # Loja de apps GNOME
               ];
               update.onActivation = true;
               update.auto = {
@@ -96,10 +96,30 @@ _: {
             # Layout br+abnt2 como default para todos os usuários.
             # Espelha services.xserver.xkb definido em localization.nix no lado GNOME:
             # sem isso, o GNOME ignora o XKB do sistema e exibe apenas "English (US)".
+            # profiles.user.databases: banco dconf de sistema, gravado em /etc/dconf/db/
+            # e independente do home. Use aqui (não em dconf.settings no HM) para
+            # qualquer setting que deva sobreviver a reboots com home efêmero.
             profiles.user.databases = [
               {
-                settings."org/gnome/desktop/input-sources" = {
-                  sources = [ (lib.gvariant.mkTuple [ "xkb" "br" ]) ];
+                settings = {
+                  # Layout br+abnt2 para todos os usuários.
+                  # Espelha services.xserver.xkb definido em localization.nix.
+                  "org/gnome/desktop/input-sources" = {
+                    sources = [
+                      (lib.gvariant.mkTuple [
+                        "xkb"
+                        "br"
+                      ])
+                    ];
+                  };
+
+                  # Quake Terminal — perfil sem decorações definido em ghostty.nix
+                  "org/gnome/shell/extensions/quake-terminal" = {
+                    terminal-id = "ghostty-no-decorations.desktop";
+                    terminal-shortcut = [ "F12" ];
+                    vertical-size = 75;
+                    skip-taskbar = true;
+                  };
                 };
               }
             ];
