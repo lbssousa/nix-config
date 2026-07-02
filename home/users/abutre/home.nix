@@ -18,7 +18,7 @@ in
     ../../../modules/home/apps/security/yubikey.nix
     ../../../modules/home/apps/editors/helix
     ../../../modules/home/apps/editors/zed.nix
-    ../../../modules/home/apps/editors/nvf
+    ../../../modules/home/apps/editors/nixvim
     ../../../modules/home/apps/terminals/ghostty.nix
     ../../../modules/home/apps/terminals/tmux.nix
 

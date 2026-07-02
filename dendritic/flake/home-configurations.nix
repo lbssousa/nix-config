@@ -20,7 +20,7 @@ let
         inherit (config) flake;
       };
       modules = [
-        inputs.nvf.homeManagerModules.default
+        inputs.nixvim.homeModules.nixvim
         inputs.sops-nix.homeManagerModules.sops
         ../../home/common.nix
         {

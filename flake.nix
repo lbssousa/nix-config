@@ -47,9 +47,9 @@
     # nix-flatpak para Flatpaks declarativos sem equivalente no nixpkgs
     nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=v0.7.0";
 
-    # nvf para configuração declarativa do Neovim
-    nvf = {
-      url = "github:NotAShelf/nvf";
+    # nixvim para configuração declarativa do Neovim
+    nixvim = {
+      url = "github:nix-community/nixvim";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
