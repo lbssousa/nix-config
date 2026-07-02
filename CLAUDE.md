@@ -42,6 +42,21 @@ The pre-commit hook automatically runs `nixfmt --check`, `statix`, and `deadnix`
 
 `just update` auto-commits and pushes `flake.lock` when the file changes. Suppress with `just auto_commit=false update`.
 
+### Shell aliases (bash/zsh — defined in `home/common.nix`)
+
+These are available in every user's interactive shell. All NixOS aliases use `run0` for privilege escalation (polkit/YubiKey, no password prompt) and pass `SSH_AUTH_SOCK` so `nixos-rebuild` can fetch SSH-gated flake inputs (e.g. `nix-secrets`). Because Home Manager is a NixOS module, every `nixos-rebuild` also deploys all HM changes.
+
+| Alias | Expands to | Effect |
+|-------|-----------|--------|
+| `nrs` | `run0 … nixos-rebuild switch --flake $(_nix_cfg)` | Rebuild + activate NixOS **and** HM immediately |
+| `nrb` | `run0 … nixos-rebuild boot --flake $(_nix_cfg)` | Stage next boot only — current session unchanged |
+| `nru` | `run0 … nix flake update … && nixos-rebuild switch …` | Update all flake inputs, then rebuild + activate |
+| `hmn` | `home-manager news` | Show HM changelog since last generation |
+
+`_nix_cfg()` resolves the flake path: `/etc/nixos` when populated (deployed system), otherwise `$(xdg-user-dir PROJECTS)/lbssousa/nix-config` (development checkout).
+
+The `just` function is also shadowed in the shell to always point to `$(_nix_cfg)/justfile`, so `just switch` works from any directory without specifying `--justfile`.
+
 ## Architecture
 
 ### Flake Composition (dendritic pattern)
