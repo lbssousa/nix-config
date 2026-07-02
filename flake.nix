@@ -48,10 +48,7 @@
     nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=v0.7.0";
 
     # nixvim para configuração declarativa do Neovim
-    nixvim = {
-      url = "github:nix-community/nixvim";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    nixvim.url = "github:nix-community/nixvim";
 
     # nix-wrapper-modules — empacota programas com config integrada na store
     wrapper-modules.url = "github:BirdeeHub/nix-wrapper-modules";

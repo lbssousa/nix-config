@@ -117,7 +117,7 @@ _: {
                   "org/gnome/shell/extensions/quake-terminal" = {
                     terminal-id = "ghostty-no-decorations.desktop";
                     terminal-shortcut = [ "F12" ];
-                    vertical-size = 75;
+                    vertical-size = lib.gvariant.mkInt32 75;
                     skip-taskbar = true;
                   };
                 };
