@@ -1,6 +1,7 @@
 # Overlay local — adiciona pacotes personalizados ao nixpkgs.
 # Importado por dendritic/features/local-overlay.nix e propagado a todas as
-# nixosConfigurations e homeConfigurations via config.dendritic.localOverlay.
+# nixosConfigurations via config.dendritic.localOverlay. O Home Manager herda
+# o overlay automaticamente via home-manager.useGlobalPkgs = true.
 final: _prev: {
   run0-sudo = final.callPackage ../pkgs/run0-sudo/package.nix { };
   epson-printer-utility = final.callPackage ../pkgs/epson-printer-utility/package.nix { };

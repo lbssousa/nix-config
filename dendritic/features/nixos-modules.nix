@@ -29,7 +29,8 @@ in
         inherit inputs;
         inherit (config.dendritic) users;
       })
-      # Expõe o CLI do home-manager standalone como pacote de sistema.
+      # Expõe o CLI do home-manager como pacote de sistema (útil para
+      # `home-manager news` e `home-manager generations`).
       (
         { pkgs, inputs, ... }:
         {

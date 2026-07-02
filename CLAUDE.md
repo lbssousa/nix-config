@@ -7,17 +7,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 All commands run from the repo root (typically `/etc/nixos` on deployed systems, or the development checkout). Use `run0` instead of `sudo` for privilege escalation.
 
 ```bash
-# Apply NixOS system + Home Manager (most common operation)
+# Apply NixOS system + Home Manager (Home Manager is a NixOS module — both deploy together)
 just switch                        # current host
 just switch barbudus               # specific host
 
-# Home Manager only (standalone, without system rebuild)
-just home switch                   # current user@host
-just home switch abutre@barbudus   # specific user@host
-just home news                     # check HM changelog for current user@host
-
 # NixOS subcommands
-just nixos switch [host]           # apply system config
+just nixos switch [host]           # apply system config (includes Home Manager)
 just nixos test [host]             # activate without adding to boot menu (ephemeral)
 just nixos boot [host]             # stage for next boot only
 just nixos diff [host]             # preview changes vs current system (uses nvd)
@@ -77,9 +72,14 @@ Beyond configuration assembly, several files in `dendritic/flake/` are flake-par
 - **`helix-wrapper.nix`** — builds and exports `packages.helix`: Helix editor wrapped with GABC/Gregorio tree-sitter grammar, texlab + ltex-ls + gregorio-lsp in PATH, and the full editor/LSP/keybindings config baked in via `nix-wrapper-modules`.
 - **`pkgs.nix`** — wires the local overlay into `_module.args.pkgs` for all `perSystem` modules.
 
-### Home Manager is standalone
+### Home Manager as NixOS module
 
-`dendritic/flake/home-configurations.nix` generates `homeConfigurations.<user>@<host>` for every user/host combination. It always imports `home/common.nix` (shell config, git, neovim, starship, fzf, zoxide) and adds `home/users/<user>/home.nix` when present. HM changes require `just home switch` separately from `just nixos switch` (or use `just switch` which runs both).
+`dendritic/flake/home-nixos-module.nix` adds `home-manager.nixosModules.home-manager` to `dendritic.nixos.sharedModules` and wires every user's HM config via `home-manager.users.<name>`. Each user's config always imports `home/common.nix` (shell config, git, neovim, starship, fzf, zoxide) and adds `home/users/<name>/home.nix` when present. HM and NixOS deploy together via `just switch` — no separate `home-manager switch` step.
+
+Key HM module settings:
+- `useGlobalPkgs = true` — HM uses the NixOS system pkgs (overlay + allowUnfree inherited)
+- `useUserPackages = true` — packages install to `/etc/profiles/per-user/<user>` (in PATH automatically)
+- `backupFileExtension = "bkp"` — conflicting files are backed up rather than failing
 
 ### Local packages and overlay
 
@@ -89,7 +89,7 @@ Beyond configuration assembly, several files in `dendritic/flake/` are flake-par
 - **Fingerprint** (Goodix sensor 27c6:538d on barbudus): `libfprint-goodix`, `fprintd-goodix`, `goodix-fp-dump`
 - **Brave Origin**: `brave-origin-beta`, `brave-origin-nightly` (simplified Brave without rewards/wallet/AI)
 
-`dendritic/features/local-overlay.nix` wires this overlay into all `nixosConfigurations` and `homeConfigurations`. New packages go in `pkgs/<name>/package.nix` and are registered in `overlays/default.nix`.
+`dendritic/features/local-overlay.nix` wires this overlay into all `nixosConfigurations`. HM inherits it automatically via `home-manager.useGlobalPkgs = true`. New packages go in `pkgs/<name>/package.nix` and are registered in `overlays/default.nix`.
 
 ### Preservation
 

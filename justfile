@@ -47,33 +47,6 @@ _run_nixos action host='' *args:
       ;;
   esac
 
-[private]
-_run_home action user='' *args:
-  #!/usr/bin/env bash
-  set -euo pipefail
-
-  action="{{action}}"
-  user_host="{{user}}"
-  set -- {{args}}
-
-  user_host="${user_host:-$(whoami)@$(hostname)}"
-
-  case "$action" in
-    switch)
-      home-manager "$action" --flake "{{flake_root}}#${user_host}" -b bkp "$@"
-      ;;
-    build)
-      home-manager "$action" --flake "{{flake_root}}#${user_host}" "$@"
-      ;;
-    news)
-      home-manager news --flake "{{flake_root}}#${user_host}" "$@"
-      ;;
-    *)
-      echo "Ação inválida para home: '$action'. Use: switch, build, news" >&2
-      exit 1
-      ;;
-  esac
-
 default:
   @nix run nixpkgs#just -- --justfile "{{justfile_file}}" help
 
@@ -83,20 +56,18 @@ help:
   @echo ''
   @echo "FLAKE_DIR atual: {{flake_root}}"
   @echo 'switch, boot e test elevam com run0 (polkit/YubiKey) quando necessário.'
-  @echo 'just switch aplica nixos switch e home switch em sequência.'
-  @echo 'just upgrade atualiza os inputs e em seguida aplica switch (nixos + home).'
+  @echo 'Home Manager é módulo NixOS: just switch aplica NixOS + HM em conjunto.'
+  @echo 'just upgrade atualiza os inputs e em seguida aplica switch.'
   @echo ''
   @echo 'Exemplos:'
   @echo '  just update'
   @echo '  just auto_commit=false update'
   @echo '  just auto_commit=false upgrade'
-  @echo '  just nixos switch'
+  @echo '  just switch'
+  @echo '  just switch barbudus'
   @echo '  just nixos switch barbudus'
   @echo '  just nixos diff'
-  @echo '  just home switch'
-  @echo '  just home switch abutre@barbudus'
-  @echo '  just home news'
-  @echo '  just switch-full barbudus'
+  @echo '  just nixos test'
   @echo ''
   @nix run nixpkgs#just -- --justfile "{{justfile_file}}" --list --unsorted
 
@@ -120,12 +91,8 @@ whoami:
 nixos action='' host='' *args:
   nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_nixos "{{action}}" "{{host}}" {{args}}
 
-home action='' user='' *args:
-  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_home "{{action}}" "{{user}}" {{args}}
-
 switch host='' *args:
   nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_nixos switch "{{host}}" {{args}}
-  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_home switch
 
 boot host='' *args:
   nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_nixos boot "{{host}}" {{args}}

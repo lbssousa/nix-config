@@ -1,6 +1,6 @@
-# Configuração Home Manager base — compartilhada por todos os usuários
-# no modo standalone do Home Manager.
-# Os arquivos por usuário ficam em home/users/<usuario>/home.nix.
+# Configuração Home Manager base — compartilhada por todos os usuários.
+# Aplicada como módulo NixOS via home-manager.users (dendritic/flake/home-nixos-module.nix).
+# As customizações por usuário ficam em home/users/<usuario>/home.nix.
 { pkgs, lib, ... }:
 
 {
@@ -56,11 +56,11 @@
         # NixOS shortcuts (run0: eleva via polkit/YubiKey sem setuid;
         # --setenv=SSH_AUTH_SOCK repassa o socket do agente SSH para que
         # nixos-rebuild acesse entradas de flake SSH, ex.: nix-secrets)
+        # Home Manager é módulo NixOS — nrs/nrb aplicam HM automaticamente.
         nrs = "run0 --setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK nixos-rebuild switch --flake $(_nix_cfg)";
         nru = "run0 --setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK sh -c \"nix flake update $(_nix_cfg) && nixos-rebuild switch --flake $(_nix_cfg)\"";
         nrb = "run0 --setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK nixos-rebuild boot --flake $(_nix_cfg)";
-        hms = "home-manager switch --flake $(_nix_cfg)#$(whoami)@$(hostname)";
-        hmn = "home-manager news --flake $(_nix_cfg)#$(whoami)@$(hostname)";
+        hmn = "home-manager news";
         # Podman/Docker aliases
         dk = "podman";
         dkc = "podman-compose";
@@ -122,11 +122,11 @@
         # NixOS shortcuts (run0: eleva via polkit/YubiKey sem setuid;
         # --setenv=SSH_AUTH_SOCK repassa o socket do agente SSH para que
         # nixos-rebuild acesse entradas de flake SSH, ex.: nix-secrets)
+        # Home Manager é módulo NixOS — nrs/nrb aplicam HM automaticamente.
         nrs = "run0 --setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK nixos-rebuild switch --flake $(_nix_cfg)";
         nru = "run0 --setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK sh -c \"nix flake update $(_nix_cfg) && nixos-rebuild switch --flake $(_nix_cfg)\"";
         nrb = "run0 --setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK nixos-rebuild boot --flake $(_nix_cfg)";
-        hms = "home-manager switch --flake $(_nix_cfg)#$(whoami)@$(hostname)";
-        hmn = "home-manager news --flake $(_nix_cfg)#$(whoami)@$(hostname)";
+        hmn = "home-manager news";
         # Podman/Docker aliases
         dk = "podman";
         dkc = "podman-compose";

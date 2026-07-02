@@ -1673,7 +1673,7 @@
             ];
             options = {
               nixos.expr = ''(builtins.getFlake "/etc/nixos").nixosConfigurations.barbudus.options'';
-              home_manager.expr = ''(builtins.getFlake "/etc/nixos").homeConfigurations."abutre@barbudus".options'';
+              home_manager.expr = ''(builtins.getFlake "/etc/nixos").nixosConfigurations.barbudus.options.home-manager.users.abutre'';
             };
           };
         };
