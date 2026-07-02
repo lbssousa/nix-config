@@ -643,7 +643,7 @@ fprintd-list "$USER"
 
 O script de ativação do Home Manager do usuário `abutre` copia automaticamente a chave
 age pessoal de `$(xdg-user-dir PROJECTS)/lbssousa/nix-keys/sops/age/abutre/keys.txt`
-para `~/.config/sops/age/keys.txt`. Para que isso funcione no primeiro `just home switch`,
+para `~/.config/sops/age/keys.txt`. Para que isso funcione no primeiro `just switch`,
 o repositório `nix-keys` precisa estar clonado e desbloqueado no diretório de projetos:
 
 ```bash
@@ -656,12 +656,12 @@ gpg --card-status               # verificar que o YubiKey está reconhecido
 cd "$NIX_KEYS_DIR"
 git-crypt unlock
 
-# Aplicar Home Manager — o script de ativação copiará a chave age pessoal automaticamente
+# Aplicar NixOS + Home Manager — o script de ativação copiará a chave age pessoal automaticamente
 cd /etc/nixos
-just home switch
+just switch
 ```
 
-Se a chave age pessoal não estiver disponível no momento do `just home switch`, o
+Se a chave age pessoal não estiver disponível no momento do `just switch`, o
 script de ativação emitirá um aviso indicando que deve clonar e desbloquear o nix-keys.
 Secrets do Home Manager (como credenciais do rclone) não funcionarão até que a chave
 seja restaurada.

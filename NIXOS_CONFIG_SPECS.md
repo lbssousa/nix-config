@@ -216,11 +216,12 @@ flatpak install flathub org.kde.konsole    # KDE: terminal
 
 ## Home Manager
 
-- Usado em modo standalone (saídas `homeConfigurations` separadas das saídas `nixosConfigurations`)
-- Compartilha a mesma revisão de nixpkgs do flake
+- Usado como módulo NixOS (`home-manager.nixosModules.home-manager`), integrado ao `nixosConfigurations`
+- Compartilha o mesmo nixpkgs do sistema (`useGlobalPkgs = true`), herdando overlay e allowUnfree
+- Pacotes de usuário instalados em `/etc/profiles/per-user/<usuario>` (`useUserPackages = true`)
 - Configuração base em `home/common.nix`
 - Configuração por usuário em `home/users/<usuario>/home.nix` (quando necessário)
-- Saídas `homeConfigurations` geradas automaticamente a partir do inventário dendrítico
+- Wiring automático em `dendritic/flake/home-nixos-module.nix` a partir do inventário dendrítico
 
 ## Preservation (Sistema Efêmero)
 
