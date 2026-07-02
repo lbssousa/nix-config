@@ -131,14 +131,19 @@ in
     ${pkgs.coreutils}/bin/ln -sfn ../bitwarden-fix-autostart.path \
       "$systemdUserWantsDir/bitwarden-fix-autostart.path"
 
-    $systemctlUser daemon-reload
-    $systemctlUser reset-failed \
-      bitwarden-ssh-agent.path \
-      bitwarden-ssh-agent-env.service \
-      bitwarden-fix-autostart.path \
-      bitwarden-fix-autostart.service || true
-    $systemctlUser start \
-      bitwarden-ssh-agent.path \
-      bitwarden-fix-autostart.path
+    # Recarregar e iniciar units apenas se há sessão de usuário ativa.
+    # Sem sessão (ex.: durante nixos-rebuild sem login), os symlinks acima são
+    # suficientes: systemd carregará as units via WantedBy=default.target ao iniciar a sessão.
+    if XDG_RUNTIME_DIR="/run/user/$(id -u)" $systemctlUser status >/dev/null 2>&1; then
+      $systemctlUser daemon-reload
+      $systemctlUser reset-failed \
+        bitwarden-ssh-agent.path \
+        bitwarden-ssh-agent-env.service \
+        bitwarden-fix-autostart.path \
+        bitwarden-fix-autostart.service || true
+      $systemctlUser start \
+        bitwarden-ssh-agent.path \
+        bitwarden-fix-autostart.path
+    fi
   '';
 }
