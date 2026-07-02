@@ -71,9 +71,13 @@ _:
 
     # Desktop entry oculto do menu de apps, usado pela extensão quake-terminal
     # para lançar Ghostty já no perfil sem decorações.
+    # --gtk-single-instance=false: impede que esta instância se registre como
+    # singleton GApplication. Sem isso, ela capturaria o slot de instância única
+    # e janelas abertas "explicitamente" (com --gtk-single-instance=true) seriam
+    # roteadas para este processo, herdando o perfil sem decorações.
     desktopEntries."ghostty-no-decorations" = {
       name = "Ghostty (sem decorações)";
-      exec = "ghostty --profile=no-decorations";
+      exec = "ghostty --profile=no-decorations --gtk-single-instance=false";
       icon = "com.mitchellh.ghostty";
       noDisplay = true;
     };
