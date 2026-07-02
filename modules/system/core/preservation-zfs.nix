@@ -45,11 +45,10 @@
   #   '';
   # };
 
-  # Marcar /persist e /home como necessários no boot (preservation depende disso)
-  fileSystems = {
-    "/persist".neededForBoot = true;
-    "/home".neededForBoot = true;
-  };
+  # /persist deve estar disponível no boot (preservation precisa dele para
+  # configurar os bind mounts antes de qualquer serviço iniciar).
+  # /home não precisa de neededForBoot — é recriado pelo preservation via tmpfiles.
+  fileSystems."/persist".neededForBoot = true;
 
   # Configuração do módulo preservation
   # Define quais arquivos e diretórios são preservados entre boots
@@ -76,6 +75,5 @@
     ];
   };
 
-  # Os diretórios de usuário são definidos em modules/system/users/users.nix
-  # e complementados em hosts/*/configuration.nix
+  # A lista de itens preservados por usuário é definida em users/mkUser.nix.
 }

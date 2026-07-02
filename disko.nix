@@ -89,15 +89,6 @@ in
               extraArgs = [ "-f" ]; # Forçar criação (sobrescreve fs existente se necessário)
 
               subvolumes = {
-                # Diretórios de usuário — preservados entre boots
-                "@home" = {
-                  mountpoint = "/home";
-                  mountOptions = [
-                    "compress=zstd"
-                    "noatime"
-                  ];
-                };
-
                 # Nix store — preservado (essencial para o sistema funcionar)
                 "@nix" = {
                   mountpoint = "/nix";

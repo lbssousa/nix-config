@@ -2,19 +2,21 @@
 # A raiz (/) é um tmpfs — limpa automaticamente a cada boot sem necessidade
 # de rollback ou snapshot. Dados importantes são preservados em /persist via
 # bind mounts gerenciados pelo módulo nix-community/preservation.
+#
+# /home também é tmpfs (sem subvolume Btrfs próprio). Os itens selecionados de
+# cada usuário são bind-montados de /persist/home/<usuario>/. O restante do
+# diretório home — symlinks gerenciados pelo Home Manager, arquivos de cache,
+# etc. — é efêmero e recriado a cada boot.
+#
+# A lista de itens preservados por usuário é definida em users/mkUser.nix.
 _:
 
 {
-  # Marcar /persist e /home como necessários no boot (preservation depende disso)
-  fileSystems = {
-    "/persist".neededForBoot = true;
-    "/home".neededForBoot = true;
-  };
+  # /persist deve estar disponível no boot (o módulo preservation precisa dele
+  # para configurar os bind mounts antes de qualquer serviço iniciar)
+  fileSystems."/persist".neededForBoot = true;
 
-  # Configuração do módulo preservation
-  # Define quais arquivos e diretórios são preservados entre boots
   preservation.preserveAt."/persist" = {
-    # Diretórios do sistema a preservar
     directories = [
       "/etc/nixos" # Configuração do NixOS
       "/etc/NetworkManager/system-connections" # Conexões de rede salvas
@@ -24,7 +26,6 @@ _:
       "/var/db/sudo" # Timestamps do sudo
     ];
 
-    # Arquivos do sistema a preservar
     files = [
       "/etc/machine-id" # ID único da máquina
       # NOTA: /etc/shadow NÃO é gerenciado aqui.
@@ -35,7 +36,4 @@ _:
       # persistidas em /persist/etc/shadow.
     ];
   };
-
-  # Os diretórios de usuário são definidos em modules/system/users/users.nix
-  # e complementados em hosts/*/configuration.nix
 }
