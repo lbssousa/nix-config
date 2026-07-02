@@ -1,5 +1,5 @@
 # Suporte de sistema para YubiKey/SmartCard (pcscd)
-{ config, lib, ... }:
+{ config, lib, pkgs, ... }:
 
 let
   wheelUsers = lib.attrNames (
@@ -33,9 +33,23 @@ in
         u2f.enable = true;
       };
 
-      # run0 (systemd): mesma política do sudo.
+      # run0 (systemd): autentica uma vez e memoriza por 5 minutos (pam_timestamp).
+      # auth:    verifica se existe timestamp recente em /run/sudo/<user>/run0:<tty>;
+      #          se recente (< 5 min), retorna sucesso sem nova autenticação.
+      # session: atualiza o timestamp após cada autenticação bem-sucedida,
+      #          reiniciando a janela de 5 minutos.
       run0 = {
         u2f.enable = true;
+        rules.auth.timestamp = {
+          control = "sufficient";
+          modulePath = "${pkgs.linux-pam}/lib/security/pam_timestamp.so";
+          order = 400; # Antes do pam_u2f (10900)
+        };
+        rules.session.timestamp = {
+          control = "optional";
+          modulePath = "${pkgs.linux-pam}/lib/security/pam_timestamp.so";
+          order = 500;
+        };
       };
 
       # Login: YubiKey → senha.
@@ -55,6 +69,12 @@ in
       };
     };
   };
+
+  # Diretório de timestamps do pam_timestamp (compartilhado com sudo).
+  # O sudo normalmente o cria, mas run0 pode existir sem sudo instalado.
+  systemd.tmpfiles.rules = [
+    "d /run/sudo 0700 root root -"
+  ];
 
   # Checagem automática no switch/rebuild para evitar lockout em sudo.
   system.activationScripts.checkPamU2FMapping = {
