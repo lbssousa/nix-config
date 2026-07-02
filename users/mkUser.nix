@@ -109,6 +109,8 @@
     files = [
       ".bash_history"
       ".zsh_history"
+      ".config/user-dirs.dirs"
+      ".config/user-dirs.locale"
     ];
   };
 }

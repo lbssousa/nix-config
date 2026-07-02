@@ -16,6 +16,8 @@ _:
   # para configurar os bind mounts antes de qualquer serviço iniciar)
   fileSystems."/persist".neededForBoot = true;
 
+  preservation.enable = true;
+
   preservation.preserveAt."/persist" = {
     directories = [
       "/etc/nixos" # Configuração do NixOS
