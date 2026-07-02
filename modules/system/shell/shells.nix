@@ -1,4 +1,4 @@
-# Módulo de shells: Bash, Fish e Zsh (Bash como padrão)
+# Módulo de shells: Bash, Fish e Zsh (Zsh como padrão)
 { pkgs, ... }:
 
 {
@@ -11,9 +11,7 @@
     zsh-autosuggestions
     zsh-syntax-highlighting
     zsh-history-substring-search
-    # Oh My Zsh (gerenciador de plugins/temas)
-    oh-my-zsh
-    # Starship prompt (cross-shell)
+    # Starship prompt (cross-shell, para usuários sem configuração específica)
     starship
   ];
 
@@ -45,8 +43,8 @@
     };
   };
 
-  # Definir Bash como shell padrão para novos usuários
-  users.defaultUserShell = pkgs.bash;
+  # Definir Zsh como shell padrão para novos usuários
+  users.defaultUserShell = pkgs.zsh;
 
   # Adicionar shells ao /etc/shells
   environment.shells = with pkgs; [
