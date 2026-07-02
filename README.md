@@ -247,18 +247,38 @@ sudo bash scripts/update.sh --rebuild-only
 ### Switch do sistema (inclui Home Manager)
 
 ```bash
-# Rebuild e ativa o sistema (inclui HM de todos os usuários):
-sudo nixos-rebuild switch --flake /etc/nixos#barbudus
+# Via Just — eleva automaticamente com run0 (polkit/YubiKey):
+just switch                  # host atual
+just switch barbudus         # host específico
 
-# Via Just (a partir da raiz do repositório):
-sudo just switch
-
-# Via Just especificando host manualmente:
-sudo just switch barbudus
+# Ou via alias de shell (disponível após o primeiro switch):
+nrs   # nixos-rebuild switch (NixOS + HM)
+nrb   # nixos-rebuild boot   (aplica no próximo boot)
+nru   # atualiza inputs + switch
 ```
 
 > As configurações de Home Manager de todos os usuários são aplicadas automaticamente
 > a cada rebuild do sistema — não é necessário nenhum comando adicional.
+
+### Aliases de shell (bash/zsh)
+
+Definidos em `home/common.nix` e disponíveis em sessões interativas após o primeiro `just switch`.
+Todos os aliases NixOS usam `run0` para elevação de privilégio via polkit/YubiKey
+(sem prompt de senha), e repassam `SSH_AUTH_SOCK` para que o `nixos-rebuild` acesse
+entradas de flake protegidas por SSH (ex.: `nix-secrets`).
+Como o Home Manager é um módulo NixOS, todo rebuild aplica NixOS e HM juntos.
+
+| Alias | Efeito |
+|-------|--------|
+| `nrs` | `nixos-rebuild switch` — aplica NixOS + HM e ativa imediatamente |
+| `nrb` | `nixos-rebuild boot` — prepara o próximo boot, sessão atual inalterada |
+| `nru` | `nix flake update` + `nixos-rebuild switch` — atualiza inputs e aplica |
+| `hmn` | `home-manager news` — exibe o changelog do HM desde a última geração |
+
+A função auxiliar `_nix_cfg()` resolve o caminho do flake automaticamente:
+`/etc/nixos` em sistemas implantados, ou `$PROJECTS/lbssousa/nix-config`
+em checkouts de desenvolvimento. O wrapper `just()` aponta sempre para
+`$(_nix_cfg)/justfile`, então `just switch` funciona em qualquer diretório.
 
 ### Rollback
 
@@ -310,7 +330,7 @@ sudo nixos-rebuild switch --rollback
 5. Rebuilde o sistema:
 
    ```bash
-   sudo nixos-rebuild switch --flake /etc/nixos#barbudus
+   just switch
    ```
 
 ### 2. Configurar o Home Manager do usuário (opcional)
@@ -325,13 +345,13 @@ Para uma configuração HM personalizada (além da `home/common.nix` padrão):
    # Edite conforme necessário
    ```
 
-2. O módulo `modules/system/users/home-manager.nix` detecta automaticamente o arquivo
+2. `dendritic/flake/home-nixos-module.nix` detecta automaticamente o arquivo
    `home/users/<username>/home.nix` e o importa para o usuário correspondente.
 
 3. Aplique com um rebuild normal do sistema:
 
    ```bash
-   sudo just switch
+   just switch
    ```
 
 > Usuários sem customização continuam recebendo apenas `home/common.nix` automaticamente.
@@ -477,7 +497,6 @@ sudo bash scripts/enroll-tpm2.sh
 - **[INSTALLATION.md](INSTALLATION.md)**: Guia completo de instalação
 - **[NIXOS_CONFIG_SPECS.md](NIXOS_CONFIG_SPECS.md)**: Especificações e requisitos do projeto
 - **[modules/home/apps/terminals/README.md](modules/home/apps/terminals/README.md)**: Atalhos de teclado do tmux
-- **[modules/home/apps/editors/nvf/README.md](modules/home/apps/editors/nvf/README.md)**: Atalhos de teclado do Neovim (nvf)
 
 ## 🔗 Referências
 
