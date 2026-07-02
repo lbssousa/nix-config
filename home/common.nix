@@ -4,6 +4,10 @@
 { pkgs, lib, ... }:
 
 {
+  imports = [
+    ../modules/home/apps/security/bitwarden.nix
+  ];
+
   # Zathura como visualizador de PDF padrão.
   # Usuários com gnome.nix podem sobrescrever com Papers (plain > mkDefault).
   xdg.mimeApps.defaultApplications = {
@@ -16,6 +20,8 @@
 
   home = {
     stateVersion = "26.05";
+
+    packages = [ pkgs.run0-sudo ];
 
     # Variáveis de ambiente do usuário
     sessionVariables = {

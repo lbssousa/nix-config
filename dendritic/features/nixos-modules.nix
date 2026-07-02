@@ -14,7 +14,9 @@ in
       ../../modules/system/hardware/printing.nix
       ../../modules/system/network/ssh.nix
       ../../modules/system/network/wifi.nix
+      ../../modules/system/security/bitwarden-polkit.nix
       ../../modules/system/security/keepassxc-yubikey-lock.nix
+      ../../modules/system/security/selinux.nix
       ../../modules/system/security/tpm2.nix
       ../../modules/system/security/yubikey.nix
       ../../modules/system/security/yubikey-notify.nix

@@ -20,6 +20,7 @@ _: {
             flatpak = {
               enable = true;
               packages = [
+                "com.bitwarden.desktop"            # Gestão de senhas
                 "com.github.tchx84.Flatseal"      # Gerenciador de permissões Flatpak
                 "com.ranfdev.DistroShelf"          # Gerenciador de distros em contêineres
                 "io.github.flattool.Ignition"      # Gerenciador de autostart de Flatpaks
@@ -59,9 +60,8 @@ _: {
               firefox
               brave
 
-              # Gestão de senhas e chaves
-              bitwarden-desktop
-              kleopatra
+              # Gestão de chaves PGP/X.509
+              seahorse
 
               # Criação de conteúdo
               obs-studio

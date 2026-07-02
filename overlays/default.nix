@@ -2,6 +2,7 @@
 # Importado por dendritic/features/local-overlay.nix e propagado a todas as
 # nixosConfigurations e homeConfigurations via config.dendritic.localOverlay.
 final: _prev: {
+  run0-sudo = final.callPackage ../pkgs/run0-sudo/package.nix { };
   epson-printer-utility = final.callPackage ../pkgs/epson-printer-utility/package.nix { };
   gregorio-lsp = final.callPackage ../pkgs/gregorio-lsp/package.nix { };
   gregorio-nvim = final.callPackage ../pkgs/gregorio-nvim/package.nix { };
