@@ -1,12 +1,5 @@
-# Módulo de usuário: Brave Browser — navegador alternativo (padrão: Firefox)
-{ pkgs, ... }:
-
-{
-  programs.brave = {
-    enable = true;
-    package = pkgs.brave;
-    extensions = [
-      { id = "oboonakemofpalcgghocfoadofidjkkk"; } # KeePassXC-Browser
-    ];
-  };
-}
+# Módulo de usuário: Brave Browser Flatpak — navegador alternativo (padrão: Firefox)
+#
+# O Brave é instalado como Flatpak (com.brave.Browser) — não via programs.brave.
+# Extensões (ex.: KeePassXC-Browser) são instaladas manualmente.
+_: { }

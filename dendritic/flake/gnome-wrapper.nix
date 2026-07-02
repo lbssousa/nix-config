@@ -26,6 +26,8 @@ _: {
                 "io.github.flattool.Ignition" # Gerenciador de autostart de Flatpaks
                 "io.github.flattool.Warehouse" # Gerenciador de apps Flatpak
                 "io.github.kolunmi.Bazaar" # Loja de apps GNOME
+                "org.mozilla.firefox" # Navegador padrão
+                "com.brave.Browser" # Navegador alternativo / PWAs
               ];
               update.onActivation = true;
               update.auto = {
@@ -56,10 +58,6 @@ _: {
               # Terminal padrão
               ghostty
 
-              # Navegadores
-              firefox
-              brave
-
               # Gestão de chaves PGP/X.509
               seahorse
 
@@ -82,11 +80,11 @@ _: {
               # preferência configurada no Home Manager.
               "xdg/mimeapps.list".text = ''
                 [Default Applications]
-                text/html=firefox.desktop
-                x-scheme-handler/http=firefox.desktop
-                x-scheme-handler/https=firefox.desktop
-                x-scheme-handler/about=firefox.desktop
-                x-scheme-handler/unknown=firefox.desktop
+                text/html=org.mozilla.firefox.desktop
+                x-scheme-handler/http=org.mozilla.firefox.desktop
+                x-scheme-handler/https=org.mozilla.firefox.desktop
+                x-scheme-handler/about=org.mozilla.firefox.desktop
+                x-scheme-handler/unknown=org.mozilla.firefox.desktop
               '';
             };
           };

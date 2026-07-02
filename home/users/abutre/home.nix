@@ -23,7 +23,7 @@ in
     ../../../modules/home/apps/terminals/tmux.nix
 
     ./gnome.nix
-    ./rclone.nix
+    # ./rclone.nix  # desabilitado até reautenticação OAuth do Google Drive
     ./vscode.nix
   ];
 

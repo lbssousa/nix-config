@@ -1,16 +1,14 @@
 # Configuração do Ghostty — terminal padrão do desktop
 #
-# Perfis disponíveis:
-#   padrão         → decorações de janela ativas (uso normal, clique duplo na barra,
-#                    redimensionamento nativo)
-#   no-decorations → sem decorações (PaperWM, quake-terminal)
-#
-# Para abrir o perfil sem decorações:
-#   ghostty --profile=no-decorations
+# Para abrir sem decorações (PaperWM, quake-terminal):
+#   ghostty --window-decoration=false
 #
 # O desktop entry 'ghostty-no-decorations' (oculto do menu de apps) é criado em
 # ~/.local/share/applications/ para que a extensão quake-terminal possa lançar
-# Ghostty diretamente neste perfil via terminal-id.
+# Ghostty sem decorações via terminal-id.
+#
+# Nota: Ghostty 1.3.1 não suporta [profile:name] no config — usa-se a flag
+# --window-decoration=false direto na linha de comando.
 _:
 
 {
@@ -60,13 +58,6 @@ _:
 
       # Desabilitar auto-atualização (pacote gerenciado pelo Nix)
       auto-update = off
-
-      # ── Perfil: sem decorações ─────────────────────────────────────────────
-      # Uso direto: ghostty --profile=no-decorations
-      # Quake-terminal: configurado via terminal-id = ghostty-no-decorations.desktop
-      # PaperWM: abrir manualmente com o comando acima ou via atalho customizado
-      [profile:no-decorations]
-      window-decoration = false
     '';
 
     # Desktop entry oculto do menu de apps, usado pela extensão quake-terminal
@@ -77,7 +68,7 @@ _:
     # roteadas para este processo, herdando o perfil sem decorações.
     desktopEntries."ghostty-no-decorations" = {
       name = "Ghostty (sem decorações)";
-      exec = "ghostty --profile=no-decorations --gtk-single-instance=false";
+      exec = "ghostty --window-decoration=false --gtk-single-instance=false";
       icon = "com.mitchellh.ghostty";
       noDisplay = true;
     };

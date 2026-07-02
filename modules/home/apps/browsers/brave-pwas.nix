@@ -2,7 +2,7 @@
 { pkgs, ... }:
 
 let
-  brave = "${pkgs.brave}/bin/brave";
+  brave = "flatpak run com.brave.Browser";
 
   whatsappIcon = pkgs.fetchurl {
     name = "whatsapp-web.png";
