@@ -28,29 +28,30 @@ in
     };
 
     services = {
-      # Sudo autenticado por YubiKey (pam_u2f); fallback para senha se a YubiKey estiver ausente.
+      # Sudo: YubiKey (suficiente) → digital → senha.
       sudo = {
         u2f.enable = true;
-        fprintAuth = false;
       };
 
-      # run0 (systemd) usa serviço PAM próprio; mesma política do sudo.
+      # run0 (systemd): mesma política do sudo.
       run0 = {
         u2f.enable = true;
-        fprintAuth = false;
       };
 
-      # Login do usuário com YubiKey.
-      # Mantemos fallback de senha para evitar lockout em caso de ausência da chave.
+      # Login: YubiKey → senha.
+      # Nota: gdm.nix do nixpkgs define login.fprintAuth = false explicitamente,
+      # pois o GNOME usa gdm-fingerprint como serviço PAM separado para digitais.
       login = {
         u2f.enable = true;
         enableGnomeKeyring = true;
       };
 
-      # pkexec/polkit autenticado por YubiKey (pam_u2f); fallback para senha se a YubiKey estiver ausente.
+      # polkit/pkexec: YubiKey → digital → senha.
+      # Habilitar fprintAuth permite que diálogos de autenticação do GNOME
+      # (Settings, Nautilus, etc.) aceitem digital como método alternativo.
       "polkit-1" = {
         u2f.enable = true;
-        fprintAuth = false;
+        fprintAuth = true;
       };
     };
   };

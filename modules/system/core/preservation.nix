@@ -25,6 +25,7 @@ _:
       "/var/lib/systemd" # Estado do systemd
       "/var/lib/nixos" # Estado interno do NixOS
       "/var/lib/bluetooth" # Dispositivos Bluetooth pareados
+      "/var/lib/fprint" # Digitais cadastradas no fprintd
       "/var/db/sudo" # Timestamps do sudo
     ];
 
