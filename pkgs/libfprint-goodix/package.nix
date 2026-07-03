@@ -33,14 +33,22 @@
 
 stdenv.mkDerivation {
   pname = "libfprint-goodix";
-  version = "1.94.10-unstable-2026-06-29";
+  version = "1.94.10-unstable-2026-07-03";
 
   src = fetchFromGitHub {
     owner = "lbssousa";
     repo = "libfprint";
-    rev = "af723548957cb61afe48cdd74acd5a09c49bf4e3";
-    hash = "sha256-IsiDOMpZvVCmpXnyqR0o3S68U0by9B+EoMnTtVaNTZE=";
+    rev = "512bc9e057689191d945d33ac86094185cd40231";
+    hash = "sha256-ATrUSPzrpdCxgE4c8hlqLJYp8aApEq27KY3QBiR3UXY=";
   };
+
+  patches = [
+    # Corrige use-after-free em goodix_tls_ready_image_handler: reseta o estado
+    # de comando (ack/reply/callback) antes de marcar o SSM como falho em
+    # dev_cancel, evitando que dados USB posteriores chamem o callback com
+    # ponteiro para SSM já liberado.
+    ./0001-fix-dev-cancel-reset-state-before-ssm-fail.patch
+  ];
 
   postPatch = ''
     patchShebangs \
