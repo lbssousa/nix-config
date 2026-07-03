@@ -1,4 +1,9 @@
-{ pkgs, lib, ... }:
+{
+  pkgs,
+  lib,
+  inputs,
+  ...
+}:
 
 {
   programs.neovim.enable = lib.mkForce false;
@@ -15,6 +20,9 @@
 
   programs.nixvim = {
     enable = true;
+    # useGlobalPkgs = true faz o nixvim usar o nixpkgs do flake; declarar
+    # explicitamente suprime o evaluation warning do módulo nixvim.
+    nixpkgs.source = inputs.nixpkgs;
     defaultEditor = true;
     viAlias = true;
     vimAlias = true;
