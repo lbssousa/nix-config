@@ -1,5 +1,10 @@
 # Suporte de sistema para YubiKey/SmartCard (pcscd)
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   wheelUsers = lib.attrNames (
@@ -28,27 +33,35 @@ in
     };
 
     services = {
-      # Sudo: YubiKey (suficiente) → digital → senha.
+      # Sudo: digital (suficiente) → YubiKey (suficiente) → senha.
+      # fprintd order 10700: antes do yubikey-notify (10850) e pam_u2f (10900).
       sudo = {
         u2f.enable = true;
+        rules.auth.fprintd.order = lib.mkForce 10700;
       };
 
       # run0 (systemd): autentica uma vez e memoriza por 5 minutos (pam_timestamp).
+      # Ordem: timestamp (400) → digital (500) → YubiKey (10900) → senha (11700).
       # auth:    verifica se existe timestamp recente em /run/sudo/<user>/run0:<tty>;
       #          se recente (< 5 min), retorna sucesso sem nova autenticação.
       # session: atualiza o timestamp após cada autenticação bem-sucedida,
       #          reiniciando a janela de 5 minutos.
       run0 = {
         u2f.enable = true;
-        rules.auth.timestamp = {
-          control = "sufficient";
-          modulePath = "${pkgs.linux-pam}/lib/security/pam_timestamp.so";
-          order = 400; # Antes do pam_u2f (10900)
-        };
-        rules.session.timestamp = {
-          control = "optional";
-          modulePath = "${pkgs.linux-pam}/lib/security/pam_timestamp.so";
-          order = 500;
+        rules = {
+          auth = {
+            fprintd.order = lib.mkForce 500;
+            timestamp = {
+              control = "sufficient";
+              modulePath = "${pkgs.linux-pam}/lib/security/pam_timestamp.so";
+              order = 400; # Antes do pam_fprintd (500) e pam_u2f (10900)
+            };
+          };
+          session.timestamp = {
+            control = "optional";
+            modulePath = "${pkgs.linux-pam}/lib/security/pam_timestamp.so";
+            order = 500;
+          };
         };
       };
 
@@ -60,12 +73,12 @@ in
         enableGnomeKeyring = true;
       };
 
-      # polkit/pkexec: YubiKey → digital → senha.
-      # Habilitar fprintAuth permite que diálogos de autenticação do GNOME
-      # (Settings, Nautilus, etc.) aceitem digital como método alternativo.
+      # polkit/pkexec: digital (suficiente) → YubiKey (suficiente) → senha.
+      # fprintd order 10700: antes do yubikey-notify (10850) e pam_u2f (10900).
       "polkit-1" = {
         u2f.enable = true;
         fprintAuth = true;
+        rules.auth.fprintd.order = lib.mkForce 10700;
       };
     };
   };

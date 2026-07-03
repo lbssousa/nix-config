@@ -14,7 +14,17 @@ _: {
           services = {
             # Sessão GNOME (Wayland — padrão e único modo suportado no GNOME 50+)
             displayManager.gdm.enable = true;
-            desktopManager.gnome.enable = true;
+            desktopManager.gnome = {
+              enable = true;
+              # Expõe o schema org.gnome.login-screen (fornecido pelo GDM) na
+              # sessão do usuário. Sem isso, GNOME Settings não encontra o schema
+              # ao verificar `enable-fingerprint-authentication`, e a linha de
+              # impressão digital fica oculta em Configurações → Sistema → Usuários.
+              # O módulo NixOS do GNOME exporta schemas via sessionPath; o GDM não
+              # está no sessionPath padrão, por isso precisa ser adicionado
+              # explicitamente.
+              sessionPath = [ pkgs.gdm ];
+            };
 
             # Flatpak — apps sem equivalente no nixpkgs instalados declarativamente.
             flatpak = {
