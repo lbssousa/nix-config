@@ -100,6 +100,14 @@ _: {
             profiles.user.databases = [
               {
                 settings = {
+                  "org/gnome/shell" = {
+                    enabled-extensions = [
+                      "appindicatorsupport@rgcjonas.gmail.com"
+                      "caffeine@patapon.info"
+                      "quake-terminal@diegodario88.github.io"
+                    ];
+                  };
+
                   # Layout br+abnt2 para todos os usuários.
                   # Espelha services.xserver.xkb definido em localization.nix.
                   "org/gnome/desktop/input-sources" = {

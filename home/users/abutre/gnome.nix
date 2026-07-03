@@ -1,7 +1,13 @@
 # Configuração GNOME para o usuário abutre
-_:
+{ pkgs, ... }:
 
 {
+  home.packages = with pkgs.gnomeExtensions; [
+    appindicator
+    caffeine
+    quake-terminal
+  ];
+
   xdg.mimeApps.defaultApplications = {
     "application/pdf" = "org.gnome.Papers.desktop";
     "application/x-bzpdf" = "org.gnome.Papers.desktop";
