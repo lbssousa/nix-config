@@ -13,6 +13,13 @@ lib.mkMerge [
   {
     security.keepassxc.autoLockOnYubikeyRemove.users = [ "abutre" ];
 
+    # Preservação do estado do Claude CLI entre reboots.
+    # Credenciais (.credentials.json), configurações e memórias de projeto
+    # ficam em ~/.claude — sem isso, o login é perdido a cada reboot (/ é tmpfs).
+    preservation.preserveAt."/persist".users.abutre.directories = [
+      ".claude"
+    ];
+
     # Pacotes específicos do usuário abutre instalados via NixOS.
     # Ferramentas de desenvolvimento e apps exclusivos deste usuário.
     users.users.abutre.packages = with pkgs; [

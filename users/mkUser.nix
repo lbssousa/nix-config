@@ -83,7 +83,7 @@
 
       # ── Flatpak: dados por aplicação ───────────────────────────────────
       ".var/app" # Vault do Bitwarden, dados de todos os Flatpaks
-      ".config/autostart" # Autostart dos Flatpaks (monitorado pelo fix-autostart)
+      ".config/autostart" # Autostart dos Flatpaks (gerenciado pelo Ignition)
 
       # ── Estado GNOME / desktop ─────────────────────────────────────────
       # Nota: .config/dconf NÃO é preservado intencionalmente.
