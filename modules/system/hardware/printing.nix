@@ -46,21 +46,22 @@
     udev.packages = [ pkgs.epson-printer-utility ];
   };
 
-  # SNMP (UDP/161) — necessário para o epson-printer-utility descobrir
-  # impressoras Wi-Fi/Ethernet.
+  # SNMP — necessário para o epson-printer-utility descobrir impressoras Wi-Fi.
   #
-  # A GUI faz broadcast SNMP em 255.255.255.255:161 (ver símbolos
-  # `snmpFindStart`, `epsmpSetBroadCast`, `SnmpTransact` no binário). As
-  # respostas vêm em unicast do IP da impressora (porta de origem 161),
-  # mas o conntrack do nixos-fw não associa essas respostas à entrada do
-  # broadcast (IPs de destino divergem) e descarta os pacotes. Abrir 161
-  # explicitamente nas regras de entrada resolve a descoberta de rede.
+  # A GUI faz broadcast SNMP para 255.255.255.255:161 a partir de uma porta
+  # efêmera local. A impressora responde em unicast com sport=161, dport=efêmera.
+  # O conntrack não associa essa resposta ao broadcast de saída (IPs divergem),
+  # então o nixos-fw descarta o pacote por padrão.
   #
-  # Sem isso, o epson-printer-utility só enxerga impressoras USB (via ecbd)
-  # e impressoras já cadastradas no CUPS com URI baseada em IP
-  # (socket://, lpd:// ou ipp://); URIs dnssd:// e implicitclass://
-  # não são reconhecidas pelo binário.
-  networking.firewall.allowedUDPPorts = [ 161 ];
+  # A correção é permitir explicitamente UDP com sport 161 na entrada.
+  # allowedUDPPorts abre dpt:161 (direção errada); é necessário extraCommands
+  # para criar a regra com sport:161.
+  networking.firewall.extraCommands = ''
+    iptables -A nixos-fw -p udp --sport 161 -j nixos-fw-accept
+  '';
+  networking.firewall.extraStopCommands = ''
+    iptables -D nixos-fw -p udp --sport 161 -j nixos-fw-accept 2>/dev/null || true
+  '';
 
   # Utilitário de impressora Epson: monitoramento de tinta, limpeza de cabeçotes, etc.
   # O pacote epson-printer-utility inclui o daemon ecbd (Epson Communication Bridge Daemon).
