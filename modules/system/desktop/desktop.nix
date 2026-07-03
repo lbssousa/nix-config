@@ -68,4 +68,12 @@
 
   # Electron: forçar detecção automática de Wayland em todos os apps Nix.
   environment.variables.ELECTRON_OZONE_PLATFORM_HINT = "auto";
+
+  # /var/lib/dbus/machine-id é efêmero (/ é tmpfs). Apps que usam libdbus
+  # (não dbus-broker) — como o epson-printer-utility — lêem esse caminho.
+  # A regra abaixo recria o symlink a cada boot.
+  systemd.tmpfiles.rules = [
+    "d  /var/lib/dbus             0755 root root - -"
+    "L+ /var/lib/dbus/machine-id  -    -    -    - /etc/machine-id"
+  ];
 }
