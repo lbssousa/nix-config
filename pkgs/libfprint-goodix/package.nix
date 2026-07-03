@@ -38,8 +38,8 @@ stdenv.mkDerivation {
   src = fetchFromGitHub {
     owner = "lbssousa";
     repo = "libfprint";
-    rev = "512bc9e057689191d945d33ac86094185cd40231";
-    hash = "sha256-ATrUSPzrpdCxgE4c8hlqLJYp8aApEq27KY3QBiR3UXY=";
+    rev = "02a5326fab3814730c1e8aab644c6972a72252fc";
+    hash = "sha256-WLp5T5ERQM22Fv9DUDURNWlHHTVU4o9fWgfdWKguJjY=";
   };
 
   patches = [
