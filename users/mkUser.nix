@@ -75,7 +75,8 @@
       ".gnupg" # Chaves GPG, base de confiança, stubs do YubiKey
 
       # ── Navegadores (pacotes nixpkgs — dados não geridos pelo HM) ──────
-      ".mozilla" # Firefox: favoritos, sessões, extensões, senhas
+      # Nota: .mozilla não é preservado — o Firefox agora roda via Flatpak,
+      # cujos dados ficam em .var/app (preservado abaixo).
       {
         directory = ".config/BraveSoftware";
         mode = "0700"; # Brave armazena credenciais aqui

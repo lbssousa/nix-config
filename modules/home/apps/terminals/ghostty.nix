@@ -3,12 +3,14 @@
 # Para abrir sem decorações (PaperWM, quake-terminal):
 #   ghostty --window-decoration=false
 #
-# O desktop entry 'ghostty-no-decorations' (oculto do menu de apps) é criado em
-# ~/.local/share/applications/ para que a extensão quake-terminal possa lançar
-# Ghostty sem decorações via terminal-id.
+# O desktop entry 'com.mitchellh.ghostty.quake' (oculto do menu de apps) é usado
+# pela extensão quake-terminal via terminal-id. O flag --class define o GApplication
+# ID (e portanto o app_id Wayland), que o GNOME Shell usa para atribuir janelas ao
+# Shell.App correto — sem isso, o Shell atribui a janela a com.mitchellh.ghostty.desktop
+# e o sinal windows-changed nunca dispara para o app monitorado pela extensão.
 #
-# Nota: Ghostty 1.3.1 não suporta [profile:name] no config — usa-se a flag
-# --window-decoration=false direto na linha de comando.
+# Nota: Ghostty 1.3.1 não suporta [profile:name] no config — usa-se as flags
+# diretamente na linha de comando.
 _:
 
 {
@@ -60,15 +62,16 @@ _:
       auto-update = off
     '';
 
-    # Desktop entry oculto do menu de apps, usado pela extensão quake-terminal
-    # para lançar Ghostty já no perfil sem decorações.
+    # Desktop entry oculto do menu de apps, usado pela extensão quake-terminal.
+    # --class: define o GApplication ID como com.mitchellh.ghostty.quake, o que
+    #   faz o GNOME Shell atribuir a janela a este desktop entry (via app_id Wayland),
+    #   permitindo que o sinal windows-changed dispare no Shell.App correto.
     # --gtk-single-instance=false: impede que esta instância se registre como
-    # singleton GApplication. Sem isso, ela capturaria o slot de instância única
-    # e janelas abertas "explicitamente" (com --gtk-single-instance=true) seriam
-    # roteadas para este processo, herdando o perfil sem decorações.
-    desktopEntries."ghostty-no-decorations" = {
-      name = "Ghostty (sem decorações)";
-      exec = "ghostty --window-decoration=false --gtk-single-instance=false";
+    #   singleton GApplication. Sem isso, ela capturaria o slot de instância única
+    #   e janelas abertas normalmente seriam roteadas para este processo.
+    desktopEntries."com.mitchellh.ghostty.quake" = {
+      name = "Ghostty (Quake)";
+      exec = "ghostty --window-decoration=false --gtk-single-instance=false --class=com.mitchellh.ghostty.quake";
       icon = "com.mitchellh.ghostty";
       noDisplay = true;
     };

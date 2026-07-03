@@ -129,9 +129,11 @@ _: {
                     ];
                   };
 
-                  # Quake Terminal — perfil sem decorações definido em ghostty.nix
+                  # Quake Terminal — desktop entry definido em ghostty.nix
+                  # O ID usa --class=com.mitchellh.ghostty.quake para que o GNOME Shell
+                  # atribua a janela ao Shell.App correto via app_id Wayland.
                   "org/gnome/shell/extensions/quake-terminal" = {
-                    terminal-id = "ghostty-no-decorations.desktop";
+                    terminal-id = "com.mitchellh.ghostty.quake.desktop";
                     terminal-shortcut = [ "F12" ];
                     vertical-size = lib.gvariant.mkInt32 75;
                     skip-taskbar = true;
