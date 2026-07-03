@@ -13,7 +13,7 @@
         name = "L4160_IP";
         location = "Wi-Fi";
         description = "EPSON L4160 Series";
-        deviceUri = "socket://192.168.1.75:9100";
+        deviceUri = "socket://EPSONE0321F.local:9100";
         model = "epson-inkjet-printer-escpr/Epson-L4160_Series-epson-escpr-en.ppd";
       }
     ];
