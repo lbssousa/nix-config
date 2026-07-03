@@ -42,10 +42,12 @@ in
 
       # run0 (systemd): autentica uma vez e memoriza por 5 minutos (pam_timestamp).
       # Ordem: timestamp (400) → digital (500) → YubiKey (10900) → senha (11700).
-      # auth:    verifica se existe timestamp recente em /run/sudo/<user>/run0:<tty>;
-      #          se recente (< 5 min), retorna sucesso sem nova autenticação.
-      # session: atualiza o timestamp após cada autenticação bem-sucedida,
+      # auth:    lê /run/pam_timestamp/<user>/run0:<tty>; se recente (< 5 min),
+      #          retorna sucesso sem nova autenticação.
+      # session: grava o timestamp após autenticação bem-sucedida,
       #          reiniciando a janela de 5 minutos.
+      # Nota: linux-pam ≥ 1.7 usa /run/pam_timestamp (não mais /run/sudo).
+      #       O diretório é criado via systemd.tmpfiles abaixo.
       run0 = {
         u2f.enable = true;
         rules = {
@@ -83,10 +85,12 @@ in
     };
   };
 
-  # Diretório de timestamps do pam_timestamp (compartilhado com sudo).
-  # O sudo normalmente o cria, mas run0 pode existir sem sudo instalado.
+  # Diretório de timestamps do pam_timestamp (linux-pam ≥ 1.7).
+  # O pam_timestamp não cria o diretório pai — sem ele, o módulo session
+  # falha silenciosamente (controle "optional") e o cache nunca é gravado.
   systemd.tmpfiles.rules = [
-    "d /run/sudo 0700 root root -"
+    "d /run/pam_timestamp 0700 root root -"
+    "d /run/sudo          0700 root root -" # compatibilidade com sudo
   ];
 
   # Checagem automática no switch/rebuild para evitar lockout em sudo.
