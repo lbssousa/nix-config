@@ -42,14 +42,6 @@ stdenv.mkDerivation {
     hash = "sha256-WLp5T5ERQM22Fv9DUDURNWlHHTVU4o9fWgfdWKguJjY=";
   };
 
-  patches = [
-    # Corrige use-after-free em goodix_tls_ready_image_handler: reseta o estado
-    # de comando (ack/reply/callback) antes de marcar o SSM como falho em
-    # dev_cancel, evitando que dados USB posteriores chamem o callback com
-    # ponteiro para SSM já liberado.
-    ./0001-fix-dev-cancel-reset-state-before-ssm-fail.patch
-  ];
-
   postPatch = ''
     patchShebangs \
       tests/test-runner.sh \
