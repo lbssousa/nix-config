@@ -23,38 +23,6 @@
 
 let
   sock = "${config.home.homeDirectory}/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock";
-
-  # O Bitwarden Flatpak escreve --command=bitwarden.sh no arquivo de autostart,
-  # o que quebra a inicialização da sessão. Este script corrige para --command=bitwarden
-  # sempre que o arquivo for criado ou modificado pelo Flatpak.
-  fixBitwardenAutostart = pkgs.writeShellScript "fix-bitwarden-autostart" ''
-    set -euo pipefail
-    AUTOSTART_DIR="''${XDG_CONFIG_HOME:-$HOME/.config}/autostart"
-    DESKTOP_FILE="$AUTOSTART_DIR/com.bitwarden.desktop.desktop"
-    WRONG="flatpak run --command=bitwarden.sh com.bitwarden.desktop"
-    RIGHT="flatpak run --command=bitwarden com.bitwarden.desktop"
-
-    if [[ ! -f "$DESKTOP_FILE" ]]; then
-      echo "Nenhum autostart do Bitwarden encontrado em: $DESKTOP_FILE"
-      exit 0
-    fi
-
-    if grep -qF "$RIGHT" "$DESKTOP_FILE"; then
-      echo "Autostart já está correto."
-      exit 0
-    fi
-
-    if grep -qF "$WRONG" "$DESKTOP_FILE"; then
-      cp "$DESKTOP_FILE" "$DESKTOP_FILE.bak.$(date +%Y%m%d-%H%M%S)"
-      sed -i "s|$WRONG|$RIGHT|" "$DESKTOP_FILE"
-      echo "Corrigido: $DESKTOP_FILE"
-      exit 0
-    fi
-
-    echo "Aviso: conteúdo inesperado em $DESKTOP_FILE"
-    cat "$DESKTOP_FILE"
-    exit 1
-  '';
 in
 
 {
@@ -91,27 +59,6 @@ in
       WantedBy=default.target
     '';
 
-    "systemd/user/bitwarden-fix-autostart.service".text = ''
-      [Unit]
-      Description=Corrige --command=bitwarden.sh para --command=bitwarden no autostart
-      StartLimitIntervalSec=0
-
-      [Service]
-      Type=oneshot
-      ExecStart=${fixBitwardenAutostart}
-    '';
-
-    "systemd/user/bitwarden-fix-autostart.path".text = ''
-      [Unit]
-      Description=Corrige o autostart do Bitwarden quando o Flatpak o reescreve
-
-      [Path]
-      PathModified=${config.xdg.configHome}/autostart/com.bitwarden.desktop.desktop
-      Unit=bitwarden-fix-autostart.service
-
-      [Install]
-      WantedBy=default.target
-    '';
   };
 
   # Fallback para shells que não herdam o ambiente do systemd --user
@@ -128,8 +75,6 @@ in
 
     ${pkgs.coreutils}/bin/ln -sfn ../bitwarden-ssh-agent.path \
       "$systemdUserWantsDir/bitwarden-ssh-agent.path"
-    ${pkgs.coreutils}/bin/ln -sfn ../bitwarden-fix-autostart.path \
-      "$systemdUserWantsDir/bitwarden-fix-autostart.path"
 
     # Recarregar e iniciar units apenas se há sessão de usuário ativa.
     # Sem sessão (ex.: durante nixos-rebuild sem login), os symlinks acima são
@@ -138,12 +83,9 @@ in
       $systemctlUser daemon-reload
       $systemctlUser reset-failed \
         bitwarden-ssh-agent.path \
-        bitwarden-ssh-agent-env.service \
-        bitwarden-fix-autostart.path \
-        bitwarden-fix-autostart.service || true
+        bitwarden-ssh-agent-env.service || true
       $systemctlUser start \
-        bitwarden-ssh-agent.path \
-        bitwarden-fix-autostart.path
+        bitwarden-ssh-agent.path
     fi
   '';
 }
