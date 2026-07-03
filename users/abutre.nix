@@ -20,6 +20,34 @@ lib.mkMerge [
       ".claude"
     ];
 
+    # Preservação da configuração de monitor (fator de escala, resolução, etc.).
+    # monitors.xml é gerenciado pelo GNOME e precisa ser persistido para que
+    # ajustes como fator de escala 100% sobrevivam ao reboot (/ e /home são tmpfs).
+    preservation.preserveAt."/persist".users.abutre.files = [
+      ".config/monitors.xml"
+    ];
+
+    # Atalhos da dock (barra de favoritos do GNOME Shell) para o usuário abutre.
+    # Declarado via programs.dconf.profiles.user.databases (banco dconf de sistema,
+    # em /etc/dconf/db/) para sobreviver ao reboot com home efêmero.
+    programs.dconf.profiles.user.databases = [
+      {
+        settings = {
+          "org/gnome/shell" = {
+            favorite-apps = [
+              "org.mozilla.firefox.desktop"
+              "com.brave.Browser.desktop"
+              "org.gnome.TextEditor.desktop"
+              "org.gnome.Nautilus.desktop"
+              "io.github.kolunmi.Bazaar.desktop"
+              "code.desktop"
+              "dev.zed.Zed.desktop"
+            ];
+          };
+        };
+      }
+    ];
+
     # Pacotes específicos do usuário abutre instalados via NixOS.
     # Ferramentas de desenvolvimento e apps exclusivos deste usuário.
     users.users.abutre.packages = with pkgs; [
