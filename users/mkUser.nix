@@ -60,31 +60,34 @@
   preservation.preserveAt."/persist".users.${username} = {
     directories = [
       # ── Diretórios XDG padrão (dados do usuário) ──────────────────────
-      "Área de Trabalho"
-      "Documentos"
-      "Downloads"
-      "Imagens"
-      "Modelos"
-      "Música"
-      "Projetos"
-      "Público"
-      "Vídeos"
+      # Symlinks: dados simples, sem verificações especiais de caminho
+      { directory = "Área de Trabalho"; how = "symlink"; }
+      { directory = "Documentos"; how = "symlink"; }
+      { directory = "Downloads"; how = "symlink"; }
+      { directory = "Imagens"; how = "symlink"; }
+      { directory = "Modelos"; how = "symlink"; }
+      { directory = "Músicas"; how = "symlink"; }
+      { directory = "Projetos"; how = "symlink"; }
+      { directory = "Público"; how = "symlink"; }
+      { directory = "Vídeos"; how = "symlink"; }
 
       # ── Identidade e segurança ─────────────────────────────────────────
+      # Bind-mounts: SSH (StrictModes usa lstat) e GPG (2.x faz lstat de segurança)
       ".ssh" # Chaves SSH, known_hosts, authorized_keys
       ".gnupg" # Chaves GPG, base de confiança, stubs do YubiKey
 
       # ── Navegadores (pacotes nixpkgs — dados não geridos pelo HM) ──────
       # Nota: .mozilla não é preservado — o Firefox agora roda via Flatpak,
       # cujos dados ficam em .var/app (preservado abaixo).
+      # Bind-mount: sandbox do Chromium verifica propriedade real do diretório
       {
         directory = ".config/BraveSoftware";
         mode = "0700"; # Brave armazena credenciais aqui
       }
 
       # ── Flatpak: dados por aplicação ───────────────────────────────────
-      ".var/app" # Vault do Bitwarden, dados de todos os Flatpaks
-      ".config/autostart" # Autostart dos Flatpaks (gerenciado pelo Ignition)
+      { directory = ".var/app"; how = "symlink"; } # Vault do Bitwarden, dados de todos os Flatpaks
+      { directory = ".config/autostart"; how = "symlink"; } # Autostart dos Flatpaks (gerenciado pelo Ignition)
 
       # ── Estado GNOME / desktop ─────────────────────────────────────────
       # Nota: .config/dconf NÃO é preservado intencionalmente.
@@ -93,25 +96,26 @@
       # que é gerenciado pelo sistema e independe do home). O dconf.settings do
       # Home Manager escreve em ~/.config/dconf/user apenas na ativação —
       # não use-o para settings que devem persistir em home efêmero.
-      ".local/share/keyrings" # GNOME keyring: senhas de Wi-Fi e apps
-      ".local/share/applications" # Arquivos .desktop do usuário e de Flatpaks
+      { directory = ".local/share/keyrings"; how = "symlink"; } # GNOME keyring: senhas de Wi-Fi e apps
+      { directory = ".local/share/applications"; how = "symlink"; } # Arquivos .desktop do usuário e de Flatpaks
 
       # ── Configuração de apps (não geridos pelo HM) ─────────────────────
-      ".config/keepassxc" # Preferências e caminho do banco de dados
+      { directory = ".config/keepassxc"; how = "symlink"; } # Preferências e caminho do banco de dados
 
       # ── Ferramentas de shell ───────────────────────────────────────────
-      ".local/share/zoxide" # Base de dados de frequência do zoxide (cd inteligente)
-      ".local/share/fish" # Histórico do Fish e cache de funções
+      { directory = ".local/share/zoxide"; how = "symlink"; } # Base de dados de frequência do zoxide (cd inteligente)
+      { directory = ".local/share/fish"; how = "symlink"; } # Histórico do Fish e cache de funções
 
       # ── Containers rootless (Podman sem root) ──────────────────────────
+      # Bind-mount: bubblewrap/Podman verifica que o caminho é um diretório real
       ".local/share/containers" # Imagens e volumes Podman do usuário
     ];
 
     files = [
-      ".bash_history"
-      ".zsh_history"
-      ".config/user-dirs.dirs"
-      ".config/user-dirs.locale"
+      { file = ".bash_history"; how = "symlink"; }
+      { file = ".zsh_history"; how = "symlink"; }
+      { file = ".config/user-dirs.dirs"; how = "symlink"; }
+      { file = ".config/user-dirs.locale"; how = "symlink"; }
     ];
   };
 }
