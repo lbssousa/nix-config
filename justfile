@@ -31,7 +31,19 @@ _run_nixos action host='' *args:
 
   case "$action" in
     switch|boot|test|build)
+      old_system=""
+      if [[ "$action" == "switch" ]]; then
+        old_system="$(readlink -f /run/current-system)"
+      fi
       nixos-rebuild "$action" --flake "{{flake_root}}#${system_host}" "$@"
+      if [[ "$action" == "switch" ]]; then
+        new_system="$(readlink -f /run/current-system)"
+        if [[ "$old_system" != "$new_system" ]]; then
+          echo ""
+          echo "Pacotes alterados neste switch:"
+          nix run nixpkgs#nvd -- diff "$old_system" "$new_system"
+        fi
+      fi
       ;;
     diff)
       next_drv="$(
@@ -121,7 +133,34 @@ update *inputs:
   #!/usr/bin/env bash
   set -euo pipefail
   cd "{{flake_root}}"
+  old_lock=$(mktemp)
+  trap 'rm -f "$old_lock"' EXIT
+  cp flake.lock "$old_lock"
   nix flake update "$@"
+  if ! diff -q "$old_lock" flake.lock > /dev/null 2>&1; then
+    echo ""
+    echo "Resumo das atualizações de inputs:"
+    jq -r --slurpfile old "$old_lock" '
+      def short: if . == null then "-" else .[0:7] end;
+      def date: if . == null then "-" else (. | gmtime | strftime("%Y-%m-%d")) end;
+      ($old[0].nodes) as $old |
+      .nodes as $new |
+      ($old | keys) as $old_names |
+      ($new | keys) as $new_names |
+      ($new_names - ["root"] - $old_names) as $added |
+      ($old_names - ["root"] - $new_names) as $removed |
+      (($new_names - ["root"]) - $added - $removed) as $common |
+      ( $common[] |
+        ($old[.].locked // {}) as $ol |
+        ($new[.].locked // {}) as $nl |
+        select($ol != $nl) |
+        "  ~ \(.): \($ol.rev | short) (\($ol.lastModified | date)) -> \($nl.rev | short) (\($nl.lastModified | date))"
+      ),
+      ( $added[] | "  + \(.): novo input" ),
+      ( $removed[] | "  - \(.): removido" )
+    ' flake.lock
+    echo ""
+  fi
   if [[ "{{auto_commit}}" == "true" ]] && ! git diff --quiet flake.lock; then
     git add flake.lock
     git commit -m "flake: atualiza flake.lock"
