@@ -174,7 +174,7 @@
       };
     };
 
-    # Starship — prompt estilo Powerlevel10k lean, duas linhas, conciso
+    # Starship — preset oficial "Catppuccin Powerline", paleta Mocha (a mais escura)
     starship = {
       enable = true;
       enableZshIntegration = lib.mkDefault true;
@@ -182,271 +182,188 @@
       enableBashIntegration = lib.mkDefault true;
       settings = {
         "$schema" = "https://starship.rs/config-schema.json";
-
-        # Linha 1 esquerda: OS · usuário@host (só SSH/root) · dir · git · versões · contextos · jobs
-        # Linha 1 direita: status · bateria · duração · hora
-        # Linha 2: ❯
-        format = "$os$username$hostname$directory$git_branch$git_commit$git_state$git_status$c$cpp$rust$golang$nodejs$bun$php$java$kotlin$haskell$python$docker_context$nix_shell$conda$pixi$jobs$line_break$character";
-        right_format = "$status$battery$cmd_duration$time";
-
-        add_newline = true;
-        palette = "lean";
-
-        palettes.lean = {
-          p_blue   = "#61afef";
-          p_green  = "#98c379";
-          p_yellow = "#e5c07b";
-          p_red    = "#e06c75";
-          p_cyan   = "#56b6c2";
-          p_purple = "#c678dd";
-          p_orange = "#d19a66";
-          p_grey   = "#5c6370";
-          p_fg     = "#abb2bf";
-        };
-
+        format = "[](red)$os$username[](bg:peach fg:red)$directory[](bg:yellow fg:peach)$git_branch$git_status[](fg:yellow bg:green)$c$rust$golang$nodejs$bun$php$java$kotlin$haskell$python[](fg:green bg:sapphire)$conda$nix_shell[](fg:sapphire bg:lavender)$time[ ](fg:lavender)$cmd_duration$line_break$character";
+        palette = "catppuccin_mocha";
         os = {
           disabled = false;
-          style = "bold fg:p_blue";
-          format = "[$symbol ]($style)";
+          style = "bg:red fg:crust";
           symbols = {
-            NixOS            = "";
-            Linux            = "󰌽";
-            Windows          = "󰍲";
-            Macos            = "󰀵";
-            Ubuntu           = "󰕈";
-            Debian           = "󰣚";
-            Fedora           = "󰣛";
-            Arch             = "󰣇";
-            Artix            = "󰣇";
-            Gentoo           = "󰣨";
-            Alpine           = "";
-            Manjaro          = "";
-            Mint             = "󰣭";
-            Pop              = "";
-            EndeavourOS      = "";
-            CentOS           = "";
-            Raspbian         = "󰐿";
-            SUSE             = "";
-            openSUSE         = "";
-            Amazon           = "";
-            Android          = "";
-            AOSC             = "";
-            Redhat           = "󱄛";
+            NixOS = "";
+            Windows = "";
+            Ubuntu = "󰕈";
+            SUSE = "";
+            Raspbian = "󰐿";
+            Mint = "󰣭";
+            Macos = "󰀵";
+            Manjaro = "";
+            Linux = "󰌽";
+            Gentoo = "󰣨";
+            Fedora = "󰣛";
+            Alpine = "";
+            Amazon = "";
+            Android = "";
+            AOSC = "";
+            Arch = "󰣇";
+            Artix = "󰣇";
+            CentOS = "";
+            Debian = "󰣚";
+            Redhat = "󱄛";
             RedHatEnterprise = "󱄛";
-            FreeBSD          = "󰣠";
-            OpenBSD          = "󰣠";
-            NetBSD           = "󰣠";
-            DragonFly        = "󰈸";
           };
         };
-
         username = {
-          show_always = false;
-          style_user  = "fg:p_fg";
-          style_root  = "bold fg:p_red";
-          format = "[$user]($style)";
+          show_always = true;
+          style_user = "bg:red fg:crust";
+          style_root = "bg:red fg:crust";
+          format = "[ $user]($style)";
         };
-
-        hostname = {
-          ssh_only = true;
-          style    = "fg:p_fg";
-          format   = "[@$hostname ]($style)";
-        };
-
         directory = {
-          style           = "bold fg:p_blue";
-          read_only       = " 󰌾";
-          read_only_style = "fg:p_red";
-          truncation_length = 4;
+          style = "bg:peach fg:crust";
+          format = "[ $path ]($style)";
+          truncation_length = 3;
           truncation_symbol = "…/";
-          # Destaca a raiz do repositório (estilo p10k): caminho antes fica cinza
-          before_repo_root_style = "fg:p_grey";
-          repo_root_style        = "bold fg:p_blue";
-          format           = "[$path]($style)[$read_only]($read_only_style) ";
-          repo_root_format = "[$before_root_path]($before_repo_root_style)[$repo_root]($repo_root_style)[$path]($style)[$read_only]($read_only_style) ";
           substitutions = {
-            # Ícone de home
-            "~"                 = "󰋞 ~";
-            # Dirs em inglês
-            "Documents"         = "󰈙 Docs";
-            "Downloads"         = "󰇚 Down";
-            "Music"             = "󰝚 Music";
-            "Pictures"          = "󰉏 Pics";
-            "Videos"            = "󰕧 Videos";
-            "Desktop"           = "󰇄 Desktop";
-            "Projects"          = "󰲋 Projects";
-            # Dirs em português
-            "Projetos"          = "󰲋 Projetos";
-            "Documentos"        = "󰈙 Docs";
-            "Músicas"           = "󰝚 Músicas";
-            "Imagens"           = "󰉏 Imagens";
-            "Vídeos"            = "󰕧 Vídeos";
-            "Área de Trabalho"  = "󰇄 Área";
-            "Área de trabalho"  = "󰇄 Área";
-            # Dirs de desenvolvimento comuns
-            ".config"           = "󱁿 cfg";
-            ".local"            = " local";
-            ".cache"            = "󰪛 cache";
-            ".ssh"              = "󰣀 ssh";
-            "src"               = " src";
+            Documents = "󰈙 ";
+            Downloads = " ";
+            Music = "󰝚 ";
+            Pictures = " ";
+            Developer = "󰲋 ";
           };
         };
-
         git_branch = {
-          symbol           = " ";
-          style            = "fg:p_green";
-          format           = "[$symbol$branch(:$remote_branch)]($style) ";
-          truncation_length = 24;
-          truncation_symbol = "…";
+          symbol = "";
+          style = "bg:yellow";
+          format = "[[ $symbol $branch ](fg:crust bg:yellow)]($style)";
         };
-
-        # Hash do commit atual (estilo p10k — sempre visível, não só em detached HEAD)
-        git_commit = {
-          commit_hash_length = 7;
-          style        = "fg:p_grey";
-          format       = "[󰜘 $hash$tag]($style) ";
-          tag_symbol   = " 󰓼";
-          only_detached = false;
-          tag_disabled  = false;
-        };
-
-        # Estado de operações git em curso (REBASE, MERGE, CHERRY-PICK…)
-        git_state = {
-          style        = "bold fg:p_yellow";
-          format       = "\\([$state( $progress_current/$progress_total)]($style)\\) ";
-          rebase       = "REBASE";
-          merge        = "MERGE 󰃸";
-          revert       = "REVERT";
-          cherry_pick  = "PICK 󰊢";
-          bisect       = "BISECT";
-          am           = "AM";
-          am_or_rebase = "AM/REBASE";
-        };
-
         git_status = {
-          style  = "fg:p_yellow";
-          format = "([\\[$all_status$ahead_behind\\]]($style) )";
-          # Símbolos com contagem individual (estilo p10k)
-          conflicted = "󰩌$\{count}";
-          untracked  = "?$\{count}";
-          modified   = "!$\{count}";
-          staged     = "+$\{count}";
-          renamed    = "»$\{count}";
-          deleted    = "✘$\{count}";
-          stashed    = "󰏗 ";
-          ahead      = "⇡$\{count}";
-          behind     = "⇣$\{count}";
-          diverged   = "⇡$\{ahead_count}⇣$\{behind_count}";
+          style = "bg:yellow";
+          format = "[[($all_status$ahead_behind )](fg:crust bg:yellow)]($style)";
         };
-
-        # Jobs em background
-        jobs = {
-          symbol           = "󱜯 ";
-          style            = "bold fg:p_blue";
-          format           = "[$symbol$number]($style) ";
-          symbol_threshold = 1;
-          number_threshold = 1;
+        nodejs = {
+          symbol = "";
+          style = "bg:green";
+          format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
         };
-
-        # Linguagens — ícone + versão, aparecem só quando relevante
-        nodejs  = { symbol = " "; style = "fg:p_green";  format = "[$symbol($version) ]($style)"; };
-        bun     = { symbol = " "; style = "fg:p_yellow"; format = "[$symbol($version) ]($style)"; };
-        rust    = { symbol = " "; style = "fg:p_orange"; format = "[$symbol($version) ]($style)"; };
-        golang  = { symbol = " "; style = "fg:p_cyan";   format = "[$symbol($version) ]($style)"; };
-        python  = { symbol = " "; style = "fg:p_yellow"; format = "[$symbol($version)( $virtualenv) ]($style)"; };
-        java    = { symbol = " "; style = "fg:p_orange"; format = "[$symbol($version) ]($style)"; };
-        kotlin  = { symbol = " "; style = "fg:p_purple"; format = "[$symbol($version) ]($style)"; };
-        haskell = { symbol = " "; style = "fg:p_purple"; format = "[$symbol($version) ]($style)"; };
-        php     = { symbol = " "; style = "fg:p_purple"; format = "[$symbol($version) ]($style)"; };
-        c       = { symbol = " "; style = "fg:p_blue";   format = "[$symbol($version) ]($style)"; };
-        cpp     = { symbol = " "; style = "fg:p_blue";   format = "[$symbol($version) ]($style)"; };
-
-        # Contextos de ambiente
+        bun = {
+          symbol = "";
+          style = "bg:green";
+          format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
+        };
+        c = {
+          symbol = " ";
+          style = "bg:green";
+          format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
+        };
+        rust = {
+          symbol = "";
+          style = "bg:green";
+          format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
+        };
+        golang = {
+          symbol = "";
+          style = "bg:green";
+          format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
+        };
+        php = {
+          symbol = "";
+          style = "bg:green";
+          format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
+        };
+        java = {
+          symbol = " ";
+          style = "bg:green";
+          format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
+        };
+        kotlin = {
+          symbol = "";
+          style = "bg:green";
+          format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
+        };
+        haskell = {
+          symbol = "";
+          style = "bg:green";
+          format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
+        };
+        python = {
+          symbol = "";
+          style = "bg:green";
+          format = "[[ $symbol( $version)(\\(#$virtualenv\\)) ](fg:crust bg:green)]($style)";
+        };
         docker_context = {
-          symbol          = " ";
-          style           = "fg:p_blue";
-          format          = "[$symbol$context ]($style)";
-          only_with_files = true;
+          symbol = "";
+          style = "bg:sapphire";
+          format = "[[ $symbol( $context) ](fg:crust bg:sapphire)]($style)";
         };
-
-        nix_shell = {
-          disabled  = false;
-          symbol    = " ";
-          style     = "fg:p_blue";
-          format    = "[$symbol$state( \\($name\\)) ]($style)";
-          impure_msg = "impure";
-          pure_msg   = "pure";
-        };
-
         conda = {
-          symbol      = "󰌠 ";
-          style       = "fg:p_green";
-          format      = "[$symbol$environment ]($style)";
-          ignore_base = true;
-        };
-
-        pixi = {
-          symbol = "󰏓 ";
-          style  = "fg:p_green";
+          symbol = "  ";
+          style = "fg:crust bg:sapphire";
           format = "[$symbol$environment ]($style)";
+          ignore_base = false;
         };
-
-        # Lado direito: código de saída · bateria · duração · hora
-
-        # Exibe o código de saída apenas quando não-zero (estilo p10k)
-        status = {
-          disabled              = false;
-          symbol                = "✘ ";
-          success_symbol        = "";
-          not_executable_symbol = "󰒃 ";
-          not_found_symbol      = "󰦀 ";
-          sigint_symbol         = "󰚃 ";
-          signal_symbol         = "󱐋 ";
-          style                 = "bold fg:p_red";
-          format                = "[$symbol$status]($style) ";
-          map_symbol            = true;
-          recognize_signal_code = true;
+        nix_shell = {
+          disabled = false;
+          symbol = " ";
+          style = "fg:crust bg:sapphire";
+          format = "[$symbol$state( \\($name\\)) ]($style)";
+          impure_msg = "impure";
+          pure_msg = "pure";
+          unknown_msg = "desconhecido";
         };
-
-        # Bateria com ícone dinâmico por nível (só exibida abaixo de 80%)
-        battery = {
-          format             = "[$symbol$percentage]($style) ";
-          full_symbol        = "󱟢 ";
-          charging_symbol    = "󰂄 ";
-          discharging_symbol = "󰁹 ";
-          unknown_symbol     = "󰂑 ";
-          empty_symbol       = "󰂃 ";
-          display = [
-            { threshold = 10; discharging_symbol = "󰁺 "; style = "bold fg:p_red"; }
-            { threshold = 30; discharging_symbol = "󰁼 "; style = "fg:p_orange"; }
-            { threshold = 60; discharging_symbol = "󰁾 "; style = "fg:p_yellow"; }
-            { threshold = 80; discharging_symbol = "󰁿 "; style = "fg:p_fg"; }
-          ];
-        };
-
-        cmd_duration = {
-          min_time = 2000;
-          style    = "fg:p_yellow";
-          format   = "[ 󱎫 $duration ]($style)";
-        };
-
         time = {
-          disabled    = false;
-          time_format = "%H:%M";
-          style       = "fg:p_grey";
-          format      = "[󰥔 $time ]($style)";
+          disabled = false;
+          time_format = "%R";
+          style = "bg:lavender";
+          format = "[[  $time ](fg:crust bg:lavender)]($style)";
         };
-
-        line_break.disabled = false;
-
+        line_break = {
+          disabled = false;
+        };
         character = {
-          disabled                  = false;
-          success_symbol            = "[❯](bold fg:p_green)";
-          error_symbol              = "[❯](bold fg:p_red)";
-          vimcmd_symbol             = "[❮](bold fg:p_green)";
-          vimcmd_replace_one_symbol = "[❮](bold fg:p_purple)";
-          vimcmd_replace_symbol     = "[❮](bold fg:p_purple)";
-          vimcmd_visual_symbol      = "[❮](bold fg:p_yellow)";
+          disabled = false;
+          success_symbol = "[❯](bold fg:green)";
+          error_symbol = "[❯](bold fg:red)";
+          vimcmd_symbol = "[❮](bold fg:green)";
+          vimcmd_replace_one_symbol = "[❮](bold fg:lavender)";
+          vimcmd_replace_symbol = "[❮](bold fg:lavender)";
+          vimcmd_visual_symbol = "[❮](bold fg:yellow)";
+        };
+        cmd_duration = {
+          show_milliseconds = true;
+          format = " in $duration ";
+          style = "bg:lavender";
+          disabled = false;
+          show_notifications = true;
+          min_time_to_notify = 45000;
+        };
+        palettes = {
+          catppuccin_mocha = {
+            rosewater = "#f5e0dc";
+            flamingo = "#f2cdcd";
+            pink = "#f5c2e7";
+            mauve = "#cba6f7";
+            red = "#f38ba8";
+            maroon = "#eba0ac";
+            peach = "#fab387";
+            yellow = "#f9e2af";
+            green = "#a6e3a1";
+            teal = "#94e2d5";
+            sky = "#89dceb";
+            sapphire = "#74c7ec";
+            blue = "#89b4fa";
+            lavender = "#b4befe";
+            text = "#cdd6f4";
+            subtext1 = "#bac2de";
+            subtext0 = "#a6adc8";
+            overlay2 = "#9399b2";
+            overlay1 = "#7f849c";
+            overlay0 = "#6c7086";
+            surface2 = "#585b70";
+            surface1 = "#45475a";
+            surface0 = "#313244";
+            base = "#1e1e2e";
+            mantle = "#181825";
+            crust = "#11111b";
+          };
         };
       };
     };
