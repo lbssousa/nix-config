@@ -14,15 +14,18 @@
     key = "abutre/openai_api_key";
   };
 
+  # NOTE: fishPlugins.async-prompt was removed on purpose — it hijacks
+  # fish_prompt/fish_right_prompt to render them via a backgrounded `fish -c`
+  # job (spawned with `&` + `disown`). Starship already computes its prompt
+  # asynchronously on its own, so the plugin is redundant; here it also broke
+  # the custom starship theme outright ("disown: no suitable jobs" on every
+  # prompt, background job dying immediately), leaving fish_prompt stuck on
+  # a plain, uncolored fallback instead of the Catppuccin preset.
   programs.fish = {
     plugins = [
       {
         name = "ai";
         src = pkgs.fishPlugins.ai.src;
-      }
-      {
-        name = "async-prompt";
-        src = pkgs.fishPlugins.async-prompt.src;
       }
       {
         name = "autopair";
