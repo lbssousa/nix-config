@@ -160,6 +160,10 @@
         directory = ".local/share/fish";
         how = "symlink";
       } # Fish history and function cache
+      {
+        directory = ".local/share/direnv";
+        how = "symlink";
+      } # direnv "allow" cache (avoids re-approving .envrc after every reboot)
 
       # ── Rootless containers (Podman without root) ────────────────────────
       # Bind-mount: bubblewrap/Podman checks that the path is a real directory
