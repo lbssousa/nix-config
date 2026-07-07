@@ -75,14 +75,14 @@
   };
 
   # --- Bootloader: Limine (migração do lanzaboote — ver roteiro) ---
-  # Fase 2: Limine ainda sem Secure Boot (BIOS com Secure Boot desligado).
-  # Fase 3 liga secureBoot.enable=true reaproveitando as chaves sbctl já
-  # existentes em /persist/etc/secureboot, sem precisar recriar/reenrollar.
+  # Fase 3: Secure Boot via Limine, reaproveitando as chaves sbctl já
+  # existentes em /persist/etc/secureboot (mesmo PK/KEK/db do lanzaboote),
+  # sem precisar recriar ou reenrollar nada no firmware.
   boot.loader.systemd-boot.enable = lib.mkForce false; # Substituído pelo Limine
   boot.loader.limine = {
     enable = true;
     maxGenerations = 10; # equivalente ao configurationLimit do systemd-boot em boot.nix
-    secureBoot.enable = false;
+    secureBoot.enable = true;
   };
 
   environment.systemPackages = [
