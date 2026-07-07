@@ -210,28 +210,8 @@
         dkc = "podman-compose";
       };
 
-      plugins = [
-        {
-          name = "ai";
-          src = pkgs.fishPlugins.ai.src;
-        }
-        {
-          name = "async-prompt";
-          src = pkgs.fishPlugins.async-prompt.src;
-        }
-        {
-          name = "autopair";
-          src = pkgs.fishPlugins.autopair.src;
-        }
-        {
-          name = "forgit";
-          src = pkgs.fishPlugins.forgit.src;
-        }
-        {
-          name = "grc";
-          src = pkgs.fishPlugins.grc.src;
-        }
-      ];
+      # Plugins do Fish: exclusivos do abutre (ver home/users/abutre/fish.nix).
+      # Os demais usuários usam o Fish sem plugins.
     };
 
     # Starship — preset oficial "Catppuccin Powerline", paleta Mocha (a mais escura)

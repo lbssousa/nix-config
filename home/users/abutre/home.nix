@@ -25,6 +25,7 @@ in
     ./gnome.nix
     # ./rclone.nix  # desabilitado até reautenticação OAuth do Google Drive
     ./vscode.nix
+    ./fish.nix
   ];
 
   home = {
