@@ -37,14 +37,17 @@
         src = pkgs.fishPlugins.grc.src;
       }
     ];
-
-    # fish-ai (plugin "ai") lê a chave da API da OpenAI da variável
-    # OPENAI_API_KEY. A chave é decifrada em tempo de execução pelo
-    # sops-nix e nunca gravada no Nix store.
-    interactiveShellInit = ''
-      if test -f ${config.sops.secrets."openai-api-key".path}
-        set -gx OPENAI_API_KEY (cat ${config.sops.secrets."openai-api-key".path})
-      end
-    '';
   };
+
+  # fish-ai (plugin "ai") lê a chave da API da OpenAI da variável
+  # OPENAI_API_KEY. A chave é decifrada em tempo de execução pelo sops-nix
+  # e nunca gravada no Nix store. O Fish sempre carrega conf.d/*.fish antes
+  # de config.fish, então este export precisa estar em conf.d — ordenado
+  # antes de "plugin-ai.fish" — para já existir quando o próprio conf.d
+  # do plugin verifica a variável.
+  xdg.configFile."fish/conf.d/00-openai-api-key.fish".text = ''
+    if test -f ${config.sops.secrets."openai-api-key".path}
+      set -gx OPENAI_API_KEY (cat ${config.sops.secrets."openai-api-key".path})
+    end
+  '';
 }

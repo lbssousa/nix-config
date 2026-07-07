@@ -176,10 +176,10 @@
     },
     "nix-secrets": {
       "locked": {
-        "lastModified": 1778338547,
-        "narHash": "sha256-H58Ce121/6JEC9UqhDannpyLQGjiT46TBBDoVUeibqI=",
+        "lastModified": 1783428251,
+        "narHash": "sha256-7kIqu47ban0OeCYe1C7Zg0QOByVQXY5gkmEh8xFibo4=",
         "ref": "refs/heads/main",
-        "rev": "ae135150847358bf97aa19d2e3f76556c2f632ce",
+        "rev": "d1be10a26134fad044530efe60c6c5c65c205baf",
         "shallow": true,
         "type": "git",
         "url": "ssh://git@github.com/lbssousa/nix-secrets"
