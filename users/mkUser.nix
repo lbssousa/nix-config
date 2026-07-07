@@ -157,6 +157,14 @@
       # ── Containers rootless (Podman sem root) ──────────────────────────
       # Bind-mount: bubblewrap/Podman verifica que o caminho é um diretório real
       ".local/share/containers" # Imagens e volumes Podman do usuário
+
+      # ── Claude CLI ───────────────────────────────────────────────────
+      # Credenciais (.credentials.json), configurações e memórias de projeto.
+      # Sem isso, o login é perdido a cada reboot (/ é tmpfs).
+      {
+        directory = ".claude";
+        how = "symlink";
+      }
     ];
 
     files = [
@@ -174,6 +182,18 @@
       }
       {
         file = ".config/user-dirs.locale";
+        how = "symlink";
+      }
+      {
+        file = ".claude.json";
+        how = "symlink";
+        mode = "0600";
+      }
+      # Configuração de monitor (fator de escala, resolução, etc.), gerida
+      # pelo GNOME. Precisa ser persistida para sobreviver ao reboot
+      # (/ e /home são tmpfs).
+      {
+        file = ".config/monitors.xml";
         how = "symlink";
       }
     ];

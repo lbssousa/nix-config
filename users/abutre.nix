@@ -13,31 +13,6 @@ lib.mkMerge [
   {
     security.keepassxc.autoLockOnYubikeyRemove.users = [ "abutre" ];
 
-    # Preservação do estado do Claude CLI entre reboots.
-    # Credenciais (.credentials.json), configurações e memórias de projeto
-    # ficam em ~/.claude — sem isso, o login é perdido a cada reboot (/ é tmpfs).
-    preservation.preserveAt."/persist".users.abutre.directories = [
-      {
-        directory = ".claude";
-        how = "symlink";
-      }
-    ];
-
-    # Preservação da configuração de monitor (fator de escala, resolução, etc.).
-    # monitors.xml é gerenciado pelo GNOME e precisa ser persistido para que
-    # ajustes como fator de escala 100% sobrevivam ao reboot (/ e /home são tmpfs).
-    preservation.preserveAt."/persist".users.abutre.files = [
-      {
-        file = ".claude.json";
-        how = "symlink";
-        mode = "0600";
-      }
-      {
-        file = ".config/monitors.xml";
-        how = "symlink";
-      }
-    ];
-
     # Atalhos da dock (barra de favoritos do GNOME Shell) para o usuário abutre.
     # Declarado via programs.dconf.profiles.user.databases (banco dconf de sistema,
     # em /etc/dconf/db/) para sobreviver ao reboot com home efêmero.
