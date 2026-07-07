@@ -174,12 +174,6 @@
         function just
           command just --justfile (_nix_cfg)/justfile $argv
         end
-
-        # Zoxide (cd inteligente)
-        zoxide init fish | source
-
-        # Starship prompt
-        starship init fish | source
       '';
       shellAliases = {
         # Substitutos modernos
