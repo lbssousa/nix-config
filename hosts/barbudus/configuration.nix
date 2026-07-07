@@ -74,19 +74,20 @@
     thermald.enable = true; # Gerenciamento térmico Intel
   };
 
-  # --- Secure Boot com Lanzaboote ---
-  # Para Secure Boot com NVIDIA (assina módulos do kernel)
-  # NOTA: Requer configuração inicial de chaves (ver INSTALLATION.md)
-  boot.loader.systemd-boot.enable = lib.mkForce false; # Substituído pelo lanzaboote
-  boot.lanzaboote = {
+  # --- Bootloader: Limine (migração do lanzaboote — ver roteiro) ---
+  # Fase 2: Limine ainda sem Secure Boot (BIOS com Secure Boot desligado).
+  # Fase 3 liga secureBoot.enable=true reaproveitando as chaves sbctl já
+  # existentes em /persist/etc/secureboot, sem precisar recriar/reenrollar.
+  boot.loader.systemd-boot.enable = lib.mkForce false; # Substituído pelo Limine
+  boot.loader.limine = {
     enable = true;
-    pkiBundle = "/persist/etc/secureboot"; # Chaves armazenadas em /persist
+    maxGenerations = 10; # equivalente ao configurationLimit do systemd-boot em boot.nix
+    secureBoot.enable = false;
   };
 
   environment.systemPackages = [
-    # sbctl é necessário para gerenciar chaves Secure Boot com lanzaboote.
-    # Adicionado explicitamente para garantir disponibilidade independente do que
-    # o módulo lanzaboote injeta em systemPackages.
+    # sbctl é necessário para gerenciar chaves Secure Boot (Fase 3) e para
+    # inspeção manual (sbctl status/verify) mesmo antes de ligar secureBoot.enable.
     pkgs.sbctl
 
     # Script helper para executar aplicações com nvidia-offload
@@ -106,10 +107,9 @@
 
   # Criar symlink /var/lib/sbctl → /persist/etc/secureboot a cada boot.
   # Necessário porque a raiz (/) é tmpfs e é apagada a cada reinicialização.
-  # O módulo lanzaboote (v0.4.1) NÃO cria este symlink automaticamente;
-  # é responsabilidade da configuração do host criá-lo via systemd-tmpfiles.
-  # Sem este symlink, o sbctl não consegue localizar o banco de chaves PKI
-  # e o setup-secureboot.sh falha na verificação do banco de chaves.
+  # Nem o lanzaboote nem o módulo boot.loader.limine criam este symlink
+  # automaticamente; é responsabilidade da configuração do host criá-lo via
+  # systemd-tmpfiles. Sem ele, o sbctl não localiza o banco de chaves PKI.
   systemd.tmpfiles.rules = [
     "L+ /var/lib/sbctl - - - - /persist/etc/secureboot"
   ];
