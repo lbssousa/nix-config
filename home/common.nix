@@ -216,30 +216,30 @@
       enableBashIntegration = lib.mkDefault true;
       settings = {
         "$schema" = "https://starship.rs/config-schema.json";
-        format = "[](red)$os$username[](bg:peach fg:red)$directory[](bg:yellow fg:peach)$git_branch$git_status[](fg:yellow bg:green)$c$rust$golang$nodejs$bun$php$java$kotlin$haskell$python[](fg:green bg:sapphire)$conda$nix_shell[](fg:sapphire bg:lavender)$time[ ](fg:lavender)$cmd_duration$line_break$character";
+        format = "[](red)$os$username[](bg:peach fg:red)$directory[](bg:yellow fg:peach)$git_branch$git_status[](fg:yellow bg:green)$c$rust$golang$nodejs$bun$php$java$kotlin$haskell$python[](fg:green bg:sapphire)$conda$nix_shell[](fg:sapphire bg:lavender)$time[ ](fg:lavender)$cmd_duration$line_break$character";
         palette = "catppuccin_mocha";
         os = {
           disabled = false;
           style = "bg:red fg:crust";
           symbols = {
-            NixOS = "";
-            Windows = "";
+            NixOS = "";
+            Windows = "";
             Ubuntu = "󰕈";
-            SUSE = "";
+            SUSE = "";
             Raspbian = "󰐿";
             Mint = "󰣭";
             Macos = "󰀵";
-            Manjaro = "";
+            Manjaro = "";
             Linux = "󰌽";
             Gentoo = "󰣨";
             Fedora = "󰣛";
-            Alpine = "";
-            Amazon = "";
-            Android = "";
-            AOSC = "";
+            Alpine = "";
+            Amazon = "";
+            Android = "";
+            AOSC = "";
             Arch = "󰣇";
             Artix = "󰣇";
-            CentOS = "";
+            CentOS = "";
             Debian = "󰣚";
             Redhat = "󱄛";
             RedHatEnterprise = "󱄛";
@@ -258,14 +258,14 @@
           truncation_symbol = "…/";
           substitutions = {
             Documents = "󰈙 ";
-            Downloads = " ";
+            Downloads = " ";
             Music = "󰝚 ";
-            Pictures = " ";
+            Pictures = " ";
             Developer = "󰲋 ";
           };
         };
         git_branch = {
-          symbol = "";
+          symbol = "";
           style = "bg:yellow";
           format = "[[ $symbol $branch ](fg:crust bg:yellow)]($style)";
         };
@@ -274,69 +274,69 @@
           format = "[[($all_status$ahead_behind )](fg:crust bg:yellow)]($style)";
         };
         nodejs = {
-          symbol = "";
+          symbol = "";
           style = "bg:green";
           format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
         };
         bun = {
-          symbol = "";
+          symbol = "";
           style = "bg:green";
           format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
         };
         c = {
-          symbol = " ";
+          symbol = " ";
           style = "bg:green";
           format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
         };
         rust = {
-          symbol = "";
+          symbol = "";
           style = "bg:green";
           format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
         };
         golang = {
-          symbol = "";
+          symbol = "";
           style = "bg:green";
           format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
         };
         php = {
-          symbol = "";
+          symbol = "";
           style = "bg:green";
           format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
         };
         java = {
-          symbol = " ";
+          symbol = " ";
           style = "bg:green";
           format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
         };
         kotlin = {
-          symbol = "";
+          symbol = "";
           style = "bg:green";
           format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
         };
         haskell = {
-          symbol = "";
+          symbol = "";
           style = "bg:green";
           format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
         };
         python = {
-          symbol = "";
+          symbol = "";
           style = "bg:green";
           format = "[[ $symbol( $version)(\\(#$virtualenv\\)) ](fg:crust bg:green)]($style)";
         };
         docker_context = {
-          symbol = "";
+          symbol = "";
           style = "bg:sapphire";
           format = "[[ $symbol( $context) ](fg:crust bg:sapphire)]($style)";
         };
         conda = {
-          symbol = "  ";
+          symbol = "  ";
           style = "fg:crust bg:sapphire";
           format = "[$symbol$environment ]($style)";
           ignore_base = false;
         };
         nix_shell = {
           disabled = false;
-          symbol = " ";
+          symbol = " ";
           style = "fg:crust bg:sapphire";
           format = "[$symbol$state( \\($name\\)) ]($style)";
           impure_msg = "impure";
@@ -347,7 +347,7 @@
           disabled = false;
           time_format = "%R";
           style = "bg:lavender";
-          format = "[[  $time ](fg:crust bg:lavender)]($style)";
+          format = "[[  $time ](fg:crust bg:lavender)]($style)";
         };
         line_break = {
           disabled = false;
@@ -363,7 +363,7 @@
         };
         cmd_duration = {
           show_milliseconds = true;
-          format = " in $duration ";
+          format = " in $duration ";
           style = "bg:lavender";
           disabled = false;
           show_notifications = true;
