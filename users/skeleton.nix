@@ -1,27 +1,27 @@
-# Esqueleto para definição de usuários NixOS (conta do sistema)
-# INSTRUÇÕES:
-# 1. Copie este arquivo para users/<seu-usuario>.nix
-# 2. Substitua "skeleton" pelo nome do usuário desejado
-# 3. Ajuste as configurações conforme necessário
-# 4. Adicione o arquivo ao índice do git (OBRIGATÓRIO para nixos-install):
-#      git add users/<seu-usuario>.nix
-#    ⚠️  O Nix avalia flakes a partir do índice git. Arquivos não rastreados
-#    (mesmo que existam no disco) são IGNORADOS pelo Nix e não chegam ao
-#    /nix/store — causando erros de "módulo não encontrado" no nixos-install.
-#    git add inclui o arquivo no índice, tornando-o visível ao Nix.
-# 5. O módulo é carregado automaticamente via dendritic/data/users.nix —
-#    basta adicionar o nome de usuário à lista.
+# Skeleton for defining NixOS users (system account)
+# INSTRUCTIONS:
+# 1. Copy this file to users/<your-username>.nix
+# 2. Replace "skeleton" with the desired username
+# 3. Adjust the settings as needed
+# 4. Add the file to the git index (REQUIRED for nixos-install):
+#      git add users/<your-username>.nix
+#    ⚠️  Nix evaluates flakes from the git index. Untracked files (even if
+#    they exist on disk) are IGNORED by Nix and never reach the
+#    /nix/store — causing "module not found" errors in nixos-install.
+#    git add includes the file in the index, making it visible to Nix.
+# 5. The module is loaded automatically via dendritic/data/users.nix —
+#    just add the username to the list.
 #
-# Para configuração Home Manager personalizada (opcional):
-# 6. Crie home/users/<seu-usuario>/home.nix (copie de home/users/abutre/home.nix)
-# 7. Adicione-o ao índice do git:
-#      git add home/users/<seu-usuario>/home.nix
-#    O módulo home-manager.nix detecta automaticamente o arquivo via
-#    lib.pathExists e o importa sem nenhuma alteração adicional no flake.
+# For custom Home Manager configuration (optional):
+# 6. Create home/users/<your-username>/home.nix (copy from home/users/abutre/home.nix)
+# 7. Add it to the git index:
+#      git add home/users/<your-username>/home.nix
+#    The home-manager.nix module automatically detects the file via
+#    lib.pathExists and imports it with no further changes to the flake needed.
 #
 { pkgs, lib, ... }:
 import ./mkUser.nix { inherit pkgs lib; } {
   username = "skeleton";
-  # Descomente se o usuário deve ter permissão de sudo:
+  # Uncomment if the user should have sudo permission:
   # hasSudo = true;
 }

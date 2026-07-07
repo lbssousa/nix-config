@@ -1,17 +1,17 @@
--- LaTeX: usa zathura como visualizador e latexmk como compilador.
--- O extra lang.tex do LazyVim já ativa vimtex + texlab; aqui só sobrescrevemos
--- as configurações específicas do ambiente.
+-- LaTeX: uses zathura as the viewer and latexmk as the compiler.
+-- LazyVim's lang.tex extra already enables vimtex + texlab; here we only
+-- override the environment-specific settings.
 return {
   {
     "lervag/vimtex",
     opts = {},
     config = function()
-      -- Usa zathura com suporte a SyncTeX
+      -- Use zathura with SyncTeX support
       vim.g.vimtex_view_method = "zathura"
-      -- Compilador padrão
+      -- Default compiler
       vim.g.vimtex_compiler_method = "latexmk"
-      -- Mapeia <leader>l* para os comandos do vimtex (LazyVim usa <leader>l para LSP,
-      -- então remapeamos para <leader>v de "vimtex")
+      -- Map <leader>l* to vimtex commands (LazyVim uses <leader>l for LSP,
+      -- so we remap to <leader>v for "vimtex")
       vim.g.vimtex_mappings_prefix = "<localleader>"
     end,
   },

@@ -1,4 +1,4 @@
-# Recursos de YubiKey para Home Manager (usuário)
+# YubiKey resources for Home Manager (user)
 {
   lib,
   pkgs,
@@ -8,10 +8,10 @@
 {
   home = {
     packages = with pkgs; [
-      yubikey-manager # provê o comando ykman
+      yubikey-manager # provides the ykman command
       yubioath-flutter # Yubico Authenticator
-      pam_u2f # ferramenta pamu2fcfg para registrar chaves U2F
-      yubico-piv-tool # operações PIV (certificados/chaves)
+      pam_u2f # pamu2fcfg tool to register U2F keys
+      yubico-piv-tool # PIV operations (certificates/keys)
       gnupg # gpg/gpg-agent CLI
     ];
 
@@ -22,9 +22,9 @@
     activation.refreshGpgAgentSockets = lib.hm.dag.entryBefore [ "reloadSystemd" ] ''
       systemctlUser=${lib.escapeShellArg "${pkgs.systemd}/bin/systemctl --user"}
 
-      # O gpg-agent em modo socket activation precisa reiniciar quando o socket
-      # SSH passa a ser habilitado/desabilitado; caso contrário, o serviço já
-      # ativo recusa o novo gpg-agent-ssh.socket.
+      # gpg-agent in socket-activation mode needs to restart when the SSH
+      # socket gets enabled/disabled; otherwise the already-running service
+      # refuses the new gpg-agent-ssh.socket.
       for unit in gpg-agent-ssh.socket gpg-agent.socket gpg-agent.service; do
         $systemctlUser stop "$unit" 2>/dev/null || true
         $systemctlUser reset-failed "$unit" 2>/dev/null || true
@@ -44,8 +44,8 @@
       keyid-format = "0xlong";
       with-fingerprint = true;
     };
-    # A YubiKey expõe OpenPGP via CCID. Como o sistema já usa pcscd,
-    # forçamos o scdaemon a falar via PC/SC para evitar disputa pelo USB.
+    # The YubiKey exposes OpenPGP via CCID. Since the system already uses
+    # pcscd, we force scdaemon to talk via PC/SC to avoid contention over USB.
     scdaemonSettings = {
       disable-ccid = true;
     };
@@ -62,21 +62,21 @@
     pinentry.package = pkgs.pinentry-gnome3;
   };
 
-  # O ssh-agent nativo do OpenSSH não suporta chaves ED25519-SK (YubiKey
-  # resident keys) e retorna "agent refused operation" ao tentar usá-las.
+  # OpenSSH's native ssh-agent doesn't support ED25519-SK keys (YubiKey
+  # resident keys) and returns "agent refused operation" when trying to use them.
   services.ssh-agent.enable = false;
 
   xdg.configFile."Yubico/README-pam_u2f.txt".text = ''
-    Registro inicial da YubiKey para pam_u2f (por usuário):
+    Initial YubiKey registration for pam_u2f (per user):
 
-    1) Crie o arquivo de chaves U2F com:
+    1) Create the U2F keys file with:
        mkdir -p ~/.config/Yubico
        pamu2fcfg > ~/.config/Yubico/u2f_keys
 
-    2) Para adicionar mais de uma chave, use append:
+    2) To add more than one key, use append:
        pamu2fcfg -n >> ~/.config/Yubico/u2f_keys
 
-     3) Configure o PAM no sistema para usar:
+     3) Configure PAM on the system to use:
         authfile=$HOME/.config/Yubico/u2f_keys
   '';
 

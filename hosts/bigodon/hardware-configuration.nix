@@ -1,16 +1,16 @@
-# Hardware configuration para bigodon (Morefine M6 Mini-PC)
-# NOTA: Este arquivo deve ser regenerado com: nixos-generate-config --no-filesystems --root /mnt
-# após a instalação do disko. O arquivo gerado deve substituir este template.
+# Hardware configuration for bigodon (Morefine M6 Mini-PC)
+# NOTE: This file should be regenerated with: nixos-generate-config --no-filesystems --root /mnt
+# after the disko install. The generated file should replace this template.
 { lib, modulesPath, ... }:
 
 {
   imports = [
     (modulesPath + "/installer/scan/not-detected.nix")
-    # Configuração de disco via disko
+    # Disk configuration via disko
     ./disko.nix
   ];
 
-  # Módulos do kernel para Intel N200 + NVME + USB
+  # Kernel modules for Intel N200 + NVME + USB
   boot = {
     initrd = {
       availableKernelModules = [
@@ -22,7 +22,7 @@
       ];
       kernelModules = [
         "dm-snapshot"
-        # Intel KMS para boot flicker-free
+        # Intel KMS for flicker-free boot
         "i915"
       ];
     };
@@ -30,16 +30,16 @@
     extraModulePackages = [ ];
   };
 
-  # Microcode Intel
+  # Intel microcode
   hardware.cpu.intel.updateMicrocode = true;
 
-  # Filesystems configurados via disko.nix
+  # Filesystems configured via disko.nix
   swapDevices = lib.mkForce [ ];
 
-  # Marcar /persist como necessário no boot (preservation)
+  # Mark /persist as needed for boot (preservation)
   fileSystems."/persist".neededForBoot = true;
 
-  # Swap híbrida: 20 GB em disco (hibernação) + 8 GB zram (performance)
+  # Hybrid swap: 20 GB on disk (hibernation) + 8 GB zram (performance)
   zramSwap = {
     enable = true;
     memoryPercent = 50;
@@ -47,7 +47,7 @@
     priority = 100;
   };
 
-  # Otimizações de kernel para swap híbrida
+  # Kernel tuning for hybrid swap
   boot.kernel.sysctl = {
     "vm.swappiness" = 10;
     "vm.vfs_cache_pressure" = 50;

@@ -1,4 +1,4 @@
-# Módulo comum: Configurações básicas do sistema NixOS
+# Common module: basic NixOS system settings
 _:
 
 {
@@ -6,16 +6,16 @@ _:
     ./localization.nix
   ];
 
-  # Permitir pacotes proprietários (necessário para drivers NVIDIA, etc.)
+  # Allow proprietary packages (needed for NVIDIA drivers, etc.)
   nixpkgs.config.allowUnfree = true;
 
-  # Suporte ao Btrfs (garante ferramentas e módulo de kernel disponíveis)
+  # Btrfs support (ensures tools and kernel module are available)
   boot.supportedFilesystems = [ "btrfs" ];
 
-  # Rede
+  # Networking
   networking.networkmanager.enable = true;
 
-  # Configurações do Nix
+  # Nix settings
   nix = {
     settings = {
       experimental-features = [
@@ -23,7 +23,7 @@ _:
         "flakes"
       ];
       auto-optimise-store = true;
-      # Cache binário oficial e community
+      # Official and community binary caches
       substituters = [
         "https://cache.nixos.org"
         "https://nix-community.cachix.org"
@@ -40,14 +40,14 @@ _:
     };
   };
 
-  # Repassa o socket do agente SSH ao processo sudo.
-  # Mantido para compatibilidade com scripts (ex.: setup-secureboot.sh,
-  # enroll-tpm2.sh) que ainda usam `sudo -E`. O uso interativo preferencial
-  # é run0 com --setenv=SSH_AUTH_SOCK (ver aliases nrs/nru/nrb em home/).
+  # Passes the SSH agent socket through to the sudo process.
+  # Kept for compatibility with scripts (e.g. setup-secureboot.sh,
+  # enroll-tpm2.sh) that still use `sudo -E`. The preferred interactive use
+  # is run0 with --setenv=SSH_AUTH_SOCK (see the nrs/nru/nrb aliases in home/).
   security.sudo.extraConfig = ''
     Defaults:%wheel env_keep+=SSH_AUTH_SOCK
   '';
 
-  # Versão do estado do sistema
+  # System state version
   system.stateVersion = "25.05";
 }

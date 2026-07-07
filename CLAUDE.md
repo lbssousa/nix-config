@@ -116,7 +116,7 @@ Managed via `sops-nix`. The age key lives at `/persist/etc/sops/age/keys.txt`. T
 
 ## Key Conventions
 
-- **Language**: Keep comments, docs, and help text in **Portuguese** unless the file is already clearly English-first.
+- **Language**: Keep comments, docs, and help text in **English**. Exception: functional data tied to the system's `pt_BR` locale (e.g., the XDG user-directory names in `users/mkUser.nix`'s preservation list and the `eza` theme filenames in `home/common.nix`, which must match the actual on-disk folder names like `Documentos`/`Imagens`) must stay in Portuguese — translating them would break preservation bind-mounts and icon matching, since `i18n.defaultLocale` and the `br`/`abnt2` keyboard layout in `modules/system/core/localization.nix` are themselves not translatable (they're real facts about the user's system, not prose).
 - **Privilege escalation**: Use `run0` (not `sudo`) for all privileged commands — this system uses systemd's `run0`.
 - **Git tracking**: Nix flakes only see files tracked by git. Always `git add` new files (e.g., `users/<name>.nix`, `home/users/<name>/home.nix`) before evaluating or installing.
 - **Adding a user**: (1) copy `users/skeleton.nix` → `users/<name>.nix`, (2) add to `dendritic/data/users.nix`, (3) `git add` both files, (4) rebuild. The initial password is `"nixos"` and users are forced to change it on first login. User descriptions (full names) come from `nix-secrets`, not from the user files.

@@ -1,4 +1,4 @@
-# Módulo de usuário: Zed Editor com LSPs e extensões
+# User module: Zed Editor with LSPs and extensions
 {
   pkgs,
   ...
@@ -7,9 +7,9 @@
 {
   programs."zed-editor" = {
     enable = true;
-    # Nota: "gregorio" é instalada localmente via xdg.dataFile + activation abaixo;
-    # não deve estar aqui ou o Zed tentará instalá-la do marketplace e esvaziará
-    # o diretório installed/gregorio/.
+    # Note: "gregorio" is installed locally via xdg.dataFile + activation below;
+    # it must not be listed here, or Zed will try to install it from the
+    # marketplace and wipe the installed/gregorio/ directory.
     extensions = [
       "nix"
       "latex"

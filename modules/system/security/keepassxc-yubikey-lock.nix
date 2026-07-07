@@ -74,15 +74,15 @@ in
     type = lib.types.listOf lib.types.str;
     default = [ ];
     description = ''
-      Usuários cujo KeePassXC deve ser trancado quando uma YubiKey for removida.
+      Users whose KeePassXC should be locked when a YubiKey is removed.
     '';
   };
 
   config = lib.mkIf (cfg.users != [ ]) {
     services.udev.extraRules = ''
-      # Em eventos "remove", propriedades derivadas como ID_VENDOR_ID podem já
-      # não estar disponíveis. O campo bruto PRODUCT continua presente e é o
-      # identificador mais confiável para reconhecer a YubiKey na remoção.
+      # On "remove" events, derived properties like ID_VENDOR_ID may no
+      # longer be available. The raw PRODUCT field is still present and is
+      # the most reliable identifier for recognizing the YubiKey on removal.
       ACTION=="remove", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ENV{PRODUCT}=="1050/407/*", RUN+="${pkgs.systemd}/bin/systemd-run --no-block --quiet --collect --service-type=oneshot ${lib.getExe keepassxcLockOnYubikeyRemoveAll} ${lib.escapeShellArgs cfg.users}"
     '';
   };

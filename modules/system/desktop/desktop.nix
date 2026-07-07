@@ -1,10 +1,10 @@
-# Módulo base do ambiente gráfico — partilhado por todos os desktops.
-# A configuração específica do GNOME vive em dendritic/flake/gnome-wrapper.nix.
+# Base graphical environment module — shared by all desktops.
+# GNOME-specific configuration lives in dendritic/flake/gnome-wrapper.nix.
 { pkgs, ... }:
 {
   programs = {
-    # Habilita execução de binários FHS não-patchados (ex.: dev tools distribuídos
-    # como binários genéricos Linux). Sem nix-ld, eles falham com "stub-ld" errors.
+    # Enables running unpatched FHS binaries (e.g. dev tools distributed as
+    # generic Linux binaries). Without nix-ld, they fail with "stub-ld" errors.
     nix-ld = {
       enable = true;
       libraries = with pkgs; [
@@ -16,7 +16,7 @@
     };
   };
 
-  # XDG Portal para integração com GNOME (apps Nix e Flatpak)
+  # XDG Portal for GNOME integration (Nix and Flatpak apps)
   xdg.portal = {
     enable = true;
     extraPortals = with pkgs; [
@@ -31,7 +31,7 @@
     powerOnBoot = true;
   };
 
-  # Fontes essenciais para o desktop
+  # Essential desktop fonts
   fonts = {
     enableDefaultPackages = true;
     packages = with pkgs; [
@@ -59,19 +59,19 @@
     };
   };
 
-  # Editores gráficos com ambiente FHS: permitem que extensões e ferramentas
-  # auxiliares que dependem de paths FHS padrão funcionem corretamente no NixOS.
+  # Graphical editors with an FHS environment: lets extensions and helper
+  # tools that depend on standard FHS paths work correctly on NixOS.
   environment.systemPackages = with pkgs; [
     vscode-fhs
     zed-editor-fhs
   ];
 
-  # Electron: forçar detecção automática de Wayland em todos os apps Nix.
+  # Electron: force automatic Wayland detection in all Nix apps.
   environment.variables.ELECTRON_OZONE_PLATFORM_HINT = "auto";
 
-  # /var/lib/dbus/machine-id é efêmero (/ é tmpfs). Apps que usam libdbus
-  # (não dbus-broker) — como o epson-printer-utility — lêem esse caminho.
-  # A regra abaixo recria o symlink a cada boot.
+  # /var/lib/dbus/machine-id is ephemeral (/ is tmpfs). Apps that use
+  # libdbus (not dbus-broker) — like epson-printer-utility — read this path.
+  # The rule below recreates the symlink on every boot.
   systemd.tmpfiles.rules = [
     "d  /var/lib/dbus             0755 root root - -"
     "L+ /var/lib/dbus/machine-id  -    -    -    - /etc/machine-id"

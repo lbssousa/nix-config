@@ -23,14 +23,14 @@ in
       ../../modules/system/shell/shells.nix
       ../../modules/system/tools/packages.nix
       ../../modules/system/users/users.nix
-      # Módulos gerados em tempo de avaliação flake-parts: fecham sobre a lista
-      # de usuários e inputs antes de serem passados ao nixosSystem.
+      # Modules generated at flake-parts evaluation time: close over the
+      # user list and inputs before being passed to nixosSystem.
       (import ../../modules/system/users/descriptions.nix {
         inherit inputs;
         inherit (config.dendritic) users;
       })
-      # Expõe o CLI do home-manager como pacote de sistema (útil para
-      # `home-manager news` e `home-manager generations`).
+      # Exposes the home-manager CLI as a system package (useful for
+      # `home-manager news` and `home-manager generations`).
       (
         { pkgs, inputs, ... }:
         {

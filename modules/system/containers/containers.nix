@@ -1,21 +1,21 @@
-# Módulo de containers: Podman rootless + Distrobox
-# Experiência similar ao Fedora Silverblue
+# Containers module: rootless Podman + Distrobox
+# Fedora Silverblue-like experience
 { pkgs, ... }:
 
 {
-  # Habilitar subsistema de containers
+  # Enable the container subsystem
   virtualisation.containers = {
     enable = true;
   };
 
-  # Podman - runtime de containers rootless
+  # Podman - rootless container runtime
   virtualisation.podman = {
     enable = true;
-    # Alias 'docker' para compatibilidade
+    # 'docker' alias for compatibility
     dockerCompat = true;
-    # DNS para comunicação entre containers em compose
+    # DNS for inter-container communication in compose
     defaultNetwork.settings.dns_enabled = true;
-    # Autocleanup de containers parados
+    # Autocleanup of stopped containers
     autoPrune = {
       enable = true;
       dates = "weekly";
@@ -23,13 +23,13 @@
     };
   };
 
-  # Distrobox - execute qualquer distro Linux em containers rootless
+  # Distrobox - run any Linux distro in rootless containers
   environment.systemPackages = with pkgs; [
     distrobox
     podman-compose
     podman-tui
   ];
 
-  # Habilitar suporte a user namespaces (necessário para rootless)
+  # Enable user namespace support (required for rootless)
   security.unprivilegedUsernsClone = true;
 }

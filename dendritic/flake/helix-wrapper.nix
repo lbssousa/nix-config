@@ -1,53 +1,53 @@
-# Pacote Helix com configuração integrada via nix-wrapper-modules.
-# Exporta packages.helix: binário com XDG_CONFIG_HOME apuntando para config
-# gerada na store, incluindo suporte a Gregorio/GABC, bufferline e keybinds.
+# Helix package with config baked in via nix-wrapper-modules.
+# Exports packages.helix: a binary with XDG_CONFIG_HOME pointing to config
+# generated in the store, including Gregorio/GABC support, bufferline and keybinds.
 { inputs, ... }:
 {
   perSystem =
     { pkgs, lib, ... }:
     let
-      # Runtime do Helix estendido com o parser e queries do GABC.
-      # Usa pkgs.tree-sitter-gregorio (overlay local) para o parser e queries;
-      # o grammar é exposto como gabc.so porque languages.toml declara grammar = "gabc".
-      # O Helix resolve: $HELIX_RUNTIME/grammars/<nome>.so
-      #                  $HELIX_RUNTIME/queries/<nome>/*.scm
+      # Helix runtime extended with the GABC parser and queries.
+      # Uses pkgs.tree-sitter-gregorio (local overlay) for the parser and queries;
+      # the grammar is exposed as gabc.so because languages.toml declares grammar = "gabc".
+      # Helix resolves: $HELIX_RUNTIME/grammars/<name>.so
+      #                 $HELIX_RUNTIME/queries/<name>/*.scm
       runtimeComGabc = pkgs.runCommand "helix-runtime-com-gabc" { } ''
-        # grammars: todos os originais + gabc.so
+        # grammars: all originals + gabc.so
         mkdir -p "$out/grammars"
         for so in ${pkgs.helix.passthru.runtime}/grammars/*.so; do
           ln -s "$so" "$out/grammars/$(basename "$so")"
         done
         ln -s "${pkgs.tree-sitter-gregorio}/parser" "$out/grammars/gregorio.so"
 
-        # queries: todos os diretórios originais + diretório gabc/
+        # queries: all original directories + gabc/ directory
         mkdir -p "$out/queries"
         for qdir in ${pkgs.helix.passthru.runtime}/queries/*/; do
           ln -s "$qdir" "$out/queries/$(basename "$qdir")"
         done
-        # O Helix resolve queries pelo nome da linguagem (não do grammar):
-        # queries/gabc/ é necessário para que o realce de sintaxe funcione.
+        # Helix resolves queries by language name (not grammar name):
+        # queries/gabc/ is required for syntax highlighting to work.
         mkdir -p "$out/queries/gabc"
         for scm in "${pkgs.tree-sitter-gregorio.src}/queries/"*.scm; do
           ln -s "$scm" "$out/queries/gabc/$(basename "$scm")"
         done
       '';
 
-      # TeXLive pequeno ampliado com latexmk — pdflatex + latexmk no PATH
-      # sem impor uma instalação de sistema. A adição via --suffix garante que
-      # uma instalação de sistema (se existir) tenha precedência.
+      # Small TeXLive extended with latexmk — pdflatex + latexmk on PATH
+      # without imposing a system install. Adding it via --suffix ensures a
+      # system install (if any) takes precedence.
       texliveComLatexmk = pkgs.texliveMinimal.withPackages (p: [ p.latexmk ]);
 
-      # Reempacota o Helix com HELIX_RUNTIME estendido e LSPs no PATH.
-      # Envolve .hx-wrapped diretamente para sobrescrever o HELIX_RUNTIME
-      # já definido pelo wrapper original do nixpkgs.
+      # Repackages Helix with an extended HELIX_RUNTIME and LSPs on PATH.
+      # Wraps .hx-wrapped directly to override the HELIX_RUNTIME already set
+      # by the original nixpkgs wrapper.
       helixComGabc =
         pkgs.runCommand "helix-com-gabc"
           {
             nativeBuildInputs = [ pkgs.makeBinaryWrapper ];
             inherit (pkgs.helix) version;
-            # meta.mainProgram informa ao nix-wrapper-modules que o binário
-            # principal é "hx", garantindo que binName e exePath sejam
-            # detectados corretamente para criar o wrapper com XDG_CONFIG_HOME.
+            # meta.mainProgram tells nix-wrapper-modules that the main binary
+            # is "hx", ensuring binName and exePath are detected correctly to
+            # build the wrapper with XDG_CONFIG_HOME.
             meta.mainProgram = "hx";
           }
           ''
@@ -79,12 +79,12 @@
           theme = "catppuccin_mocha";
 
           editor = {
-            # ── Visualização ────────────────────────────────────────────────────
-            # Barra de buffers aberta: visível quando 2+ arquivos abertos
+            # ── Display ───────────────────────────────────────────────────────
+            # Open buffer bar: visible when 2+ files are open
             bufferline = "multiple";
             "line-number" = "relative";
             cursorline = true;
-            # Indicador de modo colorido na statusline (normal/insert/select)
+            # Colored mode indicator in the statusline (normal/insert/select)
             "color-modes" = true;
             "true-color" = true;
             "popup-border" = "all";
@@ -108,24 +108,24 @@
               "display-signature-help-docs" = true;
             };
 
-            # ── Diagnósticos inline ─────────────────────────────────────────────
+            # ── Inline diagnostics ──────────────────────────────────────────────
             "end-of-line-diagnostics" = "hint";
             "inline-diagnostics" = {
               "cursor-line" = "warning";
             };
 
-            # ── Salvamento automático ───────────────────────────────────────────
+            # ── Auto-save ───────────────────────────────────────────────────────
             "auto-save" = {
               "focus-lost" = true;
             };
 
             # ── File picker ─────────────────────────────────────────────────────
             "file-picker" = {
-              # Mostrar arquivos ocultos no picker (útil para .env, .gitignore, etc.)
+              # Show hidden files in the picker (useful for .env, .gitignore, etc.)
               hidden = false;
             };
 
-            # ── Indentação ──────────────────────────────────────────────────────
+            # ── Indentation ─────────────────────────────────────────────────────
             "indent-heuristic" = "hybrid";
 
             # ── Statusline ──────────────────────────────────────────────────────
@@ -153,26 +153,26 @@
             };
           };
 
-          # ── Atalhos de teclado ──────────────────────────────────────────────
+          # ── Keybindings ───────────────────────────────────────────────────────
           keys = {
             normal = {
-              # Salvar com Ctrl+S (normal e com todos os buffers)
+              # Save with Ctrl+S (normal and across all buffers)
               "C-s" = ":w";
               "C-S-s" = ":wa";
 
-              # Sair do modo visual sem cursor duplo
+              # Exit visual mode without a duplicate cursor
               esc = [
                 "collapse_selection"
                 "keep_primary_selection"
               ];
 
-              # Navegação estrutural via tree-sitter (nós do AST)
+              # Structural navigation via tree-sitter (AST nodes)
               "C-h" = "select_prev_sibling";
               "C-j" = "shrink_selection";
               "C-k" = "expand_selection";
               "C-l" = "select_next_sibling";
 
-              # Mover linhas inteiras (Alt+j/k)
+              # Move whole lines (Alt+j/k)
               "A-j" = [
                 "extend_to_line_bounds"
                 "delete_selection"
@@ -185,7 +185,7 @@
                 "paste_before"
               ];
 
-              # Abrir linha sem entrar em insert (o = open_below + normal_mode)
+              # Open a line without entering insert (o = open_below + normal_mode)
               o = [
                 "open_below"
                 "normal_mode"
@@ -197,12 +197,12 @@
             };
 
             insert = {
-              # Salvar sem sair do modo de inserção
+              # Save without leaving insert mode
               "C-s" = ":w";
             };
 
             select = {
-              # Mesma limpeza de seleção no modo visual
+              # Same selection cleanup in visual mode
               esc = [
                 "collapse_selection"
                 "keep_primary_selection"
@@ -212,7 +212,7 @@
           };
         };
 
-        # ── Linguagens: LaTeX + GABC/Gregorio ────────────────────────────────
+        # ── Languages: LaTeX + GABC/Gregorio ──────────────────────────────────
         languages = {
           "language-server" = {
             texlab = {
@@ -242,10 +242,10 @@
               };
             };
 
-            # LTeX: verificação gramatical e ortográfica via LanguageTool.
-            # Complementa o texlab (sintaxe/build) com diagnósticos de escrita.
-            # Idioma padrão pt-BR; o usuário pode sobrescrever por arquivo via
-            # magic comment  `% ltex: language=en-US` no topo do .tex.
+            # LTeX: grammar and spell checking via LanguageTool.
+            # Complements texlab (syntax/build) with writing diagnostics.
+            # Default language is pt-BR; the user can override it per file via
+            # the magic comment `% ltex: language=en-US` at the top of the .tex.
             ltex = {
               command = "ltex-ls";
               config.ltex = {
@@ -255,8 +255,8 @@
                 };
               };
             };
-            # gregorio-lsp: LSP para notação de canto gregoriano GABC/NABC.
-            # Empacotado no overlay local (pkgs.gregorio-lsp).
+            # gregorio-lsp: LSP for GABC/NABC Gregorian chant notation.
+            # Packaged in the local overlay (pkgs.gregorio-lsp).
             gregorio-lsp = {
               command = "gregorio-lsp";
             };
@@ -270,7 +270,7 @@
                 "ltex"
               ];
             }
-            # GABC: notação de canto gregoriano (AISCGre-BR/tree-sitter-gregorio)
+            # GABC: Gregorian chant notation (AISCGre-BR/tree-sitter-gregorio)
             {
               name = "gabc";
               scope = "source.gabc";
@@ -278,7 +278,7 @@
               "comment-token" = "%";
               grammar = "gregorio";
               "language-servers" = [ "gregorio-lsp" ];
-              # grefmt lê stdin → escreve stdout quando nenhum arquivo é passado
+              # grefmt reads stdin → writes stdout when no file is passed
               formatter = {
                 command = "grefmt";
               };

@@ -1,19 +1,19 @@
-# Utilitário de impressora Epson para Linux
-# Inclui o daemon ecbd (Epson Communication Bridge Daemon) e a interface gráfica.
-# Compatível com a multifuncional Epson L4160 e outros modelos EcoTank/InkTank.
+# Epson printer utility for Linux
+# Includes the ecbd daemon (Epson Communication Bridge Daemon) and the GUI.
+# Compatible with the Epson L4160 all-in-one and other EcoTank/InkTank models.
 #
-# Para atualizar para uma nova versão:
-# 1. Consulte a API do Epson Download Center para obter a URL mais recente:
+# To update to a new version:
+# 1. Query the Epson Download Center API for the latest URL:
 #      curl -s -A "Firefox" \
 #        "https://download-center.epson.com/api/v1/modules/?device_id=L3250%20Series&os=LX&region=US&language=en" \
 #        | jq '.items[] | select(.url | test("printer-utility.*_amd64\\.deb$")) | {version, url}'
-#    NOTA: o User-Agent "Firefox" é obrigatório para contornar o WAF Akamai da Epson.
-#    Strings contendo "Mozilla" são bloqueadas; use apenas "Firefox".
-# 2. Obtenha o hash SHA256 com:
+#    NOTE: the "Firefox" User-Agent is mandatory to get past Epson's Akamai
+#    WAF. Strings containing "Mozilla" are blocked; use only "Firefox".
+# 2. Get the SHA256 hash with:
 #      nix-prefetch-url <url>
-#    ou:
+#    or:
 #      nix store prefetch-file --hash-type sha256 <url>
-# 3. Atualize os campos `version`, `url` e `hash` abaixo.
+# 3. Update the `version`, `url` and `hash` fields below.
 {
   lib,
   stdenv,
@@ -31,13 +31,14 @@ stdenv.mkDerivation rec {
   version = "1.2.2";
 
   src = fetchurl {
-    # URL obtida via API do Epson Download Center (os=LX, device_id=L3250 Series).
-    # Requer User-Agent "Firefox" para contornar o WAF Akamai (strings com "Mozilla"
-    # são bloqueadas). O segmento de caminho numérico é específico de cada versão;
-    # consulte os passos no cabeçalho deste arquivo para obter a URL da nova versão.
+    # URL obtained via the Epson Download Center API (os=LX, device_id=L3250 Series).
+    # Requires the "Firefox" User-Agent to get past the Akamai WAF (strings
+    # with "Mozilla" are blocked). The numeric path segment is
+    # version-specific; see the steps in this file's header to get the URL
+    # for a new version.
     url = "https://download3.ebz.epson.net/dsc/f/03/00/16/74/30/9067c71049e81fbbee48a4695c5c0acf308b9f18/epson-printer-utility_${version}-1_amd64.deb";
-    # User-Agent "Firefox" necessário para o WAF Akamai da Epson (todas as variantes
-    # de "Mozilla/..." são explicitamente bloqueadas; use apenas "Firefox").
+    # "Firefox" User-Agent required for Epson's Akamai WAF (all "Mozilla/..."
+    # variants are explicitly blocked; use only "Firefox").
     curlOptsList = [
       "--user-agent"
       "Firefox"
@@ -66,15 +67,15 @@ stdenv.mkDerivation rec {
   installPhase = ''
     runHook preInstall
 
-    # Instala o binário principal da GUI
+    # Install the main GUI binary
     install -Dm755 opt/epson-printer-utility/bin/epson-printer-utility \
       $out/bin/epson-printer-utility
 
-    # Instala o daemon ecbd e o backend CUPS
+    # Install the ecbd daemon and the CUPS backend
     install -Dm755 usr/lib/epson-backend/ecbd $out/lib/epson-backend/ecbd
     install -Dm755 usr/lib/cups/backend/ecblp $out/lib/cups/backend/ecblp
 
-    # Instala configuração e arquivos de suporte do daemon
+    # Install the daemon's config and support files
     for f in ecbd.conf ecbd.pp ecbd.service ecblp.pp epson_pol.pp; do
       if [ -f usr/lib/epson-backend/$f ]; then
         install -Dm644 usr/lib/epson-backend/$f $out/lib/epson-backend/$f
@@ -87,15 +88,15 @@ stdenv.mkDerivation rec {
       cp -r usr/lib/epson-backend/scripts $out/lib/epson-backend/scripts
     fi
 
-    # Instala recursos (imagens e traduções)
+    # Install resources (images and translations)
     mkdir -p $out/share/epson-printer-utility
     cp -r opt/epson-printer-utility/resource $out/share/epson-printer-utility/resource
 
-    # Instala o ícone no diretório XDG padrão
+    # Install the icon in the standard XDG directory
     install -Dm644 opt/epson-printer-utility/resource/Images/AppIcon.png \
       $out/share/icons/hicolor/256x256/apps/epson-printer-utility.png
 
-    # Instala e corrige o arquivo .desktop (paths do DEB apontam para /opt)
+    # Install and fix the .desktop file (DEB paths point to /opt)
     install -Dm644 opt/epson-printer-utility/epson-printer-utility.desktop \
       $out/share/applications/epson-printer-utility.desktop
     sed -i \
@@ -103,14 +104,14 @@ stdenv.mkDerivation rec {
       -e 's|^Icon=.*|Icon=epson-printer-utility|' \
       $out/share/applications/epson-printer-utility.desktop
 
-    # Instala as regras udev
+    # Install the udev rules
     install -Dm644 opt/epson-printer-utility/rules/79-udev-epson.rules \
       $out/lib/udev/rules.d/79-udev-epson.rules
 
-    # Corrige caminhos absolutos codificados do pacote .deb original
-    # (/usr/lib/epson-backend e /opt/epson-printer-utility) em todos os
-    # arquivos de texto instalados (ecbd.conf, scripts, rc.d, etc.),
-    # substituindo-os pelos caminhos corretos na Nix store.
+    # Fix hardcoded absolute paths from the original .deb package
+    # (/usr/lib/epson-backend and /opt/epson-printer-utility) in all
+    # installed text files (ecbd.conf, scripts, rc.d, etc.), replacing
+    # them with the correct Nix store paths.
     find "$out/lib/epson-backend" -type f | while read -r f; do
       if file --mime-type "$f" | grep -q "text/"; then
         sed -i \
@@ -120,7 +121,7 @@ stdenv.mkDerivation rec {
       fi
     done
 
-    # Instala a documentação
+    # Install the documentation
     if [ -d usr/share/doc ]; then
       mkdir -p $out/share/doc/epson-printer-utility
       cp -r usr/share/doc/. $out/share/doc/epson-printer-utility/
@@ -131,14 +132,14 @@ stdenv.mkDerivation rec {
 
   meta = {
     homepage = "https://download.ebz.epson.net/dsc/search/01/search/?OSC=LX";
-    description = "Epson Printer Utility — ferramenta de manutenção para impressoras Epson inkjet";
+    description = "Epson Printer Utility — maintenance tool for Epson inkjet printers";
     longDescription = ''
-      O Epson Printer Utility fornece uma interface gráfica para monitorar o nível
-      de tinta, executar limpeza dos cabeçotes de impressão e outras funções de
-      manutenção em impressoras inkjet Epson (L4160, L3150, L3110 e outros modelos).
+      Epson Printer Utility provides a GUI to monitor ink levels, run
+      printhead cleaning and other maintenance functions on Epson inkjet
+      printers (L4160, L3150, L3110 and other models).
 
-      Inclui o daemon ecbd (Epson Communication Bridge Daemon) necessário para a
-      comunicação bidirecional entre o utilitário e a impressora.
+      Includes the ecbd daemon (Epson Communication Bridge Daemon) required
+      for two-way communication between the utility and the printer.
     '';
     license = lib.licenses.unfree;
     maintainers = [ ];

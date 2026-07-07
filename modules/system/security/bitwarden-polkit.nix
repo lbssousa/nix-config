@@ -1,8 +1,8 @@
 _:
 
 {
-  # Arquivo de ação Polkit necessário para o desbloqueio biométrico do Bitwarden.
-  # Sem este arquivo, a opção de biometria não aparece nas configurações do app.
+  # Polkit action file required for Bitwarden's biometric unlock.
+  # Without this file, the biometrics option doesn't appear in the app's settings.
   environment.etc."polkit-1/actions/com.bitwarden.Bitwarden.policy".text = ''
     <?xml version="1.0" encoding="UTF-8"?>
     <!DOCTYPE policyconfig PUBLIC

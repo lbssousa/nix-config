@@ -1,4 +1,4 @@
-# Configuração do VSCode para o usuário abutre
+# VSCode configuration for the abutre user
 { pkgs, ... }:
 
 {

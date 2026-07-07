@@ -1,66 +1,67 @@
-# Módulo de preservação: Sistema efêmero com tmpfs na raiz
-# A raiz (/) é um tmpfs — limpa automaticamente a cada boot sem necessidade
-# de rollback ou snapshot. Dados importantes são preservados em /persist via
-# bind mounts gerenciados pelo módulo nix-community/preservation.
+# Preservation module: ephemeral system with tmpfs on the root
+# The root (/) is a tmpfs — automatically wiped on every boot, no rollback
+# or snapshot needed. Important data is preserved in /persist via bind
+# mounts managed by the nix-community/preservation module.
 #
-# /home também é tmpfs (sem subvolume Btrfs próprio). Os itens selecionados de
-# cada usuário são bind-montados de /persist/home/<usuario>/. O restante do
-# diretório home — symlinks gerenciados pelo Home Manager, arquivos de cache,
-# etc. — é efêmero e recriado a cada boot.
+# /home is also tmpfs (no dedicated Btrfs subvolume). Selected items for
+# each user are bind-mounted from /persist/home/<user>/. The rest of the
+# home directory — symlinks managed by Home Manager, cache files, etc. — is
+# ephemeral and recreated on every boot.
 #
-# A lista de itens preservados por usuário é definida em users/mkUser.nix.
+# The list of items preserved per user is defined in users/mkUser.nix.
 _:
 
 {
-  # /persist deve estar disponível no boot (o módulo preservation precisa dele
-  # para configurar os bind mounts antes de qualquer serviço iniciar)
+  # /persist must be available at boot (the preservation module needs it to
+  # set up the bind mounts before any service starts)
   fileSystems."/persist".neededForBoot = true;
 
   preservation.enable = true;
 
   preservation.preserveAt."/persist" = {
     directories = [
-      # Symlinks: aplicações lêem via stat() normal e seguem symlinks sem restrições
+      # Symlinks: applications read via normal stat() and follow symlinks without restriction
       {
         directory = "/etc/nixos";
         how = "symlink";
-      } # Configuração do NixOS
+      } # NixOS configuration
       {
         directory = "/etc/NetworkManager/system-connections";
         how = "symlink";
-      } # Conexões de rede salvas
+      } # Saved network connections
       {
         directory = "/var/lib/nixos";
         how = "symlink";
-      } # Estado interno do NixOS
-      # Bind-mounts: aplicações usam lstat() ou têm restrições de segurança
-      "/var/lib/bluetooth" # Bind-mount obrigatório: StateDirectory= do bluetoothd falha com symlink no systemd 256+
-      "/var/lib/fprint" # Idem: fprintd usa StateDirectory=fprint com namespace isolation
-      "/var/lib/systemd" # Estado do systemd — sensível ao próprio diretório
-      "/var/db/sudo" # Timestamps do sudo — sudo usa lstat() por segurança
+      } # NixOS internal state
+      # Bind-mounts: applications use lstat() or have security restrictions
+      "/var/lib/bluetooth" # Mandatory bind-mount: bluetoothd's StateDirectory= fails with a symlink on systemd 256+
+      "/var/lib/fprint" # Same: fprintd uses StateDirectory=fprint with namespace isolation
+      "/var/lib/systemd" # systemd state — sensitive to the directory itself
+      "/var/db/sudo" # sudo timestamps — sudo uses lstat() for security
     ];
 
     files = [
-      # inInitrd: machine-id é lido pelo systemd-journald antes de qualquer mount regular
+      # inInitrd: machine-id is read by systemd-journald before any regular mount
       {
         file = "/etc/machine-id";
         inInitrd = true;
-      } # ID único da máquina
-      # NOTA: /etc/shadow NÃO é gerenciado aqui.
-      # O módulo de usuários (users.nix) define um activation script 'restoreShadow'
-      # com deps = ["users"] que, após o script de ativação 'users' do NixOS
-      # (que faz rename atômico de /etc/shadow), copia /persist/etc/shadow →
-      # /etc/shadow. Isso garante que alterações de senha via 'passwd' sejam
-      # persistidas em /persist/etc/shadow.
+      } # Unique machine ID
+      # NOTE: /etc/shadow is NOT managed here.
+      # The users module (users.nix) defines a 'restoreShadow' activation
+      # script with deps = ["users"] that, after NixOS's 'users' activation
+      # script (which does an atomic rename of /etc/shadow), copies
+      # /persist/etc/shadow → /etc/shadow. This ensures password changes
+      # via 'passwd' are persisted to /persist/etc/shadow.
     ];
   };
 
-  # /etc/machine-id é bind-montado do btrfs (@persist) pelo preservation no initrd.
-  # O systemd-machine-id-commit.service destina-se a "commitar" um machine-id
-  # transiente (tmpfs do initrd) para disco — não se aplica aqui pois o arquivo
-  # já é persistente. A condição ConditionPathIsMountPoint=/etc/machine-id dispara
-  # o serviço (pois É um mount point), mas --commit falha ("not on a temporary file
-  # system"). O drop-in abaixo inverte a condição para suprimir a execução.
+  # /etc/machine-id is bind-mounted from btrfs (@persist) by preservation in
+  # the initrd. systemd-machine-id-commit.service is meant to "commit" a
+  # transient machine-id (initrd tmpfs) to disk — that doesn't apply here
+  # since the file is already persistent. The
+  # ConditionPathIsMountPoint=/etc/machine-id condition triggers the service
+  # (since it IS a mount point), but --commit fails ("not on a temporary
+  # file system"). The drop-in below inverts the condition to suppress the run.
   systemd.services."systemd-machine-id-commit" = {
     overrideStrategy = "asDropin";
     unitConfig = {

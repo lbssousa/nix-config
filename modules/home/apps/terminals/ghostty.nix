@@ -1,36 +1,37 @@
-# Configuração do Ghostty — terminal padrão do desktop
+# Ghostty configuration — default desktop terminal
 #
-# Para abrir sem decorações (PaperWM, quake-terminal):
+# To open without decorations (PaperWM, quake-terminal):
 #   ghostty --window-decoration=false
 #
-# O desktop entry 'com.mitchellh.ghostty.quake' (oculto do menu de apps) é usado
-# pela extensão quake-terminal via terminal-id. O flag --class define o GApplication
-# ID (e portanto o app_id Wayland), que o GNOME Shell usa para atribuir janelas ao
-# Shell.App correto — sem isso, o Shell atribui a janela a com.mitchellh.ghostty.desktop
-# e o sinal windows-changed nunca dispara para o app monitorado pela extensão.
+# The 'com.mitchellh.ghostty.quake' desktop entry (hidden from the app menu)
+# is used by the quake-terminal extension via terminal-id. The --class flag
+# sets the GApplication ID (and therefore the Wayland app_id), which GNOME
+# Shell uses to assign windows to the right Shell.App — without it, the
+# Shell assigns the window to com.mitchellh.ghostty.desktop and the
+# windows-changed signal never fires for the app the extension is watching.
 #
-# Nota: Ghostty 1.3.1 não suporta [profile:name] no config — usa-se as flags
-# diretamente na linha de comando.
+# Note: Ghostty 1.3.1 doesn't support [profile:name] in the config — flags
+# are used directly on the command line instead.
 _:
 
 {
   xdg = {
     configFile."ghostty/config".text = ''
-      # ── Fonte ──────────────────────────────────────────────────────────────
+      # ── Font ───────────────────────────────────────────────────────────────
       font-family = JetBrainsMono Nerd Font
       font-size = 14
 
-      # ── Aparência ──────────────────────────────────────────────────────────
-      # Perfil padrão: decorações ativas para uso normal
+      # ── Appearance ─────────────────────────────────────────────────────────
+      # Default profile: decorations on for normal use
       window-decoration = true
 
-      # Abas na parte inferior: mais visíveis quando a janela cai do topo
+      # Tabs at the bottom: more visible when the window drops from the top
       gtk-tabs-location = bottom
 
-      # Opacidade da janela (90%)
+      # Window opacity (90%)
       background-opacity = 0.90
 
-      # Paleta GNOME (tema escuro — compatível com o padrão do Ptyxis)
+      # GNOME palette (dark theme — matches Ptyxis's default)
       background = 171421
       foreground = D0CFCC
       palette = 0=#171421
@@ -50,25 +51,25 @@ _:
       palette = 14=#33C7DE
       palette = 15=#FFFFFF
 
-      # Negritos usam as cores brilhantes da paleta (índices 8–15)
+      # Bold text uses the bright palette colors (indices 8–15)
       bold-color = bright
 
-      # ── Comportamento ──────────────────────────────────────────────────────
+      # ── Behavior ───────────────────────────────────────────────────────────
       quit-after-last-window-closed = true
       confirm-close-surface = false
       bell-features = system
 
-      # Desabilitar auto-atualização (pacote gerenciado pelo Nix)
+      # Disable auto-update (package managed by Nix)
       auto-update = off
     '';
 
-    # Desktop entry oculto do menu de apps, usado pela extensão quake-terminal.
-    # --class: define o GApplication ID como com.mitchellh.ghostty.quake, o que
-    #   faz o GNOME Shell atribuir a janela a este desktop entry (via app_id Wayland),
-    #   permitindo que o sinal windows-changed dispare no Shell.App correto.
-    # --gtk-single-instance=false: impede que esta instância se registre como
-    #   singleton GApplication. Sem isso, ela capturaria o slot de instância única
-    #   e janelas abertas normalmente seriam roteadas para este processo.
+    # Desktop entry hidden from the app menu, used by the quake-terminal extension.
+    # --class: sets the GApplication ID to com.mitchellh.ghostty.quake, which
+    #   makes GNOME Shell assign the window to this desktop entry (via the
+    #   Wayland app_id), so the windows-changed signal fires on the right Shell.App.
+    # --gtk-single-instance=false: prevents this instance from registering as
+    #   a singleton GApplication. Without it, it would grab the single-instance
+    #   slot and normally-opened windows would get routed to this process.
     desktopEntries."com.mitchellh.ghostty.quake" = {
       name = "Ghostty (Quake)";
       exec = "ghostty --window-decoration=false --gtk-single-instance=false --class=com.mitchellh.ghostty.quake";

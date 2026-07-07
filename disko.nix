@@ -1,9 +1,9 @@
-# Template base de particionamento para Btrfs com LUKS + LVM
-# A raiz (/) usa tmpfs (sempre limpa a cada boot — sem necessidade de snapshot/rollback)
-# Os demais filesystems usam subvolumes Btrfs (dados persistentes)
-# Utilizado pelos hosts via: import ../../disko.nix { inherit lib; device = "..."; swapSize = "..."; }
+# Base Btrfs partitioning template with LUKS + LVM
+# The root (/) uses tmpfs (always clean on boot — no snapshot/rollback needed)
+# The other filesystems use Btrfs subvolumes (persistent data)
+# Used by hosts via: import ../../disko.nix { inherit lib; device = "..."; swapSize = "..."; }
 {
-  device ? throw "Defina o dispositivo de disco, ex: /dev/nvme0n1",
+  device ? throw "Set the disk device, e.g.: /dev/nvme0n1",
   swapSize ? "20G",
   lib,
   ...
@@ -13,13 +13,13 @@ let
 in
 {
   disko.devices = {
-    # Raiz efêmera: tmpfs — limpa automaticamente a cada boot, sem rollback necessário
-    # O preservation preserva arquivos importantes via bind mounts de /persist
+    # Ephemeral root: tmpfs — automatically wiped every boot, no rollback needed
+    # preservation keeps important files persistent via bind mounts from /persist
     nodev."/" = {
       fsType = "tmpfs";
       mountOptions = [
         "defaults"
-        "size=50%" # 50% da RAM; ajuste conforme necessário
+        "size=50%" # 50% of RAM; adjust as needed
         "mode=755"
       ];
     };
@@ -30,7 +30,7 @@ in
       content = {
         type = "gpt";
         partitions = {
-          # Partição EFI para systemd-boot
+          # EFI partition for systemd-boot
           esp = {
             name = "ESP";
             size = "512M";
@@ -45,7 +45,7 @@ in
               ];
             };
           };
-          # Partição principal criptografada com LUKS
+          # Main LUKS-encrypted partition
           luks = {
             name = "luks";
             size = "100%";
@@ -55,7 +55,7 @@ in
               settings = {
                 allowDiscards = true;
               };
-              # Dentro do LUKS, usa LVM para swap + volume Btrfs
+              # Inside LUKS, use LVM for swap + Btrfs volume
               content = {
                 type = "lvm_pv";
                 vg = "root_vg";
@@ -66,30 +66,30 @@ in
       };
     };
 
-    # Grupo de volumes LVM dentro do LUKS
+    # LVM volume group inside LUKS
     lvm_vg.root_vg = {
       type = "lvm_vg";
       lvs = lib.mkMerge [
-        # Swap em disco (somente se swapSize != "0")
+        # Disk swap (only if swapSize != "0")
         (lib.mkIf hasSwap {
           swap = {
             size = swapSize;
             content = {
               type = "swap";
-              resumeDevice = true; # Suporte a hibernação
+              resumeDevice = true; # Hibernation support
             };
           };
         })
-        # Volume lógico para o sistema de arquivos Btrfs
+        # Logical volume for the Btrfs filesystem
         {
           root = {
             size = "100%FREE";
             content = {
               type = "btrfs";
-              extraArgs = [ "-f" ]; # Forçar criação (sobrescreve fs existente se necessário)
+              extraArgs = [ "-f" ]; # Force creation (overwrites existing fs if needed)
 
               subvolumes = {
-                # Nix store — preservado (essencial para o sistema funcionar)
+                # Nix store — preserved (essential for the system to work)
                 "@nix" = {
                   mountpoint = "/nix";
                   mountOptions = [
@@ -98,7 +98,7 @@ in
                   ];
                 };
 
-                # Dados persistentes do sistema — usados pelo módulo preservation
+                # Persistent system data — used by the preservation module
                 "@persist" = {
                   mountpoint = "/persist";
                   mountOptions = [
@@ -107,13 +107,13 @@ in
                   ];
                 };
 
-                # Logs do sistema — sem compressão (logs já são comprimidos internamente)
+                # System logs — no compression (logs are already compressed internally)
                 "@log" = {
                   mountpoint = "/var/log";
                   mountOptions = [ "noatime" ];
                 };
 
-                # Dados de containers (Podman, Docker, etc.) — preservados
+                # Container data (Podman, Docker, etc.) — preserved
                 "@containers" = {
                   mountpoint = "/var/lib/containers";
                   mountOptions = [
@@ -122,7 +122,7 @@ in
                   ];
                 };
 
-                # Aplicações Flatpak — preservadas entre boots
+                # Flatpak apps — preserved across boots
                 "@flatpak" = {
                   mountpoint = "/var/lib/flatpak";
                   mountOptions = [
@@ -131,7 +131,7 @@ in
                   ];
                 };
 
-                # Snapshots Btrfs — para backups futuros (snapper, timeshift, etc.)
+                # Btrfs snapshots — for future backups (snapper, timeshift, etc.)
                 "@snapshots" = {
                   mountpoint = "/.snapshots";
                   mountOptions = [

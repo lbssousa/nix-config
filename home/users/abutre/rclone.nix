@@ -1,4 +1,4 @@
-# Configuração do rclone com Google Drive para o usuário abutre
+# rclone configuration with Google Drive for the abutre user
 {
   config,
   pkgs,
@@ -11,13 +11,13 @@ let
   rcloneConfigPath = "${config.xdg.configHome}/rclone/rclone.conf";
   rcloneGoogleDriveInstances = {
     my-drive = {
-      mountDir = "Meu Drive";
+      mountDir = "My Drive";
       cacheSlug = "google-drive";
       extraFlags = "";
     };
 
     shared-with-me = {
-      mountDir = "Compartilhados Comigo";
+      mountDir = "Shared with Me";
       cacheSlug = "google-drive-shared-with-me";
       extraFlags = "--drive-shared-with-me";
     };
@@ -38,10 +38,10 @@ let
       '';
     };
 
-  # Script que escreve o rclone.conf em tempo de execução, substituindo apenas
-  # as credenciais OAuth (client_id e client_secret) pelos valores decifrados
-  # pelo sops-nix. Os demais campos são declarativos. O token OAuth gerenciado
-  # pelo rclone é preservado entre ativações do home-manager.
+  # Script that writes rclone.conf at runtime, substituting only the OAuth
+  # credentials (client_id and client_secret) with the values decrypted by
+  # sops-nix. The other fields are declarative. The OAuth token managed by
+  # rclone is preserved across home-manager activations.
   writeRcloneConfig = pkgs.writeShellScript "write-rclone-config" ''
     set -euo pipefail
 
@@ -50,7 +50,7 @@ let
 
     ${pkgs.coreutils}/bin/mkdir -p "$(${pkgs.coreutils}/bin/dirname "${rcloneConfigPath}")"
 
-    # Preserva o token OAuth existente para evitar re-autenticação
+    # Preserve the existing OAuth token to avoid re-authentication
     existing_token="token = "
     if [ -f "${rcloneConfigPath}" ]; then
       existing_token=$(${pkgs.gnugrep}/bin/grep "^token = " "${rcloneConfigPath}" \
@@ -118,7 +118,7 @@ in
 
     "systemd/user/rclone-write-config.service".text = ''
       [Unit]
-      Description=Escrever config do rclone com credenciais decifradas
+      Description=Write rclone config with decrypted credentials
       After=sops-nix.service
       Requires=sops-nix.service
 
@@ -130,7 +130,7 @@ in
       ExecStart=${writeRcloneConfig}
     '';
 
-    # Env file com o e-mail do Google Drive — não é segredo, vem do flake
+    # Env file with the Google Drive email — not a secret, comes from the flake
     "rclone/google-drive-email.env".text =
       "GOOGLE_DRIVE_EMAIL=${inputs.nix-secrets.abutre.googleDriveEmail}";
   }

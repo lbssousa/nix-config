@@ -1,38 +1,38 @@
-# Módulo de boot: systemd-boot + Plymouth para experiência flicker-free
+# Boot module: systemd-boot + Plymouth for a flicker-free experience
 { lib, pkgs, ... }:
 
 {
   boot = {
-    # Kernel Linux mais recente (não-LTS)
+    # Latest Linux kernel (non-LTS)
     kernelPackages = lib.mkDefault pkgs.linuxPackages_latest;
-    # systemd-boot como gerenciador de boot padrão
-    # Nota: barbudus e bigodon substituem por boot.loader.limine (ver hosts/<host>/configuration.nix)
+    # systemd-boot as the default boot manager
+    # Note: barbudus and bigodon override this with boot.loader.limine (see hosts/<host>/configuration.nix)
     loader = {
       systemd-boot = {
         enable = lib.mkDefault true;
         configurationLimit = 10;
-        editor = false; # Desabilita editor de boot (segurança)
-        # Mantém resolução máxima no menu de boot, evitando flickering
+        editor = false; # Disable the boot editor (security)
+        # Keep max resolution in the boot menu, avoiding flickering
         consoleMode = lib.mkDefault "max";
       };
       efi.canTouchEfiVariables = true;
-      # timeout = 0: oculta o menu e inicia a entrada padrão imediatamente,
-      # evitando o flicker causado pela exibição do menu durante o boot.
-      # Para exibir o menu manualmente, mantenha pressionada a tecla Space (ou qualquer
-      # tecla) imediatamente após a tela do firmware UEFI, durante a janela de boot.
-      # Para alterar temporariamente via terminal: sudo bootctl set-timeout <segundos>
+      # timeout = 0: hides the menu and boots the default entry immediately,
+      # avoiding the flicker caused by displaying the menu during boot.
+      # To show the menu manually, hold down the Space key (or any key)
+      # right after the UEFI firmware screen, during the boot window.
+      # To change it temporarily via terminal: sudo bootctl set-timeout <seconds>
       timeout = 0;
     };
 
-    # Plymouth para splash screen durante o boot
+    # Plymouth for the boot splash screen
     plymouth = {
       enable = true;
-      # bgrt: usa o logotipo OEM do firmware (ACPI BGRT) para transição suave
-      # firmware → bootloader → Plymouth sem flickering
+      # bgrt: uses the firmware's OEM logo (ACPI BGRT) for a smooth
+      # firmware → bootloader → Plymouth transition without flickering
       theme = lib.mkDefault "bgrt";
     };
 
-    # Parâmetros do kernel para boot silencioso/flicker-free
+    # Kernel parameters for a quiet/flicker-free boot
     kernelParams = [
       "quiet"
       "splash"
@@ -40,19 +40,19 @@
       "rd.systemd.show_status=false"
       "rd.udev.log_level=3"
       "udev.log_priority=3"
-      # Desabilita mensagens de boot no framebuffer
+      # Disable boot messages on the framebuffer
       "vt.global_cursor_default=0"
     ];
 
-    # Suprimir mensagens do kernel no console durante boot
+    # Suppress kernel messages on the console during boot
     consoleLogLevel = 0;
 
-    # Initrd silencioso
+    # Quiet initrd
     initrd.verbose = false;
   };
 
-  # Configuração do framebuffer para evitar flickering
-  # (KMS/DRM mantém resolução do boot ao carregar driver)
-  # Os módulos KMS específicos (i915, nvidia, etc.) são definidos em cada host
-  # via boot.initrd.kernelModules nas hardware-configuration.nix
+  # Framebuffer configuration to avoid flickering
+  # (KMS/DRM keeps the boot resolution when loading the driver)
+  # Host-specific KMS modules (i915, nvidia, etc.) are defined per host
+  # via boot.initrd.kernelModules in hardware-configuration.nix
 }

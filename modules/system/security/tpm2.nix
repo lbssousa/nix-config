@@ -1,63 +1,62 @@
-# Módulo TPM2: Desbloqueio automático do volume LUKS via chip TPM2
+# TPM2 module: automatic LUKS volume unlock via the TPM2 chip
 #
-# Este módulo configura o desbloqueio automático do LUKS usando o chip TPM2
-# via systemd-cryptenroll. O TPM2 armazena a chave de criptografia e a libera
-# somente se as medições de integridade do sistema (PCRs) corresponderem ao
-# estado esperado, impedindo o acesso ao disco em caso de adulteração de hardware
-# ou software de boot.
+# This module sets up automatic LUKS unlock using the TPM2 chip via
+# systemd-cryptenroll. The TPM2 stores the encryption key and only releases
+# it if the system's integrity measurements (PCRs) match the expected
+# state, blocking disk access in case of hardware or boot software tampering.
 #
-# ⚠️  AÇÃO NECESSÁRIA APÓS INSTALAÇÃO:
-# Execute o seguinte comando para registrar o TPM2 no volume LUKS:
+# ⚠️  ACTION REQUIRED AFTER INSTALLATION:
+# Run the following command to enroll the TPM2 for the LUKS volume:
 #
 #   sudo systemd-cryptenroll \
 #     --tpm2-device=auto \
 #     --tpm2-pcrs=0+2+7 \
 #     /dev/disk/by-partlabel/luks
 #
-# PCRs recomendados:
-#   0 = Firmware UEFI (integridade do firmware)
-#   2 = Código de opção UEFI (drivers ROM)
-#   7 = Secure Boot state (estado do Secure Boot)
+# Recommended PCRs:
+#   0 = UEFI firmware (firmware integrity)
+#   2 = UEFI option code (ROM drivers)
+#   7 = Secure Boot state
 #
-# Para revogar o acesso TPM2 (ex: antes de vender o hardware):
+# To revoke TPM2 access (e.g. before selling the hardware):
 #   sudo systemd-cryptenroll --wipe-slot=tpm2 /dev/disk/by-partlabel/luks
 #
-# Referência: https://wiki.archlinux.org/title/Trusted_Platform_Module
+# Reference: https://wiki.archlinux.org/title/Trusted_Platform_Module
 { pkgs, ... }:
 
 {
-  # Suporte ao TPM2 no NixOS
+  # TPM2 support in NixOS
   security.tpm2 = {
     enable = true;
-    # Interface PKCS#11 para aplicações que usam TPM2 via OpenSSL
+    # PKCS#11 interface for applications using TPM2 via OpenSSL
     pkcs11.enable = true;
-    # Variável de ambiente TCTI para ferramentas de userspace
+    # TCTI environment variable for userspace tools
     tctiEnvironment.enable = true;
   };
 
-  # Módulos do kernel necessários para o TPM2
-  # tpm_tis: driver para TPM 1.2/2.0 via LPC/SPI (maioria dos laptops e desktops)
-  # tpm_crb: driver para TPM 2.0 via CRB (Command Response Buffer) - padrão moderno
+  # Kernel modules needed for TPM2
+  # tpm_tis: driver for TPM 1.2/2.0 via LPC/SPI (most laptops and desktops)
+  # tpm_crb: driver for TPM 2.0 via CRB (Command Response Buffer) - modern standard
   boot.initrd.kernelModules = [
     "tpm_tis"
     "tpm_crb"
   ];
 
-  # Ferramentas de userspace para gerenciar o TPM2
+  # Userspace tools to manage the TPM2
   environment.systemPackages = with pkgs; [
-    tpm2-tools # Ferramentas de linha de comando para TPM2
-    tpm2-tss # TCG Software Stack (TSS) para TPM2
+    tpm2-tools # Command-line tools for TPM2
+    tpm2-tss # TCG Software Stack (TSS) for TPM2
   ];
 
-  # Configurar o volume LUKS para aceitar desbloqueio via TPM2
-  # O nome "crypted" corresponde ao nome definido em disko.nix
+  # Configure the LUKS volume to accept TPM2 unlock
+  # The name "crypted" matches the name defined in disko.nix
   #
-  # crypttabExtraOpts instrui o systemd-cryptsetup a tentar o TPM2 primeiro;
-  # se falhar (ex: PCRs modificados), pede a senha ao usuário como fallback.
+  # crypttabExtraOpts tells systemd-cryptsetup to try TPM2 first;
+  # if it fails (e.g. PCRs changed), it prompts the user for the password as a fallback.
   boot.initrd.luks.devices."crypted" = {
     crypttabExtraOpts = [
-      "tpm2-device=auto" # Usar o TPM2 disponível automaticamente
-      "tpm2-pcrs=0+2+7" # PCRs a verificar (firmware + Secure Boot state)
+      "tpm2-device=auto" # Automatically use the available TPM2
+      "tpm2-pcrs=0+2+7" # PCRs to verify (firmware + Secure Boot state)
     ];
   };
 }

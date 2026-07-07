@@ -1,18 +1,18 @@
-# Módulo de usuário: Ferramentas para validação e formatação de arquivos Nix
+# User module: tools for validating and formatting Nix files
 { pkgs, ... }:
 
 {
   home.packages = with pkgs; [
-    # Formatação
+    # Formatting
     nixfmt
     alejandra
     nixpkgs-fmt
 
-    # Lint / análise estática
+    # Lint / static analysis
     statix
     deadnix
 
-    # LSP para editor
+    # LSP for editor
     nil
     nixd
   ];

@@ -1,7 +1,7 @@
-# OBSOLETO: substituído pelo módulo de sistema modules/system/desktop/desktop.nix,
-# que usa systemd.user.tmpfiles.rules para criar este arquivo para todos os
-# usuários (inclusive os que não usam home-manager).
-# Este arquivo pode ser removido quando não houver mais referência a ele.
+# DEPRECATED: replaced by the system module modules/system/desktop/desktop.nix,
+# which uses systemd.user.tmpfiles.rules to create this file for all users
+# (including those not using home-manager).
+# This file can be removed once nothing references it anymore.
 _: {
   xdg.configFile = {
     # Keep IBus Compose behavior aligned with the system locale table.

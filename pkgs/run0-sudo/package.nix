@@ -4,7 +4,7 @@ writeShellApplication {
   name = "run0-sudo";
 
   text = ''
-    RUN0=$(command -v run0) || { echo "run0 não encontrado (systemd v256+?)" >&2; exit 1; }
+    RUN0=$(command -v run0) || { echo "run0 not found (systemd v256+?)" >&2; exit 1; }
 
     AUTO_KEEP=(
       PATH HOME USER LOGNAME
@@ -81,7 +81,7 @@ writeShellApplication {
       if [[ "$cmd" != */* ]]; then
         resolved=$(PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin command -v -- "$cmd" 2>/dev/null || true)
         if [[ -z "$resolved" ]]; then
-          echo "run0-sudo: comando não encontrado: $cmd" >&2
+          echo "run0-sudo: command not found: $cmd" >&2
           exit 127
         fi
         pos_args[0]="$resolved"

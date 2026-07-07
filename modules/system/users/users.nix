@@ -1,6 +1,6 @@
-# Módulo de usuários: Esqueleto para definição de usuários
-# Os arquivos de usuário ficam em users/ (público — contêm apenas pseudônimos)
-# Consulte users/skeleton.nix para criar seu arquivo de usuário
+# Users module: skeleton for defining users
+# User files live in users/ (public — they only contain aliases)
+# See users/skeleton.nix to create your user file
 {
   config,
   lib,
@@ -9,92 +9,93 @@
 }:
 
 let
-  # Usuários normais com senha inicial declarada (initialPassword ou initialHashedPassword).
-  # Para esses usuários o sistema força a troca de senha no primeiro login,
-  # usando um arquivo de flag em /persist para que a exigência ocorra apenas uma vez.
+  # Normal users with an initial password declared (initialPassword or initialHashedPassword).
+  # For these users the system forces a password change on first login,
+  # using a flag file in /persist so the requirement only fires once.
   usersWithInitialPassword = lib.filterAttrs (
     _name: user:
     user.isNormalUser && (user.initialPassword != null || user.initialHashedPassword != null)
   ) config.users.users;
 in
 {
-  # Habilitar Zsh globalmente (necessário para usar como shell de usuário)
+  # Enable Zsh globally (needed to use it as a user shell)
   programs.zsh.enable = true;
   programs.fish.enable = true;
 
-  # Configuração padrão de sudo
+  # Default sudo configuration
   security.sudo = {
     enable = true;
     wheelNeedsPassword = true;
   };
 
-  # Os usuários são definidos em arquivos separados em users/
-  # Exemplo: users/abutre.nix
-  # Para criar um usuário, copie users/skeleton.nix para users/<seu-usuario>.nix
-  # e descomente/ajuste as configurações
+  # Users are defined in separate files under users/
+  # Example: users/abutre.nix
+  # To create a user, copy users/skeleton.nix to users/<your-username>.nix
+  # and uncomment/adjust the settings
 
-  # Configuração de grupos padrão disponíveis
+  # Default group configuration available
   users.groups = {
-    plugdev = { }; # Acesso a dispositivos USB
-    dialout = { }; # Portas seriais
-    video = { }; # Acesso à GPU
-    audio = { }; # Acesso ao áudio
-    docker = { }; # Compatibilidade com Docker (Podman)
+    plugdev = { }; # USB device access
+    dialout = { }; # Serial ports
+    video = { }; # GPU access
+    audio = { }; # Audio access
+    docker = { }; # Docker compatibility (Podman)
   };
 
   # ─────────────────────────────────────────────────────────────────────────
-  # Persistência do /etc/shadow (senhas de usuário)
+  # /etc/shadow persistence (user passwords)
   # ─────────────────────────────────────────────────────────────────────────
   #
-  # PROBLEMA RAIZ: tanto o script de ativação 'users' do NixOS quanto
-  # ferramentas como 'passwd' e 'chage' atualizam /etc/shadow via rename()
-  # atômico. Qualquer bind mount em /etc/shadow é desfeito no instante do
-  # rename, tornando o arquivo bind-mounted um inode órfão. Com tmpfs na
-  # raiz (/), o /etc/shadow recém-criado fica apenas na RAM e é perdido no
-  # próximo boot.
+  # ROOT CAUSE: both NixOS's 'users' activation script and tools like
+  # 'passwd' and 'chage' update /etc/shadow via an atomic rename(). Any bind
+  # mount on /etc/shadow gets undone the instant the rename happens, turning
+  # the bind-mounted file into an orphaned inode. With tmpfs on the root
+  # (/), the newly created /etc/shadow only lives in RAM and is lost on the
+  # next boot.
   #
-  # SOLUÇÃO EM DOIS PASSOS:
+  # TWO-STEP SOLUTION:
   #
-  # 1. Activation script 'restoreShadow' (deps = ["etc"]) — roda ANTES de
-  #    'users' (via system.activationScripts.users.deps abaixo):
-  #    Copia /persist/etc/shadow → /etc/shadow se existir, sem bind mount.
-  #    Como 'users' tem users.mutableUsers = true (padrão NixOS), ao ler o
-  #    /etc/shadow restaurado ele PRESERVA as senhas dos usuários existentes
-  #    na saída do novo shadow, em vez de aplicar initialPassword.
+  # 1. 'restoreShadow' activation script (deps = ["etc"]) — runs BEFORE
+  #    'users' (via system.activationScripts.users.deps below):
+  #    Copies /persist/etc/shadow → /etc/shadow if it exists, without a
+  #    bind mount. Since 'users' has users.mutableUsers = true (NixOS
+  #    default), when it reads the restored /etc/shadow it PRESERVES the
+  #    existing users' passwords in the new shadow output, instead of
+  #    applying initialPassword.
   #
-  # 2. Serviço systemd 'persistShadow' (path unit PathChanged=/etc/shadow):
-  #    Monitora /etc/shadow com inotify (PathChanged detecta IN_MOVED_TO,
-  #    ou seja, rename). Toda vez que /etc/shadow muda — seja por 'passwd',
-  #    'chage', ou pelo script de ativação 'users' — copia imediatamente
-  #    /etc/shadow → /persist/etc/shadow, garantindo a persistência.
+  # 2. 'persistShadow' systemd service (path unit PathChanged=/etc/shadow):
+  #    Watches /etc/shadow with inotify (PathChanged detects IN_MOVED_TO,
+  #    i.e. rename). Every time /etc/shadow changes — whether via 'passwd',
+  #    'chage', or the 'users' activation script — it immediately copies
+  #    /etc/shadow → /persist/etc/shadow, ensuring persistence.
   system.activationScripts.restoreShadow = {
     deps = [ "etc" ];
     text = ''
       mkdir -p /persist/etc
       if [ -f /persist/etc/shadow ]; then
-        # Restaura o shadow persistido ANTES do script 'users' rodar.
-        # Com users.mutableUsers = true (padrão NixOS), o script 'users'
-        # lerá este arquivo e preservará as senhas dos usuários existentes.
+        # Restore the persisted shadow BEFORE the 'users' script runs.
+        # With users.mutableUsers = true (NixOS default), the 'users'
+        # script will read this file and preserve existing users' passwords.
         install -m 640 /persist/etc/shadow /etc/shadow
       fi
     '';
   };
 
-  # Garante que o script 'users' espere o 'restoreShadow' concluir,
-  # de modo que ele leia o /etc/shadow já restaurado.
+  # Ensures the 'users' script waits for 'restoreShadow' to finish, so it
+  # reads the already-restored /etc/shadow.
   system.activationScripts.users.deps = [ "restoreShadow" ];
 
   systemd = {
-    # Permissão de escrita em /etc/nixos para o grupo wheel.
-    # O diretório real fica em /persist/etc/nixos (bind mount via preservation).
-    # A regra 'z' ajusta dono e modo sem apagar o conteúdo existente.
+    # Write permission on /etc/nixos for the wheel group.
+    # The real directory lives at /persist/etc/nixos (bind mount via preservation).
+    # The 'z' rule adjusts owner and mode without wiping existing content.
     tmpfiles.rules = [ "z /persist/etc/nixos 0775 root wheel - -" ];
 
-    # Monitora /etc/shadow e persiste toda alteração em /persist/etc/shadow.
-    # PathChanged captura IN_MOVED_TO (rename atômico do 'passwd'/'chage'/'users')
-    # bem como IN_CLOSE_WRITE (escrita direta). O serviço é oneshot e idempotente.
+    # Watches /etc/shadow and persists every change to /persist/etc/shadow.
+    # PathChanged catches IN_MOVED_TO (atomic rename from 'passwd'/'chage'/'users')
+    # as well as IN_CLOSE_WRITE (direct write). The service is oneshot and idempotent.
     paths.persistShadow = {
-      description = "Monitorar /etc/shadow para persistir alterações de senha";
+      description = "Watch /etc/shadow to persist password changes";
       wantedBy = [ "multi-user.target" ];
       pathConfig = {
         PathChanged = "/etc/shadow";
@@ -104,7 +105,7 @@ in
 
     services = {
       persistShadow = {
-        description = "Persistir /etc/shadow em /persist/etc/shadow";
+        description = "Persist /etc/shadow to /persist/etc/shadow";
         serviceConfig = {
           Type = "oneshot";
         };
@@ -116,16 +117,18 @@ in
         '';
       };
 
-      # Força a troca de senha no primeiro login para usuários com initialPassword/initialHashedPassword.
-      # Usa um arquivo de flag em /persist para que a troca seja exigida apenas uma vez.
+      # Forces a password change on first login for users with
+      # initialPassword/initialHashedPassword.
+      # Uses a flag file in /persist so the change is only required once.
       #
-      # Inicia após 'persistShadow.path' (acima), garantindo que o monitor inotify já
-      # esteja ativo quando 'chage -d 0' modifica /etc/shadow. Assim a alteração é
-      # imediatamente copiada para /persist/etc/shadow pelo persistShadow.service.
+      # Starts after 'persistShadow.path' (above), ensuring the inotify
+      # watch is already active when 'chage -d 0' modifies /etc/shadow.
+      # This way the change is immediately copied to /persist/etc/shadow by
+      # persistShadow.service.
       #
-      # Para redefinir: apague /persist/.password-change-required-<usuario> e reinicie.
+      # To reset: delete /persist/.password-change-required-<user> and reboot.
       forceInitialPasswordChange = lib.mkIf (usersWithInitialPassword != { }) {
-        description = "Forçar troca de senha no primeiro login (usuários com senha inicial)";
+        description = "Force password change on first login (users with an initial password)";
         wantedBy = [ "multi-user.target" ];
         after = [
           "local-fs.target"
@@ -147,7 +150,7 @@ in
               if ${pkgs.shadow}/bin/chage -d 0 ${escapedUser}; then
                 touch ${flagFile}
               else
-                echo "forceInitialPasswordChange: chage falhou para ${escapedUser}" >&2
+                echo "forceInitialPasswordChange: chage failed for ${escapedUser}" >&2
               fi
             fi
           ''

@@ -3,7 +3,7 @@ let
   inherit (inputs.nixpkgs) lib;
   users = config.dendritic.users;
 
-  # Módulo HM por usuário: common.nix + home.nix específico (se existir)
+  # Per-user HM module: common.nix + user-specific home.nix (if it exists)
   mkUserHome = username: {
     imports = [
       ../../home/common.nix
@@ -18,15 +18,15 @@ in
     inputs.home-manager.nixosModules.home-manager
     {
       home-manager = {
-        # Usa o nixpkgs do sistema (overlay local e allowUnfree já aplicados).
+        # Uses the system's nixpkgs (local overlay and allowUnfree already applied).
         useGlobalPkgs = true;
-        # Instala pacotes em /etc/profiles/per-user/<user> em vez de ~/.nix-profile.
+        # Installs packages to /etc/profiles/per-user/<user> instead of ~/.nix-profile.
         useUserPackages = true;
-        # Preserva arquivos conflitantes com extensão .bkp
+        # Preserves conflicting files with a .bkp extension
         backupFileExtension = "bkp";
         extraSpecialArgs = {
           inherit inputs;
-          # flake: saídas do flake (ex.: packages.helix usado em modules/home/apps/editors/helix/)
+          # flake: flake outputs (e.g. packages.helix used in modules/home/apps/editors/helix/)
           inherit (config) flake;
         };
         sharedModules = [

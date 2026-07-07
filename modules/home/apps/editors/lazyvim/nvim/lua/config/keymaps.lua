@@ -1,3 +1,3 @@
--- Keymaps adicionais.
--- O LazyVim já define a maioria dos keymaps essenciais (ver :LazyExtras → keymaps).
--- Adicione aqui apenas o que for específico desta configuração.
+-- Additional keymaps.
+-- LazyVim already defines most of the essential keymaps (see :LazyExtras → keymaps).
+-- Only add here what is specific to this configuration.

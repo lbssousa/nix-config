@@ -1,5 +1,5 @@
-# Módulo de redes Wi-Fi: Configuração de redes Wi-Fi pessoais via NetworkManager.
-# A senha é gerenciada pelo sops-nix; os SSIDs vêm de inputs.nix-secrets (não são segredos).
+# Wi-Fi networks module: personal Wi-Fi network configuration via NetworkManager.
+# The password is managed by sops-nix; the SSIDs come from inputs.nix-secrets (not secrets).
 { config, inputs, ... }:
 
 let
@@ -8,8 +8,8 @@ in
 
 {
   sops = {
-    # Chave age para descriptografar os segredos durante a ativação do sistema (boot).
-    # O caminho deve ser de sistema (não home de usuário), pois a descriptografia ocorre como root.
+    # age key to decrypt secrets during system activation (boot).
+    # The path must be system-wide (not a user home), since decryption happens as root.
     age.keyFile = "/persist/etc/sops/age/keys.txt";
 
     secrets.wifi_password = {
@@ -17,7 +17,7 @@ in
       key = "wifi/password";
     };
 
-    # Perfil NetworkManager — banda 5 GHz
+    # NetworkManager profile — 5 GHz band
     templates."home-wifi-5g.nmconnection" = {
       content = ''
         [connection]
@@ -48,7 +48,7 @@ in
       group = "root";
     };
 
-    # Perfil NetworkManager — banda 2,4 GHz
+    # NetworkManager profile — 2.4 GHz band
     templates."home-wifi-2.4g.nmconnection" = {
       content = ''
         [connection]

@@ -1,20 +1,20 @@
-# Notificação gráfica GNOME quando o PAM solicita toque na YubiKey.
+# GNOME desktop notification when PAM asks for a YubiKey touch.
 #
-# Insere um pam_exec.so antes do pam_u2f (ordem 10900) no stack de sudo e
-# polkit-1. O script descobre o usuário via PAM_RUSER (ou loginuid como
-# fallback), verifica se há sessão gráfica em /run/user/<uid>/bus e envia
-# uma notificação urgente via org.freedesktop.Notifications (gnome-shell).
-# A chamada é feita em background para não bloquear o sudo enquanto aguarda
-# a autenticação U2F.
+# Inserts a pam_exec.so before pam_u2f (order 10900) in the sudo and
+# polkit-1 stacks. The script figures out the user via PAM_RUSER (or
+# loginuid as a fallback), checks whether there's a graphical session at
+# /run/user/<uid>/bus, and sends an urgent notification via
+# org.freedesktop.Notifications (gnome-shell). The call runs in the
+# background so it doesn't block sudo while waiting for U2F authentication.
 { pkgs, ... }:
 
 let
   notifyScript = pkgs.writeShellScript "yubikey-touch-notify" ''
-    # Determina o usuário que invocou sudo/polkit
+    # Determine the user who invoked sudo/polkit
     user="''${PAM_RUSER:-}"
 
-    # Fallback: loginuid do processo PAM (útil no polkit onde PAM_RUSER pode
-    # estar vazio ou ser "root")
+    # Fallback: loginuid of the PAM process (useful in polkit, where
+    # PAM_RUSER may be empty or "root")
     if [ -z "$user" ] || [ "$user" = "root" ]; then
       loginuid=$(cat /proc/self/loginuid 2>/dev/null || true)
       if [ -n "$loginuid" ] && [ "$loginuid" != "4294967295" ]; then
@@ -27,21 +27,21 @@ let
     uid=$(id -u "$user" 2>/dev/null) || exit 0
     bus="/run/user/$uid/bus"
 
-    # Só notifica se o usuário tiver sessão gráfica ativa
+    # Only notify if the user has an active graphical session
     [ -S "$bus" ] || exit 0
 
-    # Dispara a notificação em background para não bloquear o sudo
+    # Fire the notification in the background so it doesn't block sudo
     ${pkgs.util-linux}/bin/runuser -u "$user" -- \
       ${pkgs.coreutils}/bin/env \
         DBUS_SESSION_BUS_ADDRESS="unix:path=$bus" \
         XDG_RUNTIME_DIR="/run/user/$uid" \
       ${pkgs.libnotify}/bin/notify-send \
-        --app-name="Autenticação" \
+        --app-name="Authentication" \
         --urgency=critical \
         --icon=security-high-symbolic \
         --expire-time=30000 \
-        "Toque na YubiKey" \
-        "Autenticação requer toque na chave de segurança." \
+        "Touch the YubiKey" \
+        "Authentication requires a touch on the security key." \
       >/dev/null 2>&1 &
   '';
 in
@@ -49,15 +49,15 @@ in
   security.pam.services.sudo.rules.auth.yubikeyNotify = {
     control = "optional";
     modulePath = "${pkgs.linux-pam}/lib/security/pam_exec.so";
-    # seteuid: executa o script com UID efetivo (root) em vez do UID real
-    # (o usuário invocante). Necessário para que runuser possa trocar de
-    # usuário — sem seteuid, pam_exec roda o script como o usuário real e
-    # runuser recusa a chamada por falta de privilégio.
+    # seteuid: runs the script with the effective UID (root) instead of the
+    # real UID (the invoking user). Needed so runuser can switch users —
+    # without seteuid, pam_exec runs the script as the real user and
+    # runuser refuses the call for lack of privilege.
     args = [
       "seteuid"
       "${notifyScript}"
     ];
-    order = 10850; # Imediatamente antes do pam_u2f (order 10900)
+    order = 10850; # Immediately before pam_u2f (order 10900)
   };
 
   security.pam.services."polkit-1".rules.auth.yubikeyNotify = {

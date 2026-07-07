@@ -1,28 +1,28 @@
 # nixos-config
 
-Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento declarativo (disko), sistema efêmero (preservation), swap híbrida e desktop GNOME.
+Personal NixOS configuration based on Flakes, with Btrfs, declarative partitioning (disko), an ephemeral system (preservation), hybrid swap and a GNOME desktop.
 
-## 🎯 Características
+## 🎯 Features
 
-- ✅ **Nix Flakes**: Configuração reproduzível e declarativa
-- ✅ **Disko**: Particionamento declarativo de disco
-- ✅ **LUKS + LVM**: Criptografia completa do disco
-- ✅ **Btrfs**: Sistema de arquivos moderno com compressão zstd, subvolumes e snapshots
-- ✅ **Preservation**: Sistema efêmero com tmpfs na raiz — limpo a cada boot
-- ✅ **Swap híbrida**: zram + swap em disco para máxima performance
-- ✅ **Desktop GNOME**: GNOME com apps e fontes configurados declarativamente via Nix
-- ✅ **Flatpak**: Apenas apps sem equivalente no nixpkgs (DistroShelf, Ignition, Warehouse, Bazaar, Flatseal) instalados declarativamente via nix-flatpak
-- ✅ **Podman + Distrobox**: Containers rootless (experiência Silverblue)
-- ✅ **Home Manager**: Gerenciamento de configurações de usuário
-- ✅ **Brave**: Navegador padrão instalado via Nix
-- ✅ **Ghostty**: Terminal moderno via Nix, com perfil sem decorações para PaperWM/quake-terminal
-- ✅ **Multi-host**: Configurações específicas para cada máquina
-- ✅ **Modular**: Módulos compartilhados para fácil manutenção
-- ✅ **Secure Boot**: Suporte via Limine (barbudus)
-- ✅ **YubiKey U2F**: sudo, run0 e pkexec autenticados por chave de hardware; senha como fallback quando a YubiKey estiver ausente
-- ✅ **git-crypt**: Criptografia seletiva de arquivos sensíveis no repositório
+- ✅ **Nix Flakes**: Reproducible, declarative configuration
+- ✅ **Disko**: Declarative disk partitioning
+- ✅ **LUKS + LVM**: Full-disk encryption
+- ✅ **Btrfs**: Modern filesystem with zstd compression, subvolumes and snapshots
+- ✅ **Preservation**: Ephemeral system with tmpfs on the root — clean on every boot
+- ✅ **Hybrid swap**: zram + disk swap for maximum performance
+- ✅ **GNOME Desktop**: GNOME with apps and fonts configured declaratively via Nix
+- ✅ **Flatpak**: Only apps with no nixpkgs equivalent (DistroShelf, Ignition, Warehouse, Bazaar, Flatseal), installed declaratively via nix-flatpak
+- ✅ **Podman + Distrobox**: Rootless containers (Silverblue-like experience)
+- ✅ **Home Manager**: User configuration management
+- ✅ **Brave**: Default browser, installed via Nix
+- ✅ **Ghostty**: Modern terminal via Nix, with an undecorated profile for PaperWM/quake-terminal
+- ✅ **Multi-host**: Machine-specific configurations
+- ✅ **Modular**: Shared modules for easy maintenance
+- ✅ **Secure Boot**: Support via Limine (barbudus)
+- ✅ **YubiKey U2F**: sudo, run0 and pkexec authenticated by hardware key; password as a fallback when the YubiKey is absent
+- ✅ **git-crypt**: Selective encryption of sensitive files in the repository
 
-## 🖥️ Hosts Suportados
+## 🖥️ Supported Hosts
 
 ### barbudus
 
@@ -30,52 +30,52 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 - **CPU**: Intel i5-10210U
 - **RAM**: 16 GB
 - **GPU**: Intel UHD 620 + NVIDIA GeForce MX230 (PRIME offload)
-- **Swap**: 20 GB em disco + 8 GB zram
-- **Extras**: NVIDIA drivers + Secure Boot, sensor de impressão digital Goodix
+- **Swap**: 20 GB on disk + 8 GB zram
+- **Extras**: NVIDIA drivers + Secure Boot, Goodix fingerprint sensor
 
 ### bigodon
 
 - **Hardware**: Morefine M6 Mini-PC
 - **CPU**: Intel N200
 - **RAM**: 16 GB
-- **GPU**: Intel UHD Graphics (integrada)
-- **Swap**: 20 GB em disco + 8 GB zram
+- **GPU**: Intel UHD Graphics (integrated)
+- **Swap**: 20 GB on disk + 8 GB zram
 
-## 📁 Estrutura do Projeto
+## 📁 Project Structure
 
 ```text
 .
-├── flake.nix                 # Entrada principal do Flake
-├── flake.lock                # Lockfile das dependências
-├── dendritic/                # Módulos de topo (padrão dendritic)
-│   ├── imports.nix           # Import automático de todos os módulos dendríticos
-│   ├── options.nix           # Opções do namespace `dendritic.*`
+├── flake.nix                 # Main flake entry point
+├── flake.lock                # Dependency lockfile
+├── dendritic/                # Top-level modules (dendritic pattern)
+│   ├── imports.nix           # Automatic import of all dendritic modules
+│   ├── options.nix           # Options for the `dendritic.*` namespace
 │   ├── data/
-│   │   ├── hosts.nix         # Inventário de hosts (sistema, desktop padrão, módulos extras)
-│   │   └── users.nix         # Inventário de usuários do sistema/home
+│   │   ├── hosts.nix         # Host inventory (system, default desktop, extra modules)
+│   │   └── users.nix         # System/home user inventory
 │   ├── features/
-│   │   ├── local-overlay.nix # Overlay local (importa overlays/default.nix)
-│   │   └── nixos-modules.nix # Lista de módulos NixOS compartilhados e módulos de usuários
+│   │   ├── local-overlay.nix # Local overlay (imports overlays/default.nix)
+│   │   └── nixos-modules.nix # List of shared NixOS modules and user modules
 │   └── flake/
-│       ├── nixos-configurations.nix # Geração das saídas nixosConfigurations
-│       └── disko-configurations.nix # Geração das saídas diskoConfigurations
-├── disko.nix                 # Template Btrfs de particionamento (LUKS+LVM+Btrfs)
-├── home/                     # Configurações Home Manager (módulo NixOS, aplicadas no rebuild)
-│   ├── common.nix            # Config HM base — aplicada a todos os usuários
-│   └── users/                # Customizações por usuário
+│       ├── nixos-configurations.nix # Generates the nixosConfigurations outputs
+│       └── disko-configurations.nix # Generates the diskoConfigurations outputs
+├── disko.nix                 # Btrfs partitioning template (LUKS+LVM+Btrfs)
+├── home/                     # Home Manager configurations (NixOS module, applied on rebuild)
+│   ├── common.nix            # Base HM config — applied to all users
+│   └── users/                # Per-user customizations
 │       └── abutre/
-│           └── home.nix      # Config específica do abutre (p10k, git, Bitwarden)
-├── hosts/                    # Configurações específicas por host (NixOS)
+│           └── home.nix      # abutre-specific config (p10k, git, Bitwarden)
+├── hosts/                    # Host-specific configurations (NixOS)
 │   ├── barbudus/
-│   │   ├── configuration.nix        # Config específica (NVIDIA, fprintd, etc.)
+│   │   ├── configuration.nix        # Host-specific config (NVIDIA, fprintd, etc.)
 │   │   ├── hardware-configuration.nix # Hardware + disko + zram
-│   │   └── disko.nix                # Parâmetros do disko para este host
+│   │   └── disko.nix                # disko parameters for this host
 │   └── bigodon/
 │       ├── configuration.nix
 │       ├── hardware-configuration.nix
 │       └── disko.nix
-├── modules/                  # Módulos compartilhados (sistema e Home Manager)
-│   ├── home/                 # Módulos Home Manager reutilizáveis
+├── modules/                  # Shared modules (system and Home Manager)
+│   ├── home/                 # Reusable Home Manager modules
 │   │   ├── apps/
 │   │   │   ├── nix-validation.nix
 │   │   │   ├── browsers/
@@ -83,108 +83,108 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 │   │   │   │   ├── firefox.nix
 │   │   │   │   └── google-chrome.nix
 │   │   │   ├── security/
-│   │   │   │   ├── bitwarden.nix  # SSH agent + integração Zsh
+│   │   │   │   ├── bitwarden.nix  # SSH agent + Zsh integration
 │   │   │   │   ├── keepassxc.nix
 │   │   │   │   └── yubikey.nix
 │   │   │   └── terminals/
-│   │   │       ├── ghostty.nix    # Terminal padrão, perfis c/ e s/ decorações
+│   │   │       ├── ghostty.nix    # Default terminal, decorated/undecorated profiles
 │   │   │       └── tmux.nix
 │   │   └── desktop/
 │   │       └── ibus-compose.nix
-│   └── system/               # Módulos de sistema (nixos-rebuild)
+│   └── system/               # System modules (nixos-rebuild)
 │       ├── audio/
 │       │   └── audio.nix     # PipeWire
 │       ├── boot/
 │       │   └── boot.nix      # systemd-boot/Limine + Plymouth (flicker-free)
 │       ├── containers/
-│       │   └── containers.nix # Podman rootless + Distrobox
+│       │   └── containers.nix # Rootless Podman + Distrobox
 │       ├── core/
-│       │   ├── common.nix          # Configurações básicas (locale, nix, Btrfs)
-│       │   ├── preservation.nix    # Raiz tmpfs + diretórios persistentes (/persist)
-│       │   └── preservation-zfs.nix # Variante ZFS com rollback no initrd
+│       │   ├── common.nix          # Base settings (locale, nix, Btrfs)
+│       │   ├── preservation.nix    # tmpfs root + persistent directories (/persist)
+│       │   └── preservation-zfs.nix # ZFS variant with rollback in the initrd
 │       ├── desktop/
-│       │   └── desktop.nix   # GNOME, Flatpak, fontes, instalação automática de apps
+│       │   └── desktop.nix   # GNOME, Flatpak, fonts, automatic app installation
 │       ├── hardware/
-│       │   └── printing.nix  # Impressora Epson ESC-P/R + ecbd.service
+│       │   └── printing.nix  # Epson ESC-P/R printer + ecbd.service
 │       ├── network/
-│       │   ├── ssh.nix       # Servidor SSH
-│       │   └── wifi.nix      # Redes Wi-Fi declarativas (NetworkManager)
+│       │   ├── ssh.nix       # SSH server
+│       │   └── wifi.nix      # Declarative Wi-Fi networks (NetworkManager)
 │       ├── security/
-│       │   └── tpm2.nix      # TPM2 para desbloqueio automático do LUKS
+│       │   └── tpm2.nix      # TPM2 for automatic LUKS unlock
 │       ├── shell/
-│       │   └── shells.nix    # Shells disponíveis no sistema (Bash, Fish, Zsh)
+│       │   └── shells.nix    # Shells available on the system (Bash, Fish, Zsh)
 │       ├── tools/
-│       │   └── packages.nix  # Pacotes essenciais (Neovim, Helix, home-manager, just, etc.)
+│       │   └── packages.nix  # Essential packages (Neovim, Helix, home-manager, just, etc.)
 │       └── users/
-│           └── users.nix     # Contas de usuário, grupos e política de sudo
+│           └── users.nix     # User accounts, groups and sudo policy
 ├── overlays/
-│   └── default.nix           # Overlay local: pacotes personalizados adicionados ao nixpkgs
-├── pkgs/                     # Pacotes customizados (fora do nixpkgs oficial)
+│   └── default.nix           # Local overlay: custom packages added to nixpkgs
+├── pkgs/                     # Custom packages (outside official nixpkgs)
 │   ├── epson-printer-utility/
 │   ├── gregorio-lsp/
 │   ├── gregolint/
 │   ├── tree-sitter-gregorio/
 │   └── zed-gregorio/
-├── justfile                  # Receitas Just para switch, HM e manutenção
+├── justfile                  # Just recipes for switch, HM and maintenance
 ├── scripts/
-│   ├── install.sh            # Script de instalação automatizada
-│   ├── update.sh             # Atualizar flake inputs + nixos-rebuild switch
-│   ├── enroll-tpm2.sh        # Configurar desbloqueio LUKS via TPM2
-│   └── setup-secureboot.sh   # Configurar Secure Boot + assinar módulos (barbudus)
-├── users/                    # Definições de contas de usuário NixOS
-│   ├── skeleton.nix          # Template para criar novo usuário
-│   ├── abutre.nix            # Conta do sistema do abutre
-│   ├── surubi.nix            # Conta do sistema da surubi
-│   └── ...                   # Demais usuários
-├── .gitignore                # Ignorar arquivos temporários e chaves
-├── INSTALLATION.md           # Guia de instalação detalhado
-├── NIXOS_CONFIG_SPECS.md     # Especificações do projeto
-└── README.md                 # Este arquivo
+│   ├── install.sh            # Automated installation script
+│   ├── update.sh             # Update flake inputs + nixos-rebuild switch
+│   ├── enroll-tpm2.sh        # Set up LUKS unlock via TPM2
+│   └── setup-secureboot.sh   # Set up Secure Boot + sign modules (barbudus)
+├── users/                    # NixOS user account definitions
+│   ├── skeleton.nix          # Template for creating a new user
+│   ├── abutre.nix            # abutre's system account
+│   ├── surubi.nix            # surubi's system account
+│   └── ...                   # Other users
+├── .gitignore                # Ignore temporary files and keys
+├── INSTALLATION.md           # Detailed installation guide
+├── NIXOS_CONFIG_SPECS.md     # Project specifications
+└── README.md                 # This file
 ```
 
-### Integração NixOS + Home Manager
+### NixOS + Home Manager Integration
 
-O Home Manager é integrado como módulo NixOS — **um único `nixos-rebuild switch` aplica tanto
-as configurações do sistema quanto as de todos os usuários gerenciados**. Não há um plano separado
-de Home Manager: tudo é acionado pelo mesmo rebuild.
+Home Manager is integrated as a NixOS module — **a single `nixos-rebuild switch` applies both
+the system configuration and every managed user's**. There's no separate Home Manager
+plane: everything is triggered by the same rebuild.
 
-| Diretórios | O que contém |
+| Directories | What it contains |
 | ---------- | ------------ |
-| `dendritic/`, `hosts/`, `modules/system/`, `users/` | Configurações de sistema (NixOS) |
-| `home/`, `modules/home/` | Configurações de usuário (Home Manager, aplicadas via NixOS) |
+| `dendritic/`, `hosts/`, `modules/system/`, `users/` | System (NixOS) configuration |
+| `home/`, `modules/home/` | User configuration (Home Manager, applied via NixOS) |
 
-- Qualquer mudança em `home/` é aplicada no próximo `sudo nixos-rebuild switch` (ou `just switch`).
-- Ambos usam o mesmo `nixpkgs` (pinado via `flake.lock`).
+- Any change in `home/` is applied on the next `sudo nixos-rebuild switch` (or `just switch`).
+- Both use the same `nixpkgs` (pinned via `flake.lock`).
 
-## 🚀 Início Rápido
+## 🚀 Quick Start
 
-### Pré-requisitos
+### Prerequisites
 
-- ISO do NixOS (minimal ou graphical): [https://nixos.org/download.html](https://nixos.org/download.html)
-- USB bootável criado com a ISO
+- NixOS ISO (minimal or graphical): [https://nixos.org/download.html](https://nixos.org/download.html)
+- Bootable USB created from the ISO
 
-### Instalação
+### Installation
 
-Veja o [Guia de Instalação Completo](INSTALLATION.md) para instruções detalhadas.
+See the [Full Installation Guide](INSTALLATION.md) for detailed instructions.
 
-**Instalação automatizada com o script:**
+**Automated installation with the script:**
 
 ```bash
-# 1. Boot no USB do NixOS
+# 1. Boot from the NixOS USB
 
-# 2. Clonar este repositório
+# 2. Clone this repository
 nix-shell -p git
 git clone https://github.com/lbssousa/nixos-config.git /tmp/nixos-config
 cd /tmp/nixos-config
 
-# 3. Executar o script de instalação como root (guia passo a passo interativo)
+# 3. Run the installation script as root (interactive step-by-step guide)
 sudo bash scripts/install.sh
 
-# Para ver todas as opções disponíveis:
+# To see all available options:
 sudo bash scripts/install.sh --help
 ```
 
-**Instalação não-interativa (exemplo completo):**
+**Non-interactive installation (full example):**
 
 ```bash
 sudo bash scripts/install.sh \
@@ -194,126 +194,126 @@ sudo bash scripts/install.sh \
   --non-interactive
 ```
 
-**Instalação manual (passo a passo):**
+**Manual installation (step by step):**
 
 ```bash
-# 1. Boot no USB do NixOS
+# 1. Boot from the NixOS USB
 
-# 2. Habilitar flakes
+# 2. Enable flakes
 mkdir -p ~/.config/nix
 echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
 
-# 3. Clonar este repositório
+# 3. Clone this repository
 nix-shell -p git
 git clone https://github.com/lbssousa/nixos-config.git /tmp/nixos-config
 cd /tmp/nixos-config
 
-# 4. Ajustar device no disko.nix do host
-# Para barbudus:
-nano hosts/barbudus/disko.nix  # Ajuste /dev/nvme0n1 se necessário
-# Para bigodon:
+# 4. Adjust the device in the host's disko.nix
+# For barbudus:
+nano hosts/barbudus/disko.nix  # Adjust /dev/nvme0n1 if needed
+# For bigodon:
 nano hosts/bigodon/disko.nix
 
-# 5. Particionar e instalar (⚠️ APAGA TODOS OS DADOS DO DISCO!)
-# Cria: raiz tmpfs + subvolumes Btrfs (@home, @nix, @persist, @log, ...)
-HOST=barbudus  # ou bigodon
+# 5. Partition and install (⚠️ ERASES ALL DATA ON THE DISK!)
+# Creates: tmpfs root + Btrfs subvolumes (@home, @nix, @persist, @log, ...)
+HOST=barbudus  # or bigodon
 sudo nix run github:nix-community/disko -- --mode disko ./hosts/$HOST/disko.nix
 
-# 6. Instalar o NixOS
+# 6. Install NixOS
 sudo nixos-install --flake .#$HOST
 
-# 7. Definir senha do usuário
+# 7. Set the user's password
 sudo nixos-enter --root /mnt
-passwd seu-usuario
+passwd your-username
 exit
 
-# 8. Reiniciar
+# 8. Reboot
 sudo reboot
 ```
 
-### Atualização do sistema
+### Updating the system
 
 ```bash
-# Atualizar flake inputs e rebuildar o sistema (recomendado):
+# Update flake inputs and rebuild the system (recommended):
 sudo bash scripts/update.sh
 
-# Apenas atualizar flake inputs (sem rebuild):
+# Only update flake inputs (no rebuild):
 sudo bash scripts/update.sh --update-only
 
-# Apenas rebuild (sem atualizar inputs):
+# Only rebuild (without updating inputs):
 sudo bash scripts/update.sh --rebuild-only
 ```
 
-### Switch do sistema (inclui Home Manager)
+### System switch (includes Home Manager)
 
 ```bash
-# Via Just — eleva automaticamente com run0 (polkit/YubiKey):
-just switch                  # host atual
-just switch barbudus         # host específico
+# Via Just — automatically elevates with run0 (polkit/YubiKey):
+just switch                  # current host
+just switch barbudus         # specific host
 
-# Ou via alias de shell (disponível após o primeiro switch):
+# Or via shell alias (available after the first switch):
 nrs   # nixos-rebuild switch (NixOS + HM)
-nrb   # nixos-rebuild boot   (aplica no próximo boot)
-nru   # atualiza inputs + switch
+nrb   # nixos-rebuild boot   (applies on the next boot)
+nru   # updates inputs + switch
 ```
 
-> As configurações de Home Manager de todos os usuários são aplicadas automaticamente
-> a cada rebuild do sistema — não é necessário nenhum comando adicional.
+> Every user's Home Manager configuration is applied automatically on every
+> system rebuild — no additional command is needed.
 
-### Aliases de shell (bash/zsh)
+### Shell aliases (bash/zsh)
 
-Definidos em `home/common.nix` e disponíveis em sessões interativas após o primeiro `just switch`.
-Todos os aliases NixOS usam `run0` para elevação de privilégio via polkit/YubiKey
-(sem prompt de senha), e repassam `SSH_AUTH_SOCK` para que o `nixos-rebuild` acesse
-entradas de flake protegidas por SSH (ex.: `nix-secrets`).
-Como o Home Manager é um módulo NixOS, todo rebuild aplica NixOS e HM juntos.
+Defined in `home/common.nix` and available in interactive sessions after the first `just switch`.
+All NixOS aliases use `run0` for privilege elevation via polkit/YubiKey
+(no password prompt), and pass `SSH_AUTH_SOCK` through so `nixos-rebuild` can access
+SSH-gated flake inputs (e.g. `nix-secrets`).
+Since Home Manager is a NixOS module, every rebuild applies NixOS and HM together.
 
-| Alias | Efeito |
+| Alias | Effect |
 |-------|--------|
-| `nrs` | `nixos-rebuild switch` — aplica NixOS + HM e ativa imediatamente |
-| `nrb` | `nixos-rebuild boot` — prepara o próximo boot, sessão atual inalterada |
-| `nru` | `nix flake update` + `nixos-rebuild switch` — atualiza inputs e aplica |
-| `hmn` | `home-manager news` — exibe o changelog do HM desde a última geração |
+| `nrs` | `nixos-rebuild switch` — applies NixOS + HM and activates immediately |
+| `nrb` | `nixos-rebuild boot` — prepares the next boot, current session unchanged |
+| `nru` | `nix flake update` + `nixos-rebuild switch` — updates inputs and applies |
+| `hmn` | `home-manager news` — shows the HM changelog since the last generation |
 
-A função auxiliar `_nix_cfg()` resolve o caminho do flake automaticamente:
-`/etc/nixos` em sistemas implantados, ou `$PROJECTS/lbssousa/nix-config`
-em checkouts de desenvolvimento. O wrapper `just()` aponta sempre para
-`$(_nix_cfg)/justfile`, então `just switch` funciona em qualquer diretório.
+The `_nix_cfg()` helper function resolves the flake path automatically:
+`/etc/nixos` on deployed systems, or `$PROJECTS/lbssousa/nix-config`
+in development checkouts. The `just()` wrapper always points to
+`$(_nix_cfg)/justfile`, so `just switch` works from any directory.
 
 ### Rollback
 
 ```bash
-# Listar gerações disponíveis
+# List available generations
 sudo nix-env --list-generations --profile /nix/var/nix/profiles/system
 
-# Voltar para a geração anterior
+# Go back to the previous generation
 sudo nixos-rebuild switch --rollback
 ```
 
-## 🔧 Adicionando um Usuário
+## 🔧 Adding a User
 
-### 1. Criar a conta do sistema
+### 1. Create the system account
 
-1. Copie o template de usuário:
-
-   ```bash
-   cp users/skeleton.nix users/seu-usuario.nix
-   ```
-
-2. Edite `users/seu-usuario.nix` e substitua `skeleton` pelo nome do usuário.
-
-3. Adicione o arquivo ao índice do git:
+1. Copy the user template:
 
    ```bash
-   git add users/seu-usuario.nix
+   cp users/skeleton.nix users/your-username.nix
    ```
 
-4. Inclua o usuário no inventário do sistema:
+2. Edit `users/your-username.nix` and replace `skeleton` with the username.
 
-   > Com arquitetura dendrítica, a inclusão é centralizada no inventário.
-   > Adicione o login em `dendritic/data/users.nix`.
+3. Add the file to the git index:
 
-   Exemplo:
+   ```bash
+   git add users/your-username.nix
+   ```
+
+4. Add the user to the system inventory:
+
+   > With the dendritic architecture, this is centralized in the inventory.
+   > Add the login to `dendritic/data/users.nix`.
+
+   Example:
 
    ```nix
    config.dendritic.users = [
@@ -323,182 +323,182 @@ sudo nixos-rebuild switch --rollback
      "camelo"
      "cavalo"
      "macaco"
-     "seu-usuario"
+     "your-username"
    ];
    ```
 
-5. Rebuilde o sistema:
+5. Rebuild the system:
 
    ```bash
    just switch
    ```
 
-### 2. Configurar o Home Manager do usuário (opcional)
+### 2. Configure the user's Home Manager (optional)
 
-Para uma configuração HM personalizada (além da `home/common.nix` padrão):
+For a custom HM configuration (beyond the default `home/common.nix`):
 
-1. Crie o arquivo de customização do usuário:
+1. Create the user's customization file:
 
    ```bash
-   mkdir -p home/users/seu-usuario
-   cp home/users/abutre/home.nix home/users/seu-usuario/home.nix
-   # Edite conforme necessário
+   mkdir -p home/users/your-username
+   cp home/users/abutre/home.nix home/users/your-username/home.nix
+   # Edit as needed
    ```
 
-2. `dendritic/flake/home-nixos-module.nix` detecta automaticamente o arquivo
-   `home/users/<username>/home.nix` e o importa para o usuário correspondente.
+2. `dendritic/flake/home-nixos-module.nix` automatically detects the
+   `home/users/<username>/home.nix` file and imports it for the corresponding user.
 
-3. Aplique com um rebuild normal do sistema:
+3. Apply with a normal system rebuild:
 
    ```bash
    just switch
    ```
 
-> Usuários sem customização continuam recebendo apenas `home/common.nix` automaticamente.
+> Users with no customization automatically keep receiving only `home/common.nix`.
 
-## 🖥️ Adicionando um Novo Host
+## 🖥️ Adding a New Host
 
-1. Crie o diretório `hosts/<novo-host>/` com os arquivos:
-   - `configuration.nix` — configurações específicas do host (sem lista de imports compartilhados)
-   - `hardware-configuration.nix` — gerado por `nixos-generate-config`
-   - `disko.nix` — parâmetros de particionamento (copie de um host existente)
+1. Create the `hosts/<new-host>/` directory with the files:
+   - `configuration.nix` — host-specific settings (no shared imports list)
+   - `hardware-configuration.nix` — generated by `nixos-generate-config`
+   - `disko.nix` — partitioning parameters (copy from an existing host)
 
-2. Adicione o host no inventário dendrítico em `dendritic/data/hosts.nix`:
+2. Add the host to the dendritic inventory in `dendritic/data/hosts.nix`:
 
    ```nix
    config.dendritic.hosts = {
-     # ...hosts existentes...
-     novo-host = {
+     # ...existing hosts...
+     new-host = {
        system = "x86_64-linux";
        extraNixosModules = [ ];
      };
    };
    ```
 
-3. Adicione os arquivos do host ao índice do git (`git add`) antes de avaliar o flake,
-   pois flakes ignoram arquivos não rastreados.
+3. Add the host's files to the git index (`git add`) before evaluating the flake,
+   since flakes ignore untracked files.
 
-## 📡 Configurando Redes Wi-Fi
+## 📡 Configuring Wi-Fi Networks
 
-Edite `modules/system/network/wifi.nix` para declarar redes Wi-Fi via NetworkManager.
-O hash PBKDF2 da senha (mais seguro que texto simples) pode ser gerado com:
+Edit `modules/system/network/wifi.nix` to declare Wi-Fi networks via NetworkManager.
+The password's PBKDF2 hash (safer than plaintext) can be generated with:
 
 ```bash
-nix-shell -p wpa_supplicant --run "wpa_passphrase NomeDaRede SenhaAqui"
+nix-shell -p wpa_supplicant --run "wpa_passphrase NetworkName PasswordHere"
 ```
 
-Use o valor do campo `psk=` (sem o `#`) como valor de `psk` no perfil da conexão.
+Use the value of the `psk=` field (without the `#`) as the `psk` value in the connection profile.
 
-## 🔑 Criptografia de Arquivos (git-crypt)
+## 🔑 File Encryption (git-crypt)
 
-Este repositório suporta **git-crypt** para criptografar arquivos sensíveis rastreados pelo git.
-Arquivos marcados com o filtro `git-crypt` aparecem como texto legível para colaboradores com a
-chave e como dados binários cifrados para os demais. O `git-crypt` está disponível em todos os
-sistemas gerenciados por este repositório.
+This repository supports **git-crypt** to encrypt sensitive files tracked by git.
+Files marked with the `git-crypt` filter appear as readable text for collaborators with the
+key, and as encrypted binary data for everyone else. `git-crypt` is available on every
+system managed by this repository.
 
-### Desbloquear o repositório após clonar
+### Unlocking the repository after cloning
 
-Se o repositório tiver arquivos criptografados, desbloqueie-os antes de qualquer build:
+If the repository has encrypted files, unlock them before any build:
 
 ```bash
-# Com chave simétrica (arquivo exportado):
-git-crypt unlock /caminho/para/git-crypt.key
+# With a symmetric key (exported file):
+git-crypt unlock /path/to/git-crypt.key
 
-# Com chave GPG (chave configurada no keyring):
+# With a GPG key (configured in the keyring):
 git-crypt unlock
 ```
 
-> ⚠️ **Importante para Nix flakes**: arquivos cifrados não desbloqueados aparecem como dados
-> binários no repositório. O avaliador Nix tentará parseá-los como código e falhará com um
-> erro de sintaxe. Sempre execute `git-crypt unlock` antes de `just switch` ou
+> ⚠️ **Important for Nix flakes**: unlocked encrypted files appear as binary data
+> in the repository. The Nix evaluator will try to parse them as code and fail with a
+> syntax error. Always run `git-crypt unlock` before `just switch` or
 > `nixos-rebuild`.
 
-### Adicionar arquivos criptografados ao repositório
+### Adding encrypted files to the repository
 
 ```bash
-# 1. Inicializar git-crypt (apenas uma vez por repositório):
+# 1. Initialize git-crypt (only once per repository):
 git-crypt init
 
-# 2. Exportar a chave simétrica para backup seguro (guarde fora do repositório):
+# 2. Export the symmetric key for a secure backup (keep it outside the repository):
 git-crypt export-key ~/git-crypt-nixos-config.key
 
-# 3. Marcar arquivos para criptografia via .gitattributes:
-echo "caminho/para/arquivo filter=git-crypt diff=git-crypt" >> .gitattributes
-git add .gitattributes caminho/para/arquivo
-git commit -m "Adicionar arquivo secreto criptografado"
-# O arquivo é criptografado automaticamente no push e no clone por quem não tem a chave.
+# 3. Mark files for encryption via .gitattributes:
+echo "path/to/file filter=git-crypt diff=git-crypt" >> .gitattributes
+git add .gitattributes path/to/file
+git commit -m "Add encrypted secret file"
+# The file is automatically encrypted on push and on clone for anyone without the key.
 ```
 
 ## 📱 Flatpaks
 
-A maioria dos aplicativos do desktop GNOME é instalada diretamente via Nix
-(`environment.systemPackages`). O Flatpak é mantido apenas para os cinco apps
-sem equivalente adequado no nixpkgs:
+Most GNOME desktop applications are installed directly via Nix
+(`environment.systemPackages`). Flatpak is kept only for the five apps
+with no adequate nixpkgs equivalent:
 
-| App Flatpak | Descrição |
+| Flatpak App | Description |
 |-------------|-----------|
-| `com.github.tchx84.Flatseal` | Gerenciador de permissões Flatpak |
-| `com.ranfdev.DistroShelf` | Gerenciador de distros em contêineres |
-| `io.github.flattool.Ignition` | Gerenciador de autostart de Flatpaks |
-| `io.github.flattool.Warehouse` | Gerenciador de apps Flatpak |
-| `io.github.kolunmi.Bazaar` | Loja de apps GNOME |
+| `com.github.tchx84.Flatseal` | Flatpak permissions manager |
+| `com.ranfdev.DistroShelf` | Container distro manager |
+| `io.github.flattool.Ignition` | Flatpak autostart manager |
+| `io.github.flattool.Warehouse` | Flatpak app manager |
+| `io.github.kolunmi.Bazaar` | GNOME app store |
 
-Esses Flatpaks são **instalados automaticamente** na primeira inicialização com
-internet disponível (via serviço `flatpak-managed-install` do nix-flatpak).
-Nenhuma ação manual é necessária. Atualizações automáticas diárias também estão
-configuradas.
+These Flatpaks are **installed automatically** on the first boot with
+internet available (via nix-flatpak's `flatpak-managed-install` service).
+No manual action is needed. Daily automatic updates are also
+configured.
 
-Para instalar aplicativos adicionais manualmente:
+To install additional applications manually:
 
 ```bash
-# Usuários do grupo 'wheel' podem instalar Flatpaks system-wide sem senha
+# Users in the 'wheel' group can install system-wide Flatpaks without a password
 flatpak install flathub <app-id>
 
-# Exemplo:
+# Example:
 flatpak install flathub org.gimp.GIMP
 ```
 
-## 🔒 Configuração Pós-Instalação
+## 🔒 Post-Installation Configuration
 
-### Registro do YubiKey U2F (pamu2fcfg)
+### YubiKey U2F Registration (pamu2fcfg)
 
-> 💡 **Recomendado para usuários do grupo `wheel`**: quando `/persist/etc/u2f-mappings` existe
-> e contém a entrada do usuário, `sudo`, `run0` e `pkexec` exigem toque na YubiKey. Se o arquivo
-> não existir ou o usuário não tiver entrada nele, o PAM cai automaticamente para autenticação
-> por **senha** — sem lockout.
+> 💡 **Recommended for users in the `wheel` group**: when `/persist/etc/u2f-mappings` exists
+> and contains the user's entry, `sudo`, `run0` and `pkexec` require a YubiKey touch. If the file
+> doesn't exist or the user has no entry in it, PAM automatically falls back to
+> **password** authentication — no lockout.
 
-Este passo deve ser executado **durante a instalação**, antes do primeiro reboot. Veja o
-[passo 10 do guia de instalação](INSTALLATION.md) para as instruções completas.
+This step should be performed **during installation**, before the first reboot. See
+[step 10 of the installation guide](INSTALLATION.md) for complete instructions.
 
-Se o passo foi pulado, o sistema ainda funcionará normalmente via senha. Para registrar a
-YubiKey depois do primeiro boot, consulte a seção
-[Registrar YubiKey após o primeiro boot](INSTALLATION.md#-solução-de-problemas) no guia de instalação.
+If the step was skipped, the system will still work normally via password. To register the
+YubiKey after the first boot, see the
+[Register YubiKey after the first boot](INSTALLATION.md#-troubleshooting) section of the installation guide.
 
-### Secure Boot (apenas barbudus)
+### Secure Boot (barbudus only)
 
-Após o primeiro boot, com o Secure Boot **desativado** na UEFI (Setup Mode):
+After the first boot, with Secure Boot **disabled** in the UEFI (Setup Mode):
 
 ```bash
 sudo bash scripts/setup-secureboot.sh
 ```
 
-Em seguida, ative o Secure Boot na UEFI e reinicie.
+Then enable Secure Boot in the UEFI and reboot.
 
-### Desbloqueio automático LUKS via TPM2
+### Automatic LUKS Unlock via TPM2
 
-Após o primeiro boot bem-sucedido:
+After a successful first boot:
 
 ```bash
 sudo bash scripts/enroll-tpm2.sh
 ```
 
-## 📚 Documentação
+## 📚 Documentation
 
-- **[INSTALLATION.md](INSTALLATION.md)**: Guia completo de instalação
-- **[NIXOS_CONFIG_SPECS.md](NIXOS_CONFIG_SPECS.md)**: Especificações e requisitos do projeto
-- **[modules/home/apps/terminals/README.md](modules/home/apps/terminals/README.md)**: Atalhos de teclado do tmux
+- **[INSTALLATION.md](INSTALLATION.md)**: Full installation guide
+- **[NIXOS_CONFIG_SPECS.md](NIXOS_CONFIG_SPECS.md)**: Project specifications and requirements
+- **[modules/home/apps/terminals/README.md](modules/home/apps/terminals/README.md)**: tmux keybindings
 
-## 🔗 Referências
+## 🔗 References
 
 - [NixOS Manual](https://nixos.org/manual/nixos/stable/)
 - [Disko](https://github.com/nix-community/disko)
@@ -508,7 +508,7 @@ sudo bash scripts/enroll-tpm2.sh
 - [Limine Bootloader](https://github.com/limine-bootloader/limine)
 - [nix-flatpak](https://github.com/gmodena/nix-flatpak)
 - [Ghostty](https://ghostty.org/)
-- [Erase Your Darlings (sistema efêmero)](https://grahamc.com/blog/erase-your-darlings/)
+- [Erase Your Darlings (ephemeral system)](https://grahamc.com/blog/erase-your-darlings/)
 - [Btrfs on NixOS](https://nixos.wiki/wiki/Btrfs)
 - [Arch Wiki — Btrfs](https://wiki.archlinux.org/title/Btrfs)
-- [EmergentMind/nix-config](https://github.com/EmergentMind/nix-config) — referência de organização de repositório NixOS
+- [EmergentMind/nix-config](https://github.com/EmergentMind/nix-config) — NixOS repository organization reference

@@ -1,4 +1,4 @@
-# Módulo de usuário: Microsoft Edge como navegador adicional
+# User module: Microsoft Edge as an additional browser
 { pkgs, ... }:
 
 {

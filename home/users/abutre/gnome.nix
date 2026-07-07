@@ -1,4 +1,4 @@
-# Configuração GNOME para o usuário abutre
+# GNOME configuration for the abutre user
 { pkgs, ... }:
 
 {
@@ -16,8 +16,9 @@
     "application/x-ext-pdf" = "org.gnome.Papers.desktop";
   };
 
-  # Nota: configurações dconf não são declaradas aqui com dconf.settings.
-  # Com home efêmero, dconf.settings escreve em ~/.config/dconf/user apenas
-  # no home-manager switch — perdendo-se no próximo reboot.
-  # Declarar em programs.dconf.profiles.*.databases no NixOS (ver gnome-wrapper.nix).
+  # Note: dconf settings are not declared here with dconf.settings.
+  # With an ephemeral home, dconf.settings only writes to
+  # ~/.config/dconf/user on home-manager switch — getting lost on the next
+  # reboot. Declare in programs.dconf.profiles.*.databases on the NixOS
+  # side instead (see gnome-wrapper.nix).
 }

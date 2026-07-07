@@ -1,4 +1,4 @@
-# Gerado manualmente; atualizar hashes ao trocar de versão.
+# Generated manually; update hashes when bumping the version.
 rec {
   pname = "brave-origin-nightly";
   version = "1.93.10";

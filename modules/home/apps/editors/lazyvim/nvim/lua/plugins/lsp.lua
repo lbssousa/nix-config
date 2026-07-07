@@ -1,5 +1,5 @@
--- Configuração dos LSP servers.
--- Todos os servers têm mason = false porque chegam ao PATH via Nix.
+-- LSP server configuration.
+-- All servers have mason = false because they reach PATH via Nix.
 return {
   {
     "neovim/nvim-lspconfig",

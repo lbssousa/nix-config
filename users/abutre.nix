@@ -13,9 +13,9 @@ lib.mkMerge [
   {
     security.keepassxc.autoLockOnYubikeyRemove.users = [ "abutre" ];
 
-    # Atalhos da dock (barra de favoritos do GNOME Shell) para o usuário abutre.
-    # Declarado via programs.dconf.profiles.user.databases (banco dconf de sistema,
-    # em /etc/dconf/db/) para sobreviver ao reboot com home efêmero.
+    # Dock shortcuts (GNOME Shell favorites bar) for the abutre user.
+    # Declared via programs.dconf.profiles.user.databases (system dconf
+    # database, in /etc/dconf/db/) to survive reboots with an ephemeral home.
     programs.dconf.profiles.user.databases = [
       {
         settings = {
@@ -34,20 +34,20 @@ lib.mkMerge [
       }
     ];
 
-    # Pacotes específicos do usuário abutre instalados via NixOS.
-    # Ferramentas de desenvolvimento e apps exclusivos deste usuário.
+    # Packages specific to the abutre user, installed via NixOS.
+    # Development tools and apps exclusive to this user.
     users.users.abutre.packages = with pkgs; [
-      # Desenvolvimento
+      # Development
       claude-code
       github-copilot-cli
       gcc
-      grelint # Linter para GABC/Gregório (overlay local)
+      grelint # Linter for GABC/Gregorio (local overlay)
       python3
       rustup
       opencode
       pandoc
 
-      # Browser proprietário (além de Firefox, Brave e Chrome em systemPackages)
+      # Proprietary browser (in addition to Firefox, Brave and Chrome in systemPackages)
       microsoft-edge
     ];
   }

@@ -1,6 +1,6 @@
-# Configuração Home Manager base — compartilhada por todos os usuários.
-# Aplicada como módulo NixOS via home-manager.users (dendritic/flake/home-nixos-module.nix).
-# As customizações por usuário ficam em home/users/<usuario>/home.nix.
+# Base Home Manager configuration — shared by all users.
+# Applied as a NixOS module via home-manager.users (dendritic/flake/home-nixos-module.nix).
+# Per-user customizations live in home/users/<user>/home.nix.
 { pkgs, lib, ... }:
 
 {
@@ -8,8 +8,8 @@
     ../modules/home/apps/security/bitwarden.nix
   ];
 
-  # Zathura como visualizador de PDF padrão.
-  # Usuários com gnome.nix podem sobrescrever com Papers (plain > mkDefault).
+  # Zathura as the default PDF viewer.
+  # Users with gnome.nix can override it with Papers (plain > mkDefault).
   xdg.mimeApps.defaultApplications = {
     "application/pdf" = lib.mkDefault "org.pwmt.zathura.desktop";
     "application/x-bzpdf" = lib.mkDefault "org.pwmt.zathura.desktop";
@@ -23,15 +23,15 @@
 
     packages = [
       pkgs.run0-sudo
-      pkgs.grc # Coloriza a saída de comandos comuns (usado pelo plugin grc do Fish)
+      pkgs.grc # Colorizes the output of common commands (used by the Fish grc plugin)
     ];
 
-    # Variáveis de ambiente do usuário
+    # User environment variables
     sessionVariables = {
       EDITOR = "nvim";
       VISUAL = "nvim";
       BROWSER = "xdg-open";
-      QT_QPA_PLATFORM = "wayland"; # Forçar backend Wayland para aplicações Qt
+      QT_QPA_PLATFORM = "wayland"; # Force the Wayland backend for Qt applications
     };
 
   };
@@ -41,7 +41,7 @@
       enable = true;
       historyControl = [ "ignoredups" ];
       shellAliases = {
-        # Substitutos modernos
+        # Modern replacements
         ls = "eza";
         ll = "eza -la";
         lt = "eza --tree";
@@ -56,10 +56,10 @@
         gc = "git commit";
         gp = "git push";
         gl = "git pull";
-        # NixOS shortcuts (run0: eleva via polkit/YubiKey sem setuid;
-        # --setenv=SSH_AUTH_SOCK repassa o socket do agente SSH para que
-        # nixos-rebuild acesse entradas de flake SSH, ex.: nix-secrets)
-        # Home Manager é módulo NixOS — nrs/nrb aplicam HM automaticamente.
+        # NixOS shortcuts (run0: elevates via polkit/YubiKey without setuid;
+        # --setenv=SSH_AUTH_SOCK passes the SSH agent socket through so
+        # nixos-rebuild can access SSH-gated flake inputs, e.g. nix-secrets)
+        # Home Manager is a NixOS module — nrs/nrb apply HM automatically.
         nrs = "run0 --setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK nixos-rebuild switch --flake $(_nix_cfg)";
         nru = "run0 --setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK sh -c \"nix flake update $(_nix_cfg) && nixos-rebuild switch --flake $(_nix_cfg)\"";
         nrb = "run0 --setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK nixos-rebuild boot --flake $(_nix_cfg)";
@@ -81,7 +81,7 @@
       '';
     };
 
-    # Git - configuração básica (sobrescreva no arquivo do usuário)
+    # Git - basic configuration (override in the user's file)
     git = {
       enable = true;
       settings = {
@@ -92,7 +92,7 @@
       };
     };
 
-    # Configuração do Zsh
+    # Zsh configuration
     zsh = {
       enable = true;
       enableCompletion = true;
@@ -107,7 +107,7 @@
       };
 
       shellAliases = {
-        # Substitutos modernos
+        # Modern replacements
         ls = "eza";
         ll = "eza -la";
         lt = "eza --tree";
@@ -122,10 +122,10 @@
         gc = "git commit";
         gp = "git push";
         gl = "git pull";
-        # NixOS shortcuts (run0: eleva via polkit/YubiKey sem setuid;
-        # --setenv=SSH_AUTH_SOCK repassa o socket do agente SSH para que
-        # nixos-rebuild acesse entradas de flake SSH, ex.: nix-secrets)
-        # Home Manager é módulo NixOS — nrs/nrb aplicam HM automaticamente.
+        # NixOS shortcuts (run0: elevates via polkit/YubiKey without setuid;
+        # --setenv=SSH_AUTH_SOCK passes the SSH agent socket through so
+        # nixos-rebuild can access SSH-gated flake inputs, e.g. nix-secrets)
+        # Home Manager is a NixOS module — nrs/nrb apply HM automatically.
         nrs = "run0 --setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK nixos-rebuild switch --flake $(_nix_cfg)";
         nru = "run0 --setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK sh -c \"nix flake update $(_nix_cfg) && nixos-rebuild switch --flake $(_nix_cfg)\"";
         nrb = "run0 --setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK nixos-rebuild boot --flake $(_nix_cfg)";
@@ -144,21 +144,21 @@
           fi
         }
 
-        # Zoxide (cd inteligente)
+        # Zoxide (smart cd)
         eval "$(zoxide init zsh)"
 
-        # fzf integração
+        # fzf integration
         source ${pkgs.fzf}/share/fzf/key-bindings.zsh
         source ${pkgs.fzf}/share/fzf/completion.zsh
 
-        # Completions case-insensitive
+        # Case-insensitive completions
         zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
 
         just() { command just --justfile "$(_nix_cfg)/justfile" "$@"; }
       '';
     };
 
-    # Configuração do Fish shell (shell padrão do sistema)
+    # Fish shell configuration (the system's default shell)
     fish = {
       enable = true;
       interactiveShellInit = ''
@@ -176,7 +176,7 @@
         end
       '';
       shellAliases = {
-        # Substitutos modernos
+        # Modern replacements
         ls = "eza";
         ll = "eza -la";
         lt = "eza --tree";
@@ -191,10 +191,10 @@
         gc = "git commit";
         gp = "git push";
         gl = "git pull";
-        # NixOS shortcuts (run0: eleva via polkit/YubiKey sem setuid;
-        # --setenv=SSH_AUTH_SOCK repassa o socket do agente SSH para que
-        # nixos-rebuild acesse entradas de flake SSH, ex.: nix-secrets)
-        # Home Manager é módulo NixOS — nrs/nrb aplicam HM automaticamente.
+        # NixOS shortcuts (run0: elevates via polkit/YubiKey without setuid;
+        # --setenv=SSH_AUTH_SOCK passes the SSH agent socket through so
+        # nixos-rebuild can access SSH-gated flake inputs, e.g. nix-secrets)
+        # Home Manager is a NixOS module — nrs/nrb apply HM automatically.
         nrs = "run0 --setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK nixos-rebuild switch --flake (_nix_cfg)";
         nru = "run0 --setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK sh -c \"nix flake update (_nix_cfg) && nixos-rebuild switch --flake (_nix_cfg)\"";
         nrb = "run0 --setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK nixos-rebuild boot --flake (_nix_cfg)";
@@ -204,11 +204,11 @@
         dkc = "podman-compose";
       };
 
-      # Plugins do Fish: exclusivos do abutre (ver home/users/abutre/fish.nix).
-      # Os demais usuários usam o Fish sem plugins.
+      # Fish plugins: exclusive to abutre (see home/users/abutre/fish.nix).
+      # Other users use Fish without plugins.
     };
 
-    # Starship — preset oficial "Catppuccin Powerline", paleta Mocha (a mais escura)
+    # Starship — official "Catppuccin Powerline" preset, Mocha palette (the darkest)
     starship = {
       enable = true;
       enableZshIntegration = lib.mkDefault true;
@@ -216,30 +216,30 @@
       enableBashIntegration = lib.mkDefault true;
       settings = {
         "$schema" = "https://starship.rs/config-schema.json";
-        format = "[](red)$os$username[](bg:peach fg:red)$directory[](bg:yellow fg:peach)$git_branch$git_status[](fg:yellow bg:green)$c$rust$golang$nodejs$bun$php$java$kotlin$haskell$python[](fg:green bg:sapphire)$conda$nix_shell[](fg:sapphire bg:lavender)$time[ ](fg:lavender)$cmd_duration$line_break$character";
+        format = "[](red)$os$username[](bg:peach fg:red)$directory[](bg:yellow fg:peach)$git_branch$git_status[](fg:yellow bg:green)$c$rust$golang$nodejs$bun$php$java$kotlin$haskell$python[](fg:green bg:sapphire)$conda$nix_shell[](fg:sapphire bg:lavender)$time[ ](fg:lavender)$cmd_duration$line_break$character";
         palette = "catppuccin_mocha";
         os = {
           disabled = false;
           style = "bg:red fg:crust";
           symbols = {
-            NixOS = "";
-            Windows = "";
+            NixOS = "";
+            Windows = "";
             Ubuntu = "󰕈";
-            SUSE = "";
+            SUSE = "";
             Raspbian = "󰐿";
             Mint = "󰣭";
             Macos = "󰀵";
-            Manjaro = "";
+            Manjaro = "";
             Linux = "󰌽";
             Gentoo = "󰣨";
             Fedora = "󰣛";
-            Alpine = "";
-            Amazon = "";
-            Android = "";
-            AOSC = "";
+            Alpine = "";
+            Amazon = "";
+            Android = "";
+            AOSC = "";
             Arch = "󰣇";
             Artix = "󰣇";
-            CentOS = "";
+            CentOS = "";
             Debian = "󰣚";
             Redhat = "󱄛";
             RedHatEnterprise = "󱄛";
@@ -258,14 +258,14 @@
           truncation_symbol = "…/";
           substitutions = {
             Documents = "󰈙 ";
-            Downloads = " ";
+            Downloads = " ";
             Music = "󰝚 ";
-            Pictures = " ";
+            Pictures = " ";
             Developer = "󰲋 ";
           };
         };
         git_branch = {
-          symbol = "";
+          symbol = "";
           style = "bg:yellow";
           format = "[[ $symbol $branch ](fg:crust bg:yellow)]($style)";
         };
@@ -274,80 +274,80 @@
           format = "[[($all_status$ahead_behind )](fg:crust bg:yellow)]($style)";
         };
         nodejs = {
-          symbol = "";
+          symbol = "";
           style = "bg:green";
           format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
         };
         bun = {
-          symbol = "";
+          symbol = "";
           style = "bg:green";
           format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
         };
         c = {
-          symbol = " ";
+          symbol = " ";
           style = "bg:green";
           format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
         };
         rust = {
-          symbol = "";
+          symbol = "";
           style = "bg:green";
           format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
         };
         golang = {
-          symbol = "";
+          symbol = "";
           style = "bg:green";
           format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
         };
         php = {
-          symbol = "";
+          symbol = "";
           style = "bg:green";
           format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
         };
         java = {
-          symbol = " ";
+          symbol = " ";
           style = "bg:green";
           format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
         };
         kotlin = {
-          symbol = "";
+          symbol = "";
           style = "bg:green";
           format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
         };
         haskell = {
-          symbol = "";
+          symbol = "";
           style = "bg:green";
           format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
         };
         python = {
-          symbol = "";
+          symbol = "";
           style = "bg:green";
           format = "[[ $symbol( $version)(\\(#$virtualenv\\)) ](fg:crust bg:green)]($style)";
         };
         docker_context = {
-          symbol = "";
+          symbol = "";
           style = "bg:sapphire";
           format = "[[ $symbol( $context) ](fg:crust bg:sapphire)]($style)";
         };
         conda = {
-          symbol = "  ";
+          symbol = "  ";
           style = "fg:crust bg:sapphire";
           format = "[$symbol$environment ]($style)";
           ignore_base = false;
         };
         nix_shell = {
           disabled = false;
-          symbol = " ";
+          symbol = " ";
           style = "fg:crust bg:sapphire";
           format = "[$symbol$state( \\($name\\)) ]($style)";
           impure_msg = "impure";
           pure_msg = "pure";
-          unknown_msg = "desconhecido";
+          unknown_msg = "unknown";
         };
         time = {
           disabled = false;
           time_format = "%R";
           style = "bg:lavender";
-          format = "[[  $time ](fg:crust bg:lavender)]($style)";
+          format = "[[  $time ](fg:crust bg:lavender)]($style)";
         };
         line_break = {
           disabled = false;
@@ -363,7 +363,7 @@
         };
         cmd_duration = {
           show_milliseconds = true;
-          format = " in $duration ";
+          format = " in $duration ";
           style = "bg:lavender";
           disabled = false;
           show_notifications = true;
@@ -402,7 +402,7 @@
       };
     };
 
-    # Zoxide - cd inteligente
+    # Zoxide - smart cd
     zoxide = {
       enable = true;
       enableZshIntegration = lib.mkDefault true;
@@ -418,8 +418,11 @@
       enableBashIntegration = lib.mkDefault true;
     };
 
-    # Ícones temáticos para diretórios padrão XDG em português
-    # (os nomes em inglês já têm ícones nativos no eza)
+    # Themed icons for the default XDG directories in Portuguese
+    # (system locale is pt_BR — see modules/system/core/localization.nix; these
+    # are the literal on-disk folder names, e.g. ~/Documentos, ~/Imagens, so
+    # the keys below must stay in Portuguese for eza to match them. English
+    # names already have native icons in eza.)
     eza = {
       enable = true;
       icons = "auto";
@@ -427,7 +430,7 @@
         # pt_BR
         "Área de trabalho" = {
           icon = {
-            glyph = "";
+            glyph = "";
           };
         };
         "Documentos" = {
@@ -447,28 +450,28 @@
         };
         "Vídeos" = {
           icon = {
-            glyph = "";
+            glyph = "";
           };
         };
         "Modelos" = {
           icon = {
-            glyph = "";
+            glyph = "";
           };
         };
         "Público" = {
           icon = {
-            glyph = "";
+            glyph = "";
           };
         };
         "Projetos" = {
           icon = {
-            glyph = "";
+            glyph = "";
           };
         };
-        # pt (português europeu)
+        # pt (European Portuguese)
         "Área de Trabalho" = {
           icon = {
-            glyph = "";
+            glyph = "";
           };
         };
         "Transferências" = {
@@ -483,15 +486,15 @@
         };
         "Projectos" = {
           icon = {
-            glyph = "";
+            glyph = "";
           };
         };
       };
     };
 
-    # Configuração do Neovim básica (padrão para todos os usuários)
-    # Usuários que importam modules/home/apps/editors/nvf/ substituem esta
-    # configuração declarativa.
+    # Basic Neovim configuration (default for all users)
+    # Users who import modules/home/apps/editors/nvf/ override this
+    # declarative configuration.
     neovim = {
       enable = lib.mkDefault true;
       defaultEditor = lib.mkDefault true;
@@ -511,11 +514,11 @@
       '';
     };
 
-    # Configuração do SSH do usuário
+    # User SSH configuration
     ssh = {
       enable = true;
-      # Desabilita os valores padrão obsoletos; os valores desejados são
-      # definidos explicitamente em settings abaixo
+      # Disables the deprecated defaults; the desired values are set
+      # explicitly in settings below
       enableDefaultConfig = false;
       settings = {
         "*" = {

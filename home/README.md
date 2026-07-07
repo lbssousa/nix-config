@@ -1,39 +1,39 @@
 # home
 
-Configurações Home Manager — integradas ao NixOS como módulo do sistema.
-O HM é aplicado automaticamente junto com `nixos-rebuild switch`.
+Home Manager configurations — integrated into NixOS as a system module.
+HM is applied automatically together with `nixos-rebuild switch`.
 
-## Estrutura
+## Structure
 
-| Arquivo/Pasta | Descrição |
+| File/Folder | Description |
 |---------------|-----------|
-| [`common.nix`](common.nix) | Configuração HM base aplicada a **todos** os usuários |
-| [`modules/`](../modules/home/) | Módulos HM reutilizáveis (importáveis pelos usuários) |
-| [`users/`](users/) | Customizações específicas por usuário |
+| [`common.nix`](common.nix) | Base HM configuration applied to **all** users |
+| [`modules/`](../modules/home/) | Reusable HM modules (importable by users) |
+| [`users/`](users/) | Per-user customizations |
 
-## Uso
+## Usage
 
-### Aplicar configuração do sistema (inclui Home Manager)
+### Apply the system configuration (includes Home Manager)
 
 ```bash
-# Via Just (detecta host e desktop ativos automaticamente):
+# Via Just (auto-detects the active host and desktop):
 just switch
 
-# Especificando desktop explicitamente:
+# Explicitly specifying the desktop:
 just switch plasma
 
-# Ou diretamente via nixos-rebuild:
+# Or directly via nixos-rebuild:
 sudo nixos-rebuild switch --flake /etc/nixos
 ```
 
-### Adicionar customização para um novo usuário
+### Add a customization for a new user
 
-1. Crie `home/users/<usuario>/home.nix` (use `home/users/abutre/home.nix` como exemplo).
-2. Adicione o arquivo ao índice do git:
+1. Create `home/users/<user>/home.nix` (use `home/users/abutre/home.nix` as an example).
+2. Add the file to the git index:
    ```bash
-   git add home/users/<usuario>/home.nix
+   git add home/users/<user>/home.nix
    ```
-3. O módulo [`modules/system/users/home-manager.nix`](../modules/system/users/home-manager.nix)
-   detecta o arquivo via `lib.pathExists` e o importa automaticamente.
+3. The [`modules/system/users/home-manager.nix`](../modules/system/users/home-manager.nix) module
+   detects the file via `lib.pathExists` and imports it automatically.
 
-Usuários sem customização herdam apenas `home/common.nix`.
+Users with no customization only inherit `home/common.nix`.

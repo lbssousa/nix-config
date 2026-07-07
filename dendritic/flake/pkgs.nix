@@ -1,6 +1,6 @@
-# Configura o pkgs para todos os módulos perSystem com o overlay local aplicado.
-# Sem isso, pkgs.tree-sitter-gregorio, pkgs.gregorio-lsp etc. não seriam
-# acessíveis em helix-wrapper.nix e demais módulos perSystem.
+# Configures pkgs for all perSystem modules with the local overlay applied.
+# Without this, pkgs.tree-sitter-gregorio, pkgs.gregorio-lsp etc. would not be
+# accessible in helix-wrapper.nix and other perSystem modules.
 { inputs, ... }:
 {
   perSystem =

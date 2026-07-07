@@ -1,25 +1,25 @@
-# Função auxiliar para criar definições de usuário NixOS
-# Uso: import ./mkUser.nix { inherit pkgs lib; } { username = ...; ... }
+# Helper function to create NixOS user definitions
+# Usage: import ./mkUser.nix { inherit pkgs lib; } { username = ...; ... }
 #
-# NOTA: A configuração do Home Manager é gerida como módulo NixOS (home-manager.users.<name>
-# em dendritic/flake/home-nixos-module.nix). Consulte home/users/<usuario>/home.nix
-# para customizações por usuário.
+# NOTE: Home Manager configuration is managed as a NixOS module
+# (home-manager.users.<name> in dendritic/flake/home-nixos-module.nix). See
+# home/users/<user>/home.nix for per-user customizations.
 #
-# NOTA: O nome completo (description) é definido via outputs do flake nix-secrets
-# (inputs.nix-secrets.${username}.fullName). Não deve ser definido aqui.
+# NOTE: The full name (description) is set via the nix-secrets flake outputs
+# (inputs.nix-secrets.${username}.fullName). It must not be set here.
 { pkgs, lib }:
 {
   username,
-  # UID numérico fixo. SEMPRE defina para evitar reatribuição após adicionar/remover
-  # usuários, o que causaria incompatibilidade de propriedade nos arquivos do $HOME.
+  # Fixed numeric UID. ALWAYS set it to avoid reassignment after
+  # adding/removing users, which would cause ownership mismatches on $HOME files.
   uid ? null,
-  # Define se o usuário pertence ao grupo "wheel" (sudo). Padrão: false.
+  # Whether the user belongs to the "wheel" group (sudo). Default: false.
   hasSudo ? false,
 }:
 
 {
-  # Cria um grupo com o mesmo nome do usuário (necessário para aplicativos que
-  # chamam `chown username:username`, como o epson-printer-utility).
+  # Creates a group with the same name as the user (needed by applications
+  # that call `chown username:username`, like epson-printer-utility).
   users.groups.${username} = { };
 
   users.users.${username} = {
@@ -27,40 +27,47 @@
   }
   // lib.optionalAttrs (uid != null) { inherit uid; }
   // {
-    # Grupos essenciais para desktop com GNOME + containers
+    # Groups essential for a GNOME + containers desktop
     extraGroups = [
-      "networkmanager" # Gerenciar conexões de rede
-      "video" # Acesso à GPU
-      "audio" # Acesso ao áudio
-      "plugdev" # Acesso a dispositivos USB
-      "dialout" # Portas seriais
-      "docker" # Compatibilidade com Docker (Podman)
+      "networkmanager" # Manage network connections
+      "video" # GPU access
+      "audio" # Audio access
+      "plugdev" # USB device access
+      "dialout" # Serial ports
+      "docker" # Docker compatibility (Podman)
     ]
     ++ lib.optionals hasSudo [
       "wheel" # sudo
     ];
-    shell = pkgs.fish; # Shell padrão (Fish)
-    # Senha inicial: o usuário será solicitado a trocá-la no primeiro login.
-    # Se uma senha personalizada for definida durante a instalação (ver INSTALLATION.md),
-    # a troca não será exigida.
+    shell = pkgs.fish; # Default shell (Fish)
+    # Initial password: the user will be prompted to change it on first login.
+    # If a custom password is set during installation (see INSTALLATION.md),
+    # the change won't be required.
     initialPassword = "nixos";
   };
 
   # ─────────────────────────────────────────────────────────────────────────
-  # Preservação seletiva do diretório home
+  # Selective preservation of the home directory
   # ─────────────────────────────────────────────────────────────────────────
   #
-  # /home é tmpfs — efêmero a cada boot. O módulo preservation bind-monta
-  # os itens abaixo de /persist/home/<usuario>/ no diretório home do usuário.
-  # Tudo o que não está listado aqui é recriado pelo Home Manager ou descartado.
+  # /home is tmpfs — ephemeral on every boot. The preservation module
+  # bind-mounts the items below from /persist/home/<user>/ into the user's
+  # home directory. Anything not listed here is recreated by Home Manager
+  # or discarded.
   #
-  # Para migrar uma instalação existente:
-  #   run0 rsync -a /home/<usuario>/Documentos/ /persist/home/<usuario>/Documentos/
-  #   (repita para cada diretório listado abaixo)
+  # NOTE: the directory names below match the actual on-disk XDG user
+  # directories, which are named in Portuguese because the system locale is
+  # pt_BR (see modules/system/core/localization.nix). Do not translate
+  # these strings — they must match the real folder names or the
+  # corresponding user data won't be preserved across reboots.
+  #
+  # To migrate an existing install:
+  #   run0 rsync -a /home/<user>/Documentos/ /persist/home/<user>/Documentos/
+  #   (repeat for each directory listed below)
   preservation.preserveAt."/persist".users.${username} = {
     directories = [
-      # ── Diretórios XDG padrão (dados do usuário) ──────────────────────
-      # Symlinks: dados simples, sem verificações especiais de caminho
+      # ── Default XDG directories (user data) ───────────────────────────
+      # Symlinks: plain data, no special path checks
       {
         directory = "Área de Trabalho";
         how = "symlink";
@@ -98,69 +105,69 @@
         how = "symlink";
       }
 
-      # ── Identidade e segurança ─────────────────────────────────────────
-      # Bind-mounts: SSH (StrictModes usa lstat) e GPG (2.x faz lstat de segurança)
-      ".ssh" # Chaves SSH, known_hosts, authorized_keys
-      ".gnupg" # Chaves GPG, base de confiança, stubs do YubiKey
+      # ── Identity and security ───────────────────────────────────────────
+      # Bind-mounts: SSH (StrictModes uses lstat) and GPG (2.x does a security lstat)
+      ".ssh" # SSH keys, known_hosts, authorized_keys
+      ".gnupg" # GPG keys, trust database, YubiKey stubs
 
-      # ── Navegadores (pacotes nixpkgs — dados não geridos pelo HM) ──────
-      # Nota: .mozilla não é preservado — o Firefox agora roda via Flatpak,
-      # cujos dados ficam em .var/app (preservado abaixo).
-      # Bind-mount: sandbox do Chromium verifica propriedade real do diretório
+      # ── Browsers (nixpkgs packages — data not managed by HM) ────────────
+      # Note: .mozilla is not preserved — Firefox now runs via Flatpak,
+      # whose data lives in .var/app (preserved below).
+      # Bind-mount: Chromium's sandbox checks the directory's real ownership
       {
         directory = ".config/BraveSoftware";
-        mode = "0700"; # Brave armazena credenciais aqui
+        mode = "0700"; # Brave stores credentials here
       }
 
-      # ── Flatpak: dados por aplicação ───────────────────────────────────
+      # ── Flatpak: per-application data ────────────────────────────────────
       {
         directory = ".var/app";
         how = "symlink";
-      } # Vault do Bitwarden, dados de todos os Flatpaks
+      } # Bitwarden vault, data for all Flatpaks
       {
         directory = ".config/autostart";
         how = "symlink";
-      } # Autostart dos Flatpaks (gerenciado pelo Ignition)
+      } # Flatpak autostart (managed by Ignition)
 
-      # ── Estado GNOME / desktop ─────────────────────────────────────────
-      # Nota: .config/dconf NÃO é preservado intencionalmente.
-      # Configurações dconf que devem sobreviver ao reboot devem ser declaradas
-      # via programs.dconf.profiles.*.databases no NixOS (gravadas em /etc/dconf/,
-      # que é gerenciado pelo sistema e independe do home). O dconf.settings do
-      # Home Manager escreve em ~/.config/dconf/user apenas na ativação —
-      # não use-o para settings que devem persistir em home efêmero.
+      # ── GNOME / desktop state ────────────────────────────────────────────
+      # Note: .config/dconf is intentionally NOT preserved.
+      # dconf settings that must survive reboot should be declared via
+      # programs.dconf.profiles.*.databases in NixOS (written to /etc/dconf/,
+      # which is system-managed and independent of the home). Home Manager's
+      # dconf.settings only writes to ~/.config/dconf/user on activation —
+      # don't use it for settings that must persist with an ephemeral home.
       {
         directory = ".local/share/keyrings";
         how = "symlink";
-      } # GNOME keyring: senhas de Wi-Fi e apps
+      } # GNOME keyring: Wi-Fi and app passwords
       {
         directory = ".local/share/applications";
         how = "symlink";
-      } # Arquivos .desktop do usuário e de Flatpaks
+      } # User and Flatpak .desktop files
 
-      # ── Configuração de apps (não geridos pelo HM) ─────────────────────
+      # ── App config (not managed by HM) ───────────────────────────────────
       {
         directory = ".config/keepassxc";
         how = "symlink";
-      } # Preferências e caminho do banco de dados
+      } # Preferences and database path
 
-      # ── Ferramentas de shell ───────────────────────────────────────────
+      # ── Shell tools ───────────────────────────────────────────────────────
       {
         directory = ".local/share/zoxide";
         how = "symlink";
-      } # Base de dados de frequência do zoxide (cd inteligente)
+      } # zoxide frequency database (smart cd)
       {
         directory = ".local/share/fish";
         how = "symlink";
-      } # Histórico do Fish e cache de funções
+      } # Fish history and function cache
 
-      # ── Containers rootless (Podman sem root) ──────────────────────────
-      # Bind-mount: bubblewrap/Podman verifica que o caminho é um diretório real
-      ".local/share/containers" # Imagens e volumes Podman do usuário
+      # ── Rootless containers (Podman without root) ────────────────────────
+      # Bind-mount: bubblewrap/Podman checks that the path is a real directory
+      ".local/share/containers" # User's Podman images and volumes
 
-      # ── Claude CLI ───────────────────────────────────────────────────
-      # Credenciais (.credentials.json), configurações e memórias de projeto.
-      # Sem isso, o login é perdido a cada reboot (/ é tmpfs).
+      # ── Claude CLI ──────────────────────────────────────────────────────
+      # Credentials (.credentials.json), settings and project memories.
+      # Without this, the login is lost on every reboot (/ is tmpfs).
       {
         directory = ".claude";
         how = "symlink";
@@ -189,9 +196,8 @@
         how = "symlink";
         mode = "0600";
       }
-      # Configuração de monitor (fator de escala, resolução, etc.), gerida
-      # pelo GNOME. Precisa ser persistida para sobreviver ao reboot
-      # (/ e /home são tmpfs).
+      # Monitor configuration (scale factor, resolution, etc.), managed by
+      # GNOME. Needs to be persisted to survive reboots (/ and /home are tmpfs).
       {
         file = ".config/monitors.xml";
         how = "symlink";

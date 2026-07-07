@@ -1,14 +1,14 @@
-# libfprint com suporte ao sensor Goodix 538d (fork lbssousa)
+# libfprint with support for the Goodix 538d sensor (lbssousa fork)
 # Fork: https://github.com/lbssousa/libfprint (branch: goodix-538d-sigfm-gtls)
-# Baseado no libfprint 1.94.10 com drivers Goodix TLS e matcher SIGFM (OpenCV).
+# Based on libfprint 1.94.10 with Goodix TLS drivers and the SIGFM matcher (OpenCV).
 #
-# Drivers incluídos além do upstream:
+# Drivers included beyond upstream:
 #   - goodixtls511  – Goodix 5110
-#   - goodixtls52xd – família Goodix 52xd
-#   - goodixtls53xd – família Goodix 53xd (inclui 538d, USB 27c6:538d)
+#   - goodixtls52xd – Goodix 52xd family
+#   - goodixtls53xd – Goodix 53xd family (includes 538d, USB 27c6:538d)
 #
-# O matcher SIGFM (sigfm/sigfm.cpp) usa OpenCV para capturar impressões de
-# curta área onde o matcher minutiae padrão falha.
+# The SIGFM matcher (sigfm/sigfm.cpp) uses OpenCV to capture small-area
+# fingerprints where the standard minutiae matcher fails.
 {
   lib,
   stdenv,
@@ -91,7 +91,7 @@ stdenv.mkDerivation {
 
   meta = {
     homepage = "https://github.com/lbssousa/libfprint";
-    description = "libfprint com drivers Goodix TLS e matcher SIGFM (fork lbssousa), suportando o sensor 538d (USB 27c6:538d)";
+    description = "libfprint with Goodix TLS drivers and SIGFM matcher (lbssousa fork), supporting the 538d sensor (USB 27c6:538d)";
     license = lib.licenses.lgpl21Only;
     platforms = lib.platforms.linux;
     maintainers = [ ];

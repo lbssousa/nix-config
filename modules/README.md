@@ -1,50 +1,50 @@
 # modules
 
-Módulos Nix reutilizáveis organizados em duas categorias:
+Reusable Nix modules organized into two categories:
 
-- **[system/](system/)** — Módulos system-wide, utilizados pelo `nixos-rebuild` (NixOS modules).
-- **[user/](user/)** — Módulos user-wide, utilizados pelo `home-manager` (Home Manager modules).
+- **[system/](system/)** — System-wide modules, used by `nixos-rebuild` (NixOS modules).
+- **[user/](user/)** — User-wide modules, used by `home-manager` (Home Manager modules).
 
-## Como usar
+## How to use
 
-### Módulos de sistema
+### System modules
 
-Importe no arquivo de configuração do host (`hosts/<host>/configuration.nix`):
+Import them in the host's configuration file (`hosts/<host>/configuration.nix`):
 
 ```nix
 imports = [
   ../../modules/system/core/common.nix
   ../../modules/system/desktop/desktop.nix
-  # ... outros módulos
+  # ... other modules
 ];
 ```
 
-### Módulos de usuário
+### User modules
 
-Importe no arquivo do usuário (`users/<usuario>.nix`) ou diretamente na configuração do home-manager:
+Import them in the user's file (`users/<user>.nix`) or directly in the home-manager configuration:
 
 ```nix
-home-manager.users.meuusuario = { imports = [ ../../modules/user/apps/brave.nix ]; ... };
+home-manager.users.myuser = { imports = [ ../../modules/user/apps/brave.nix ]; ... };
 ```
 
-## Estrutura
+## Structure
 
 ```
 modules/
 ├── system/          # NixOS modules (system-wide)
-│   ├── audio/       # PipeWire / áudio
+│   ├── audio/       # PipeWire / audio
 │   ├── boot/        # Boot loader, Plymouth
-│   ├── containers/  # Podman rootless, Distrobox
-│   ├── core/        # Configurações base + impermanência + usuários
+│   ├── containers/  # Rootless Podman, Distrobox
+│   ├── core/        # Base settings + impermanence + users
 │   ├── desktop/     # GNOME + Flatpak
-│   ├── hardware/    # Impressão e hardware específico
-│   ├── network/     # SSH e rede
+│   ├── hardware/    # Printing and hardware-specific config
+│   ├── network/     # SSH and networking
 │   ├── security/    # TPM2, Secure Boot
 │   ├── shell/       # Shells (Bash, Fish, Zsh)
-│   ├── tools/       # Pacotes do sistema
-│   └── users/       # Definição de usuários, sudo
+│   ├── tools/       # System packages
+│   └── users/       # User definitions, sudo
 └── user/            # Home Manager modules (user-wide)
-    ├── apps/        # Aplicativos do usuário (Brave, etc.)
-    ├── dev/         # Ferramentas de desenvolvimento
-    └── shell/       # Configuração de shell do usuário
+    ├── apps/        # User applications (Brave, etc.)
+    ├── dev/         # Development tools
+    └── shell/       # User shell configuration
 ```

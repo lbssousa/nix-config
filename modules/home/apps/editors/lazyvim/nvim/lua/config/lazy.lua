@@ -5,9 +5,9 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
   local out = vim.fn.system({ "git", "clone", "--filter=blob:none", "--branch=stable", lazyrepo, lazypath })
   if vim.v.shell_error ~= 0 then
     vim.api.nvim_echo({
-      { "Falha ao clonar lazy.nvim:\n", "ErrorMsg" },
+      { "Failed to clone lazy.nvim:\n", "ErrorMsg" },
       { out, "WarningMsg" },
-      { "\nPressione qualquer tecla para sair...", "ErrorMsg" },
+      { "\nPress any key to exit...", "ErrorMsg" },
     }, true, {})
     vim.fn.getchar()
     os.exit(1)
@@ -17,26 +17,26 @@ vim.opt.rtp:prepend(lazypath)
 
 require("lazy").setup({
   spec = {
-    -- LazyVim e todos os seus padrões
+    -- LazyVim and all its defaults
     { "LazyVim/LazyVim", import = "lazyvim.plugins" },
 
-    -- Extras do LazyVim
+    -- LazyVim extras
     { import = "lazyvim.plugins.extras.lang.nix" },
     { import = "lazyvim.plugins.extras.lang.rust" },
     { import = "lazyvim.plugins.extras.lang.tex" },
 
-    -- Overrides e plugins locais
+    -- Local overrides and plugins
     { import = "plugins" },
   },
   defaults = {
     lazy = false,
-    version = false, -- sempre usa o commit mais recente
+    version = false, -- always use the latest commit
   },
   install = { colorscheme = { "tokyonight", "habamax" } },
-  checker = { enabled = true }, -- verifica atualizações automaticamente
+  checker = { enabled = true }, -- automatically check for updates
   performance = {
     rtp = {
-      -- Desabilita plugins padrão do neovim que o LazyVim já substitui
+      -- Disable default neovim plugins that LazyVim already replaces
       disabled_plugins = {
         "gzip",
         "tarPlugin",

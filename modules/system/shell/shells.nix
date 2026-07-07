@@ -1,31 +1,31 @@
-# Módulo de shells: Bash, Fish e Zsh (Fish como padrão)
+# Shells module: Bash, Fish and Zsh (Fish as default)
 { pkgs, ... }:
 
 {
-  # Instalar as três shells
+  # Install all three shells
   environment.systemPackages = with pkgs; [
     bash
     fish
     zsh
-    # Utilitários para Zsh
+    # Zsh utilities
     zsh-autosuggestions
     zsh-syntax-highlighting
     zsh-history-substring-search
-    # Starship prompt (cross-shell, para usuários sem configuração específica)
+    # Starship prompt (cross-shell, for users with no specific config)
     starship
   ];
 
-  # Habilitar Bash (já é padrão, mas garantimos configuração)
+  # Enable Bash (already default, but we ensure config)
   programs = {
     bash = {
-      # Completions extras para Bash
+      # Extra completions for Bash
       completion.enable = true;
     };
 
-    # Habilitar Fish shell
+    # Enable Fish shell
     fish = {
       enable = true;
-      # Completions adicionais
+      # Additional completions
       vendor = {
         completions.enable = true;
         config.enable = true;
@@ -33,20 +33,20 @@
       };
     };
 
-    # Habilitar Zsh como shell padrão do sistema
+    # Enable Zsh as the system's default shell
     zsh = {
       enable = true;
       enableCompletion = true;
       autosuggestions.enable = true;
       syntaxHighlighting.enable = true;
-      # histFile e histSize são configurados por usuário via home-manager (home.nix)
+      # histFile and histSize are configured per user via home-manager (home.nix)
     };
   };
 
-  # Definir Fish como shell padrão para novos usuários
+  # Set Fish as the default shell for new users
   users.defaultUserShell = pkgs.fish;
 
-  # Adicionar shells ao /etc/shells
+  # Add shells to /etc/shells
   environment.shells = with pkgs; [
     bash
     fish

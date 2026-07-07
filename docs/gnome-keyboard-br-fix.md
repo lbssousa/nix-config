@@ -1,26 +1,26 @@
-# Correção do teclado ABNT2 no GNOME (Wayland)
+# Fixing the ABNT2 keyboard in GNOME (Wayland)
 
-## Problema
+## Problem
 
-Em sessões GNOME/Wayland com teclado ABNT2, dois comportamentos errados ocorriam:
+In GNOME/Wayland sessions with an ABNT2 keyboard, two incorrect behaviors occurred:
 
-1. **Dead key + espaço não produzia o símbolo literal do acento** (ex.: `´`, `~`, `^`) — apenas a combinação AltGr+acento funcionava.
-2. **Após relogin, o layout voltava para americano (US)**, mesmo com o layout brasileiro configurado.
+1. **Dead key + space didn't produce the literal accent symbol** (e.g. `´`, `~`, `^`) — only the AltGr+accent combination worked.
+2. **After relogin, the layout reverted to US**, even with the Brazilian layout configured.
 
-## Causa raiz
+## Root cause
 
-O GNOME inicia o IBus automaticamente via `org.freedesktop.IBus.session.GNOME.service`. O IBus intercepta os eventos de teclado e os processa com sua própria implementação de tabelas Compose (`IBusEngineSimple`), que é **completamente independente** do libxkbcommon. Isso cria um conflito:
+GNOME starts IBus automatically via `org.freedesktop.IBus.session.GNOME.service`. IBus intercepts keyboard events and processes them with its own Compose table implementation (`IBusEngineSimple`), which is **completely independent** of libxkbcommon. This creates a conflict:
 
-- O layout XKB `br` define `dead_acute + space → ´` (U+00B4, SPACING ACUTE ACCENT) via máquina de estados XKB.
-- As tabelas Compose do IBus (pt_BR.UTF-8 do libx11) definem `<dead_acute> <space> → '` (apóstrofo U+0027, convenção X11 canônica).
+- The `br` XKB layout defines `dead_acute + space → ´` (U+00B4, SPACING ACUTE ACCENT) via the XKB state machine.
+- IBus's Compose tables (libx11's pt_BR.UTF-8) define `<dead_acute> <space> → '` (apostrophe U+0027, the canonical X11 convention).
 
-O IBus responde `TRUE` (consumiu o evento) antes que o Mutter/libxkbcommon processe a combinação, portanto a tabela Compose do IBus vence sempre. O arquivo `~/.XCompose` padrão não resolve porque o IBus carrega `~/.config/ibus/Compose` com exclusividade — apenas se nenhum arquivo custom existir ele prossegue para os arquivos de locale.
+IBus responds `TRUE` (it consumed the event) before Mutter/libxkbcommon processes the combination, so IBus's Compose table always wins. The default `~/.XCompose` file doesn't fix this because IBus loads `~/.config/ibus/Compose` exclusively — only if no custom file exists does it fall through to the locale files.
 
-## Solução
+## Solution
 
-A correção usa três camadas.
+The fix uses three layers.
 
-### 1. Layout XKB de sistema — `modules/system/core/localization.nix`
+### 1. System XKB layout — `modules/system/core/localization.nix`
 
 ```nix
 services.xserver.xkb = {
@@ -30,11 +30,11 @@ services.xserver.xkb = {
 };
 ```
 
-Necessário para que `localectl` reporte `X11 Layout: br` e o IBus carregue a engine correta (`xkb:br::por`).
+Needed so `localectl` reports `X11 Layout: br` and IBus loads the correct engine (`xkb:br::por`).
 
-> **Observação:** `services.xserver.enable = false` continua válido — esse bloco configura apenas metadados XKB, sem iniciar o servidor Xorg.
+> **Note:** `services.xserver.enable = false` is still valid — this block only configures XKB metadata, without starting the Xorg server.
 
-### 2. Defaults GNOME de fontes de entrada — `modules/system/desktop/desktop.nix`
+### 2. GNOME input source defaults — `modules/system/desktop/desktop.nix`
 
 ```nix
 programs.dconf.profiles.user.databases = [{
@@ -48,14 +48,14 @@ programs.dconf.profiles.user.databases = [{
 }];
 ```
 
-- `sources` e `mru-sources`: garantem que o GNOME use o layout `br`. Sem `mru-sources`, o campo fica vazio e o GNOME pode não lembrar o layout entre sessões.
-- `xkb-model`: sem ele, o GNOME usa o genérico `pc105+inet` em vez de `abnt2`.
+- `sources` and `mru-sources`: ensure GNOME uses the `br` layout. Without `mru-sources`, the field stays empty and GNOME may not remember the layout across sessions.
+- `xkb-model`: without it, GNOME uses the generic `pc105+inet` instead of `abnt2`.
 
-### 3. Arquivo Compose do IBus — `home/modules/desktop/ibus-compose.nix`
+### 3. IBus Compose file — `home/modules/desktop/ibus-compose.nix`
 
-O IBus carrega `~/.config/ibus/Compose` como **primeira e exclusiva** fonte de tabela Compose quando o arquivo existe. Quando nenhum arquivo custom existe, o IBus usa `en_US.UTF-8` como locale interno de fallback — ignorando o locale do sistema. Forçar o load de `%L` (que expande para `pt_BR.UTF-8`) é suficiente para corrigir o comportamento.
+IBus loads `~/.config/ibus/Compose` as the **first and exclusive** Compose table source when the file exists. When no custom file exists, IBus uses `en_US.UTF-8` as its internal fallback locale — ignoring the system locale. Forcing the load of `%L` (which expands to `pt_BR.UTF-8`) is enough to fix the behavior.
 
-A definição foi migrada do módulo per-user (`home/users/abutre/home.nix`) para um módulo compartilhado aplicado a **todos os usuários GNOME** via `home/common.nix`:
+The definition was moved from the per-user module (`home/users/abutre/home.nix`) to a shared module applied to **all GNOME users** via `home/common.nix`:
 
 ```nix
 # home/modules/desktop/ibus-compose.nix
@@ -72,9 +72,9 @@ in
 }
 ```
 
-`include "%L"` expande para a tabela do locale do sistema (`pt_BR.UTF-8/Compose`), carregando todas as combinações de dead keys ABNT2, incluindo `dead_key + space`. O guard `lib.mkIf isGnome` garante que o arquivo só seja criado em sessões GNOME (no-op para KDE Plasma e outros desktops).
+`include "%L"` expands to the system locale's table (`pt_BR.UTF-8/Compose`), loading all the ABNT2 dead key combinations, including `dead_key + space`. The `lib.mkIf isGnome` guard ensures the file is only created in GNOME sessions (a no-op for KDE Plasma and other desktops).
 
-O módulo é importado em `home/common.nix`:
+The module is imported in `home/common.nix`:
 
 ```nix
 imports = [
@@ -83,48 +83,47 @@ imports = [
 ];
 ```
 
-Também é necessário configurar o IBus para operar corretamente em Wayland puro:
+It's also necessary to configure IBus to work correctly in pure Wayland:
 
 ```nix
 dconf.settings."desktop/ibus/general" = {
-  use-system-keyboard-layout = true;   # evita chamada a setxkbmap (ausente em Wayland)
-  preload-engines = [ "xkb:br::por" ]; # engine correta na inicialização da sessão
+  use-system-keyboard-layout = true;   # avoids calling setxkbmap (absent on Wayland)
+  preload-engines = [ "xkb:br::por" ]; # correct engine at session startup
 };
 ```
 
-## Comportamento de dead key + espaço
+## Dead key + space behavior
 
-Com o IBus carregando a tabela `pt_BR.UTF-8` via `include "%L"`:
+With IBus loading the `pt_BR.UTF-8` table via `include "%L"`:
 
-| Sequência | Resultado |
+| Sequence | Result |
 |---|---|
-| `dead_acute` + letra | letra com acento agudo (`á`, `é`, ...) |
-| `dead_acute` + `dead_acute` | símbolo literal `´` |
-| `dead_acute` + `espaço` | apóstrofo `'` (definido na tabela pt_BR) |
-| `dead_tilde` + `espaço` | `~` |
-| `dead_circumflex` + `espaço` | `^` |
-| `dead_diaeresis` + `espaço` | `¨` |
+| `dead_acute` + letter | letter with an acute accent (`á`, `é`, ...) |
+| `dead_acute` + `dead_acute` | literal symbol `´` |
+| `dead_acute` + `space` | apostrophe `'` (as defined in the pt_BR table) |
+| `dead_tilde` + `space` | `~` |
+| `dead_circumflex` + `space` | `^` |
+| `dead_diaeresis` + `space` | `¨` |
 
-## Fluxo do Home Manager
+## Home Manager flow
 
-O Home Manager neste repositório é um **módulo NixOS** — `nixos-rebuild switch` (ou `just switch`) aplica NixOS e HM juntos. Após qualquer mudança em módulos Home Manager (ex.: `home/common.nix`), basta:
+Home Manager in this repository is a **NixOS module** — `nixos-rebuild switch` (or `just switch`) applies NixOS and HM together. After any change to Home Manager modules (e.g. `home/common.nix`), simply:
 
 ```bash
 just switch
 ```
 
-O arquivo `~/.config/ibus/Compose` entra em vigor no próximo restart do serviço IBus (ou relogin).
+The `~/.config/ibus/Compose` file takes effect on the next IBus service restart (or relogin).
 
-> **Nota:** Como o módulo `ibus-compose.nix` é importado via `home/common.nix`, ele é aplicado automaticamente a **todos os usuários** cadastrados no flake que usem GNOME como desktop. Não é necessário adicionar nada nos módulos per-user.
+> **Note:** Since the `ibus-compose.nix` module is imported via `home/common.nix`, it's applied automatically to **all users** registered in the flake who use GNOME as their desktop. Nothing needs to be added to the per-user modules.
 
-## O que foi descartado
+## What was ruled out
 
-| Item | Razão |
+| Item | Reason |
 |---|---|
-| Drop-in `ConditionPathExists=!/run/current-system` desabilitando IBus | Solução anterior mais agressiva; substituída pelo arquivo `ibus/Compose` |
-| `GTK_IM_MODULE=xim` + serviço `input-method-env-override` | `im-xim.so` não existe no nixpkgs para Wayland |
-| `~/.XCompose` com mapeamentos manuais | O IBus não lê `~/.XCompose` quando `~/.config/ibus/Compose` existe |
-| Overrides explícitos de `dead_key + space` no arquivo Compose | `include "%L"` sozinho já carrega a tabela pt_BR com os mapeamentos corretos |
-| `include` da tabela pt_BR via `GTK_IM_MODULE=xim` | O módulo `im-xim.so` ausente impede esse caminho |
-| `console.keyMap = "br-abnt2"` para GNOME | Afeta apenas o console TTY |
-
+| `ConditionPathExists=!/run/current-system` drop-in disabling IBus | A more aggressive earlier solution; replaced by the `ibus/Compose` file |
+| `GTK_IM_MODULE=xim` + `input-method-env-override` service | `im-xim.so` doesn't exist in nixpkgs for Wayland |
+| `~/.XCompose` with manual mappings | IBus doesn't read `~/.XCompose` when `~/.config/ibus/Compose` exists |
+| Explicit `dead_key + space` overrides in the Compose file | `include "%L"` alone already loads the pt_BR table with the correct mappings |
+| `include` of the pt_BR table via `GTK_IM_MODULE=xim` | The missing `im-xim.so` module blocks this path |
+| `console.keyMap = "br-abnt2"` for GNOME | Only affects the TTY console |

@@ -1,4 +1,4 @@
-# Módulo de pacotes: Ferramentas essenciais do sistema
+# Packages module: essential system tools
 { pkgs, ... }:
 
 let
@@ -73,7 +73,7 @@ let
 in
 {
   environment.systemPackages = with pkgs; [
-    # Ferramentas básicas do sistema
+    # Basic system tools
     git
     git-crypt
     wget
@@ -96,45 +96,45 @@ in
     zip
     p7zip
 
-    # Editores de texto para console
-    neovim # Editor padrão
-    helix # Editor alternativo moderno
+    # Console text editors
+    neovim # Default editor
+    helix # Modern alternate editor
 
-    # Ferramentas de rede
+    # Network tools
     nmap
     dig
     traceroute
     iperf3
 
-    # Monitoramento
+    # Monitoring
     lm_sensors
-    nvtopPackages.full # Monitor de GPU
+    nvtopPackages.full # GPU monitor
 
-    # Utilitários do sistema
+    # System utilities
     gptfdisk
     parted
-    e2fsprogs # fornece chattr
+    e2fsprogs # provides chattr
     cryptsetup
     lvm2
     zfs
 
-    # Pacotes GStreamer e multimédia (úteis para navegadores e apps GNOME)
+    # GStreamer and multimedia packages (useful for browsers and GNOME apps)
     gst_all_1.gst-libav
     gst_all_1.gst-plugins-good
     gst_all_1.gst-plugins-bad
     gst_all_1.gst-plugins-ugly
     gst_all_1.gst-vaapi
     ffmpeg
-    libva # biblioteca VA-API + utilitário vainfo para diagnóstico
+    libva # VA-API library + vainfo diagnostic utility
   ];
 
-  # Definir Neovim como editor padrão do sistema
+  # Set Neovim as the system's default editor
   environment.variables = {
     EDITOR = "nvim";
     VISUAL = "nvim";
   };
 
-  # Alias para compatibilidade
+  # Alias for compatibility
   programs.neovim = {
     enable = true;
     defaultEditor = true;

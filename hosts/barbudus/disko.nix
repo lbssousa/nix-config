@@ -1,9 +1,9 @@
-# Configuração de disco para barbudus (Dell Inspiron 14 5490)
-# Laptop com 16 GB RAM - swap híbrida: 20 GB em disco (hibernação) + 8 GB zram
+# Disk configuration for barbudus (Dell Inspiron 14 5490)
+# Laptop with 16 GB RAM - hybrid swap: 20 GB on disk (hibernation) + 8 GB zram
 { lib, ... }:
 
 import ../../disko.nix {
   inherit lib;
-  device = "/dev/nvme0n1"; # Ajuste conforme necessário (verifique com: lsblk)
-  swapSize = "20G"; # Para suportar hibernação (16 GB RAM + margem)
+  device = "/dev/nvme0n1"; # Adjust as needed (check with: lsblk)
+  swapSize = "20G"; # To support hibernation (16 GB RAM + margin)
 }

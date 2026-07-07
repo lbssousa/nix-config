@@ -1,7 +1,7 @@
-# Módulo de usuário: Firefox Flatpak — navegador padrão para todos os usuários
+# User module: Firefox Flatpak — default browser for all users
 #
-# O Firefox é instalado como Flatpak (org.mozilla.firefox) — não via programs.firefox,
-# que só gerencia o pacote Nix. Extensões e perfil são configurados manualmente.
+# Firefox is installed as a Flatpak (org.mozilla.firefox) — not via programs.firefox,
+# which only manages the Nix package. Extensions and profile are configured manually.
 _: {
   xdg.mimeApps = {
     enable = true;

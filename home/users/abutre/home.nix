@@ -1,4 +1,4 @@
-# Configurações Home Manager específicas para o usuário abutre
+# Home Manager configuration specific to the abutre user
 {
   config,
   pkgs,
@@ -23,7 +23,7 @@ in
     ../../../modules/home/apps/terminals/tmux.nix
 
     ./gnome.nix
-    # ./rclone.nix  # desabilitado até reautenticação OAuth do Google Drive
+    # ./rclone.nix  # disabled until Google Drive OAuth reauthentication
     ./vscode.nix
     ./fish.nix
   ];
@@ -38,11 +38,11 @@ in
     personalAgeKeySource="$(${pkgs.xdg-user-dirs}/bin/xdg-user-dir PROJECTS)/lbssousa/nix-keys/sops/age/abutre/keys.txt"
     if [ ! -f "$personalAgeKeySource" ]; then
       if [ ! -f ${lib.escapeShellArg personalAgeKeyPath} ]; then
-        echo "Chave age pessoal do sops não encontrada em $personalAgeKeySource" >&2
+        echo "Personal sops age key not found at $personalAgeKeySource" >&2
         exit 1
       fi
     elif ! ${pkgs.gnugrep}/bin/grep -q '^AGE-SECRET-KEY-' "$personalAgeKeySource"; then
-      echo "Repositório nix-keys bloqueado (git-crypt). Execute:" >&2
+      echo "nix-keys repository is locked (git-crypt). Run:" >&2
       echo "  gpg --card-status && git-crypt unlock \"\$(${pkgs.xdg-user-dirs}/bin/xdg-user-dir PROJECTS)/lbssousa/nix-keys\"" >&2
       if [ ! -f ${lib.escapeShellArg personalAgeKeyPath} ]; then
         exit 1
@@ -64,7 +64,7 @@ in
       package = null;
     };
 
-    # Direnv para automatizar a ativação de nix-shell / nix develop
+    # Direnv to automate nix-shell / nix develop activation
     direnv = {
       enable = true;
       nix-direnv.enable = true;

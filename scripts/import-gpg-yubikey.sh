@@ -1,37 +1,37 @@
 #!/usr/bin/env bash
-# import-gpg-yubikey.sh — Importar chave GPG da YubiKey no ambiente do live CD
+# import-gpg-yubikey.sh — Import the GPG key from the YubiKey in the live CD environment
 #
-# Prepara o ambiente GPG para operar com a chave privada armazenada na YubiKey,
-# necessário para desbloquear o repositório nix-keys via git-crypt durante a
-# instalação do NixOS.
+# Prepares the GPG environment to work with the private key stored on the
+# YubiKey, needed to unlock the nix-keys repository via git-crypt during
+# NixOS installation.
 #
-# Passos executados:
-#   1. Verificar pré-requisitos (gpg, YubiKey detectada via USB)
-#   2. Iniciar o pcscd se não estiver em execução
-#   3. Configurar scdaemon para usar PC/SC (disable-ccid), evitando conflito com pcscd
-#   4. Importar a chave pública GPG: arquivo local > GitHub > servidor de chaves
-#   5. Executar gpg --card-status para criar os stubs de chave privada
-#   6. Definir confiança total (ultimate) para a chave importada
-#   7. Verificar que os stubs foram criados e a chave está pronta para uso
+# Steps performed:
+#   1. Check prerequisites (gpg, YubiKey detected via USB)
+#   2. Start pcscd if it isn't running
+#   3. Configure scdaemon to use PC/SC (disable-ccid), avoiding conflicts with pcscd
+#   4. Import the GPG public key: local file > GitHub > keyserver
+#   5. Run gpg --card-status to create the private key stubs
+#   6. Set ultimate trust for the imported key
+#   7. Verify the stubs were created and the key is ready to use
 #
-# Uso:
-#   bash scripts/import-gpg-yubikey.sh [opções]
+# Usage:
+#   bash scripts/import-gpg-yubikey.sh [options]
 #
-# Opções:
-#   --fingerprint <fp>  Fingerprint da chave GPG (padrão: BAC0B1B569777A733E37447FB10712C404063D38)
-#   --pubkey <arquivo>  Importar chave pública de um arquivo local (.asc ou binário)
-#   --github <usuário>  Importar chave pública do perfil GitHub (padrão: lbssousa)
-#   --keyserver <url>   Servidor de chaves GPG (padrão: keyserver.ubuntu.com)
-#   --no-trust          Não define confiança total para a chave importada
-#   --help, -h          Exibe ajuda e sai
+# Options:
+#   --fingerprint <fp>  GPG key fingerprint (default: BAC0B1B569777A733E37447FB10712C404063D38)
+#   --pubkey <file>     Import the public key from a local file (.asc or binary)
+#   --github <user>     Import the public key from a GitHub profile (default: lbssousa)
+#   --keyserver <url>   GPG keyserver (default: keyserver.ubuntu.com)
+#   --no-trust          Don't set ultimate trust for the imported key
+#   --help, -h          Show help and exit
 #
-# Após execução bem-sucedida:
-#   bash scripts/install.sh   (faz git-crypt unlock via GPG automaticamente)
+# After a successful run:
+#   bash scripts/install.sh   (runs git-crypt unlock via GPG automatically)
 
 set -euo pipefail
 
 # ---------------------------------------------------------------------------
-# Constantes
+# Constants
 # ---------------------------------------------------------------------------
 
 DEFAULT_FINGERPRINT="BAC0B1B569777A733E37447FB10712C404063D38"
@@ -57,7 +57,7 @@ error()   { echo -e "${RED}[ERRO]${RESET} $*" >&2; }
 die()     { error "$*"; exit 1; }
 
 # ---------------------------------------------------------------------------
-# Argumento parsing
+# Argument parsing
 # ---------------------------------------------------------------------------
 
 OPT_FINGERPRINT="$DEFAULT_FINGERPRINT"
@@ -75,88 +75,88 @@ while [[ $# -gt 0 ]]; do
     --no-trust)    OPT_NO_TRUST=true;    shift ;;
     --help|-h)
       cat <<'EOF'
-Uso:
-  bash scripts/import-gpg-yubikey.sh [opções]
+Usage:
+  bash scripts/import-gpg-yubikey.sh [options]
 
-Opções:
-  --fingerprint <fp>  Fingerprint completo da chave GPG
-                      Padrão: BAC0B1B569777A733E37447FB10712C404063D38
-  --pubkey <arquivo>  Caminho para arquivo de chave pública (.asc ou binário)
-  --github <usuário>  Importar chave pública do perfil GitHub (padrão: lbssousa)
-                      Passe "" para desabilitar esta fonte
-  --keyserver <url>   Servidor de chaves GPG (padrão: keyserver.ubuntu.com)
-  --no-trust          Não define confiança total (ultimate) para a chave
-  --help, -h          Exibe esta ajuda e sai
+Options:
+  --fingerprint <fp>  Full GPG key fingerprint
+                      Default: BAC0B1B569777A733E37447FB10712C404063D38
+  --pubkey <file>     Path to a public key file (.asc or binary)
+  --github <user>     Import the public key from a GitHub profile (default: lbssousa)
+                      Pass "" to disable this source
+  --keyserver <url>   GPG keyserver (default: keyserver.ubuntu.com)
+  --no-trust          Don't set ultimate trust for the key
+  --help, -h          Show this help and exit
 
-Fontes da chave pública (em ordem de prioridade):
-  1. --pubkey <arquivo>   arquivo local
-  2. --github <usuário>   https://github.com/<usuário>.gpg
-  3. --keyserver <url>    gpg --recv-keys <fingerprint>
+Public key sources (in priority order):
+  1. --pubkey <file>   local file
+  2. --github <user>   https://github.com/<user>.gpg
+  3. --keyserver <url> gpg --recv-keys <fingerprint>
 
-Exemplos:
-  # Uso padrão (importa do GitHub lbssousa):
+Examples:
+  # Default usage (imports from GitHub user lbssousa):
   bash scripts/import-gpg-yubikey.sh
 
-  # Com arquivo de chave pública local:
+  # With a local public key file:
   bash scripts/import-gpg-yubikey.sh --pubkey /mnt/usb/pubkey.asc
 
-  # Apenas via servidor de chaves, sem GitHub:
+  # Keyserver only, no GitHub:
   bash scripts/import-gpg-yubikey.sh --github "" --keyserver keys.openpgp.org
 
-Após execução bem-sucedida:
+After a successful run:
   bash scripts/install.sh
-  (o script fará git-crypt unlock automaticamente via GPG/YubiKey)
+  (the script will run git-crypt unlock automatically via GPG/YubiKey)
 EOF
       exit 0 ;;
-    *) die "Opção desconhecida: $1. Use --help para ver as opções." ;;
+    *) die "Unknown option: $1. Use --help to see the available options." ;;
   esac
 done
 
 # ---------------------------------------------------------------------------
-# Cabeçalho
+# Header
 # ---------------------------------------------------------------------------
 
 echo
 echo -e "${BOLD}╔══════════════════════════════════════════════════════════════╗${RESET}"
-echo -e "${BOLD}║     Importar chave GPG da YubiKey — preparação de install    ║${RESET}"
+echo -e "${BOLD}║          Import GPG key from YubiKey — install prep          ║${RESET}"
 echo -e "${BOLD}╚══════════════════════════════════════════════════════════════╝${RESET}"
 echo
 
 # ---------------------------------------------------------------------------
-# Passo 1: Verificar pré-requisitos
+# Step 1: Check prerequisites
 # ---------------------------------------------------------------------------
 
-info "==> Passo 1: Verificar pré-requisitos"
+info "==> Step 1: Check prerequisites"
 
 if ! command -v gpg >/dev/null 2>&1; then
-  error "gpg não encontrado."
-  warn "Execute antes de continuar:"
+  error "gpg not found."
+  warn "Run before continuing:"
   warn "  nix-shell -p gnupg"
-  die "gpg não encontrado."
+  die "gpg not found."
 fi
 success "gpg: $(gpg --version | head -1)"
 
 if command -v lsusb >/dev/null 2>&1; then
   if ! lsusb 2>/dev/null | grep -qi ":${YUBICO_USB_VENDOR}\b\|${YUBICO_USB_VENDOR}:"; then
-    die "YubiKey não detectada (lsusb não encontrou dispositivo Yubico). Insira a YubiKey e tente novamente."
+    die "YubiKey not detected (lsusb found no Yubico device). Insert the YubiKey and try again."
   fi
   _yubikey_line=$(lsusb 2>/dev/null | grep -i "${YUBICO_USB_VENDOR}:" | head -1)
-  success "YubiKey detectada: $_yubikey_line"
+  success "YubiKey detected: $_yubikey_line"
 else
-  warn "lsusb não disponível — verificação de hardware ignorada."
+  warn "lsusb not available — hardware check skipped."
 fi
 echo
 
 # ---------------------------------------------------------------------------
-# Passo 2: Iniciar pcscd
+# Step 2: Start pcscd
 # ---------------------------------------------------------------------------
 
-info "==> Passo 2: Iniciar pcscd (PC/SC daemon)"
+info "==> Step 2: Start pcscd (PC/SC daemon)"
 
 _pcscd_running=false
 
 if systemctl is-active --quiet pcscd 2>/dev/null; then
-  success "pcscd já está em execução."
+  success "pcscd is already running."
   _pcscd_running=true
 elif command -v pcscd >/dev/null 2>&1; then
   _started=false
@@ -169,7 +169,7 @@ elif command -v pcscd >/dev/null 2>&1; then
   fi
 
   if [[ "$_started" == "true" ]]; then
-    # Aguardar até 5 s para o pcscd ficar ativo
+    # Wait up to 5s for pcscd to become active
     for _i in 1 2 3 4 5; do
       if systemctl is-active --quiet pcscd 2>/dev/null; then
         _pcscd_running=true
@@ -177,22 +177,22 @@ elif command -v pcscd >/dev/null 2>&1; then
       fi
       sleep 1
     done
-    [[ "$_pcscd_running" == "true" ]] && success "pcscd iniciado." \
-      || warn "pcscd iniciado mas não ficou ativo em 5 s."
+    [[ "$_pcscd_running" == "true" ]] && success "pcscd started." \
+      || warn "pcscd started but didn't become active within 5s."
   else
-    warn "Não foi possível iniciar pcscd automaticamente."
-    warn "Tente manualmente: run0 systemctl start pcscd"
+    warn "Could not start pcscd automatically."
+    warn "Try manually: run0 systemctl start pcscd"
   fi
 else
-  warn "pcscd não encontrado. Execute: nix-shell -p pcsclite"
+  warn "pcscd not found. Run: nix-shell -p pcsclite"
 fi
 echo
 
 # ---------------------------------------------------------------------------
-# Passo 3: Configurar scdaemon
+# Step 3: Configure scdaemon
 # ---------------------------------------------------------------------------
 
-info "==> Passo 3: Configurar scdaemon"
+info "==> Step 3: Configure scdaemon"
 
 _gnupg_home="${GNUPGHOME:-$HOME/.gnupg}"
 mkdir -p "$_gnupg_home"
@@ -201,128 +201,128 @@ chmod 700 "$_gnupg_home"
 _scdaemon_conf="$_gnupg_home/scdaemon.conf"
 
 if [[ "$_pcscd_running" == "true" ]]; then
-  # disable-ccid: redireciona o scdaemon para usar PC/SC (pcscd) em vez de
-  # acessar o USB diretamente via CCID. Evita que pcscd e scdaemon disputem
-  # o mesmo dispositivo USB, o que causaria "card error" ou "no card".
+  # disable-ccid: redirects scdaemon to use PC/SC (pcscd) instead of
+  # accessing USB directly via CCID. Avoids pcscd and scdaemon contending
+  # for the same USB device, which would cause "card error" or "no card".
   if ! grep -q "^disable-ccid" "$_scdaemon_conf" 2>/dev/null; then
     echo "disable-ccid" >> "$_scdaemon_conf"
-    success "scdaemon.conf: disable-ccid adicionado."
+    success "scdaemon.conf: disable-ccid added."
   else
-    success "scdaemon.conf: disable-ccid já configurado."
+    success "scdaemon.conf: disable-ccid already configured."
   fi
 else
-  warn "pcscd não está ativo — disable-ccid não configurado."
-  warn "Se gpg --card-status falhar, inicie o pcscd e repita o script."
+  warn "pcscd is not active — disable-ccid not configured."
+  warn "If gpg --card-status fails, start pcscd and rerun the script."
 fi
 
-# Reiniciar o agente GPG para que o scdaemon releia a configuração
+# Restart the GPG agent so scdaemon rereads the configuration
 gpgconf --kill gpg-agent 2>/dev/null || true
-success "gpg-agent reiniciado."
+success "gpg-agent restarted."
 echo
 
 # ---------------------------------------------------------------------------
-# Passo 4: Importar chave pública GPG
+# Step 4: Import the GPG public key
 # ---------------------------------------------------------------------------
 
-info "==> Passo 4: Importar chave pública GPG"
+info "==> Step 4: Import the GPG public key"
 
 _key_imported=false
 
-# Verificar se o fingerprint já está no keyring
+# Check whether the fingerprint is already in the keyring
 if gpg --list-keys "$OPT_FINGERPRINT" >/dev/null 2>&1; then
-  success "Fingerprint $OPT_FINGERPRINT já está no keyring — importação ignorada."
+  success "Fingerprint $OPT_FINGERPRINT is already in the keyring — import skipped."
   _key_imported=true
 fi
 
-# Fonte 1: arquivo local
+# Source 1: local file
 if [[ "$_key_imported" == "false" && -n "$OPT_PUBKEY" ]]; then
-  [[ ! -f "$OPT_PUBKEY" ]] && die "--pubkey: arquivo não encontrado: $OPT_PUBKEY"
-  info "Importando de arquivo local: $OPT_PUBKEY"
+  [[ ! -f "$OPT_PUBKEY" ]] && die "--pubkey: file not found: $OPT_PUBKEY"
+  info "Importing from local file: $OPT_PUBKEY"
   if gpg --import "$OPT_PUBKEY" 2>&1; then
-    success "Chave pública importada do arquivo."
+    success "Public key imported from the file."
     _key_imported=true
   else
-    warn "Falha ao importar do arquivo local. Tentando próxima fonte..."
+    warn "Failed to import from the local file. Trying the next source..."
   fi
 fi
 
-# Fonte 2: GitHub
+# Source 2: GitHub
 if [[ "$_key_imported" == "false" && -n "$OPT_GITHUB" ]]; then
   if command -v curl >/dev/null 2>&1; then
-    info "Importando do GitHub: https://github.com/${OPT_GITHUB}.gpg"
+    info "Importing from GitHub: https://github.com/${OPT_GITHUB}.gpg"
     if curl -fsSL "https://github.com/${OPT_GITHUB}.gpg" | gpg --import; then
-      success "Chave pública importada do GitHub (${OPT_GITHUB})."
+      success "Public key imported from GitHub (${OPT_GITHUB})."
       _key_imported=true
     else
-      warn "Falha ao importar do GitHub. Tentando servidor de chaves..."
+      warn "Failed to import from GitHub. Trying the keyserver..."
     fi
   else
-    warn "curl não disponível — fonte GitHub ignorada."
+    warn "curl not available — GitHub source skipped."
   fi
 fi
 
-# Fonte 3: servidor de chaves
+# Source 3: keyserver
 if [[ "$_key_imported" == "false" ]]; then
-  info "Buscando no servidor de chaves: $OPT_KEYSERVER"
+  info "Querying the keyserver: $OPT_KEYSERVER"
   info "Fingerprint: $OPT_FINGERPRINT"
   if gpg --keyserver "$OPT_KEYSERVER" --recv-keys "$OPT_FINGERPRINT"; then
-    success "Chave pública obtida do servidor de chaves."
+    success "Public key obtained from the keyserver."
     _key_imported=true
   else
-    die "Não foi possível obter a chave pública por nenhuma das fontes configuradas."
+    die "Could not obtain the public key from any of the configured sources."
   fi
 fi
 
-# Confirmar que o fingerprint esperado está no keyring
+# Confirm the expected fingerprint is in the keyring
 if ! gpg --list-keys "$OPT_FINGERPRINT" >/dev/null 2>&1; then
-  error "Fingerprint $OPT_FINGERPRINT não encontrado no keyring após a importação."
-  warn "A chave importada pode ser de um fingerprint diferente."
-  warn "Liste as chaves disponíveis com: gpg --list-keys"
-  die "Fingerprint não encontrado no keyring."
+  error "Fingerprint $OPT_FINGERPRINT not found in the keyring after import."
+  warn "The imported key may have a different fingerprint."
+  warn "List the available keys with: gpg --list-keys"
+  die "Fingerprint not found in the keyring."
 fi
 echo
 
 # ---------------------------------------------------------------------------
-# Passo 5: Criar stubs de chave privada via gpg --card-status
+# Step 5: Create private key stubs via gpg --card-status
 # ---------------------------------------------------------------------------
 
-info "==> Passo 5: Criar stubs de chave privada (gpg --card-status)"
+info "==> Step 5: Create private key stubs (gpg --card-status)"
 echo
 
 if ! gpg --card-status; then
   echo
-  error "gpg --card-status falhou."
-  warn "Verifique:"
-  warn "  • YubiKey inserida"
-  warn "  • pcscd em execução: systemctl status pcscd"
-  warn "  • Configuração do scdaemon: cat ~/.gnupg/scdaemon.conf"
-  die "Falha ao ler o cartão YubiKey."
+  error "gpg --card-status failed."
+  warn "Check:"
+  warn "  • YubiKey inserted"
+  warn "  • pcscd running: systemctl status pcscd"
+  warn "  • scdaemon configuration: cat ~/.gnupg/scdaemon.conf"
+  die "Failed to read the YubiKey card."
 fi
 echo
 
 # ---------------------------------------------------------------------------
-# Passo 6: Definir confiança total (ultimate)
+# Step 6: Set ultimate trust
 # ---------------------------------------------------------------------------
 
 if [[ "$OPT_NO_TRUST" == "false" ]]; then
-  info "==> Passo 6: Definir confiança total para a chave"
+  info "==> Step 6: Set ultimate trust for the key"
 
   if echo "${OPT_FINGERPRINT}:6:" | gpg --import-ownertrust; then
-    success "Confiança total (ultimate) definida para $OPT_FINGERPRINT."
+    success "Ultimate trust set for $OPT_FINGERPRINT."
   else
-    warn "Não foi possível definir a confiança automaticamente."
-    warn "Execute manualmente:"
+    warn "Could not set trust automatically."
+    warn "Run manually:"
     warn "  gpg --edit-key $OPT_FINGERPRINT"
-    warn "  trust → 5 (eu confio plenamente) → quit"
+    warn "  trust → 5 (I trust ultimately) → quit"
   fi
   echo
 fi
 
 # ---------------------------------------------------------------------------
-# Passo 7: Verificação final
+# Step 7: Final verification
 # ---------------------------------------------------------------------------
 
-info "==> Passo 7: Verificação final"
+info "==> Step 7: Final verification"
 echo
 
 gpg --list-secret-keys --keyid-format long "$OPT_FINGERPRINT" 2>/dev/null \
@@ -330,21 +330,21 @@ gpg --list-secret-keys --keyid-format long "$OPT_FINGERPRINT" 2>/dev/null \
 
 echo
 
-# Stubs de chave no cartão aparecem como sec> ou ssb> (o '>' indica card stub)
+# Card key stubs show up as sec> or ssb> (the '>' marks a card stub)
 if gpg --list-secret-keys "$OPT_FINGERPRINT" 2>/dev/null | grep -qE '^(sec|ssb)>'; then
-  success "Stubs de chave detectados (sec> / ssb> — chave privada na YubiKey)."
+  success "Key stubs detected (sec> / ssb> — private key on the YubiKey)."
 else
-  warn "Nenhum stub de cartão detectado (esperado: sec> ou ssb>)."
-  warn "O git-crypt unlock pode falhar. Verifique: gpg --list-secret-keys"
+  warn "No card stub detected (expected: sec> or ssb>)."
+  warn "git-crypt unlock may fail. Check: gpg --list-secret-keys"
 fi
 
 echo
-echo -e "${GREEN}${BOLD}Ambiente GPG pronto para uso com a YubiKey!${RESET}"
+echo -e "${GREEN}${BOLD}GPG environment ready to use with the YubiKey!${RESET}"
 echo
-info "Próximos passos:"
+info "Next steps:"
 echo "  bash scripts/install.sh"
-echo "  (o script fará git-crypt unlock automaticamente via GPG)"
+echo "  (the script will run git-crypt unlock automatically via GPG)"
 echo
-echo "  Ou, para desbloquear o nix-keys manualmente:"
-echo "  cd /caminho/para/nix-keys && git-crypt unlock"
+echo "  Or, to unlock nix-keys manually:"
+echo "  cd /path/to/nix-keys && git-crypt unlock"
 echo

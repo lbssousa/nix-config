@@ -35,19 +35,19 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Repositório separado com os secrets SOPS/age
+    # Separate repository with the SOPS/age secrets
     nix-secrets = {
       url = "git+ssh://git@github.com/lbssousa/nix-secrets?shallow=1";
       flake = true;
     };
 
-    # nix-flatpak para Flatpaks declarativos sem equivalente no nixpkgs
+    # nix-flatpak for declarative Flatpaks with no nixpkgs equivalent
     nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=v0.7.0";
 
-    # nixvim para configuração declarativa do Neovim
+    # nixvim for declarative Neovim configuration
     nixvim.url = "github:nix-community/nixvim";
 
-    # nix-wrapper-modules — empacota programas com config integrada na store
+    # nix-wrapper-modules — packages programs with config baked into the store
     wrapper-modules.url = "github:BirdeeHub/nix-wrapper-modules";
 
   };

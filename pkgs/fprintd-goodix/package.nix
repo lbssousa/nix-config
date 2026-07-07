@@ -1,5 +1,5 @@
-# fprintd 1.94.5 compilado contra o fork lbssousa do libfprint (1.94.10).
-# A versão 1.94.5 requer libfprint >= 1.94.9, compatível com o novo fork.
+# fprintd 1.94.5 built against the lbssousa fork of libfprint (1.94.10).
+# Version 1.94.5 requires libfprint >= 1.94.9, compatible with the new fork.
 {
   lib,
   stdenv,
@@ -86,7 +86,7 @@ stdenv.mkDerivation (finalAttrs: {
 
   meta = {
     homepage = "https://fprint.freedesktop.org/";
-    description = "fprintd ${finalAttrs.version} com suporte ao sensor Goodix via fork lbssousa do libfprint";
+    description = "fprintd ${finalAttrs.version} with Goodix sensor support via the lbssousa libfprint fork";
     license = lib.licenses.gpl2Plus;
     platforms = lib.platforms.linux;
     maintainers = [ ];

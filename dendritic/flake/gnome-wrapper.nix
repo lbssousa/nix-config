@@ -1,8 +1,8 @@
-# Módulo flake-parts do GNOME: adiciona a configuração NixOS específica do
-# GNOME ao sharedModules de todos os hosts.
+# GNOME flake-parts module: adds GNOME-specific NixOS configuration to the
+# sharedModules of all hosts.
 _: {
   config = {
-    # ── Módulo NixOS do GNOME: contribui ao sharedModules de todos os hosts ───
+    # ── GNOME NixOS module: contributes to the sharedModules of all hosts ────
     dendritic.nixos.sharedModules = [
       (
         {
@@ -12,32 +12,31 @@ _: {
         }:
         {
           services = {
-            # Sessão GNOME (Wayland — padrão e único modo suportado no GNOME 50+)
+            # GNOME session (Wayland — the default and only supported mode in GNOME 50+)
             displayManager.gdm.enable = true;
             desktopManager.gnome = {
               enable = true;
-              # Expõe o schema org.gnome.login-screen (fornecido pelo GDM) na
-              # sessão do usuário. Sem isso, GNOME Settings não encontra o schema
-              # ao verificar `enable-fingerprint-authentication`, e a linha de
-              # impressão digital fica oculta em Configurações → Sistema → Usuários.
-              # O módulo NixOS do GNOME exporta schemas via sessionPath; o GDM não
-              # está no sessionPath padrão, por isso precisa ser adicionado
-              # explicitamente.
+              # Exposes the org.gnome.login-screen schema (provided by GDM) in the
+              # user session. Without this, GNOME Settings can't find the schema
+              # when checking `enable-fingerprint-authentication`, and the
+              # fingerprint row stays hidden in Settings → System → Users.
+              # The GNOME NixOS module exports schemas via sessionPath; GDM isn't
+              # in the default sessionPath, so it needs to be added explicitly.
               sessionPath = [ pkgs.gdm ];
             };
 
-            # Flatpak — apps sem equivalente no nixpkgs instalados declarativamente.
+            # Flatpak — apps with no nixpkgs equivalent, installed declaratively.
             flatpak = {
               enable = true;
               packages = [
-                "com.bitwarden.desktop" # Gestão de senhas
-                "com.github.tchx84.Flatseal" # Gerenciador de permissões Flatpak
-                "com.ranfdev.DistroShelf" # Gerenciador de distros em contêineres
-                "io.github.flattool.Ignition" # Gerenciador de autostart de Flatpaks
-                "io.github.flattool.Warehouse" # Gerenciador de apps Flatpak
-                "io.github.kolunmi.Bazaar" # Loja de apps GNOME
-                "org.mozilla.firefox" # Navegador padrão
-                "com.brave.Browser" # Navegador alternativo / PWAs
+                "com.bitwarden.desktop" # Password manager
+                "com.github.tchx84.Flatseal" # Flatpak permissions manager
+                "com.ranfdev.DistroShelf" # Container distro manager
+                "io.github.flattool.Ignition" # Flatpak autostart manager
+                "io.github.flattool.Warehouse" # Flatpak app manager
+                "io.github.kolunmi.Bazaar" # GNOME app store
+                "org.mozilla.firefox" # Default browser
+                "com.brave.Browser" # Alternate browser / PWAs
               ];
               update.onActivation = true;
               update.auto = {
@@ -46,48 +45,48 @@ _: {
               };
             };
 
-            # Impressão (CUPS)
+            # Printing (CUPS)
             printing.enable = true;
           };
 
           environment = {
             gnome.excludePackages = with pkgs; [
-              # Tour de boas-vindas — sem substituto
+              # Welcome tour — no replacement
               gnome-tour
-              # Terminais GNOME nativos — substituídos pelo Ghostty
+              # Native GNOME terminals — replaced by Ghostty
               gnome-console
               gnome-terminal
               ptyxis
-              # Gerenciador de software — gerenciamento de pacotes é feito pelo Nix
+              # Software manager — package management is done by Nix
               gnome-software
-              # Ajuda GNOME — sem substituto relevante
+              # GNOME Help — no relevant replacement
               yelp
             ];
 
             systemPackages = with pkgs; [
-              # Terminal padrão
+              # Default terminal
               ghostty
 
-              # Gestão de chaves PGP/X.509
+              # PGP/X.509 key management
               seahorse
 
-              # Criação de conteúdo
+              # Content creation
               obs-studio
               pinta
 
-              # Utilitários de sistema e produtividade
+              # System utilities and productivity
               gnome-extension-manager
               impression
               smile
               zoom-us
 
-              # Tema GTK3 para compatibilidade com apps legados
+              # GTK3 theme for compatibility with legacy apps
               adw-gtk3
             ];
 
             etc = {
-              # Padrão de sistema: Firefox como fallback para usuários sem
-              # preferência configurada no Home Manager.
+              # System default: Firefox as the fallback for users with no
+              # preference configured in Home Manager.
               "xdg/mimeapps.list".text = ''
                 [Default Applications]
                 text/html=org.mozilla.firefox.desktop
@@ -101,12 +100,14 @@ _: {
 
           programs.dconf = {
             enable = true;
-            # Layout br+abnt2 como default para todos os usuários.
-            # Espelha services.xserver.xkb definido em localization.nix no lado GNOME:
-            # sem isso, o GNOME ignora o XKB do sistema e exibe apenas "English (US)".
-            # profiles.user.databases: banco dconf de sistema, gravado em /etc/dconf/db/
-            # e independente do home. Use aqui (não em dconf.settings no HM) para
-            # qualquer setting que deva sobreviver a reboots com home efêmero.
+            # br+abnt2 layout as the default for all users.
+            # Mirrors services.xserver.xkb defined in localization.nix on the GNOME
+            # side: without this, GNOME ignores the system XKB and shows only
+            # "English (US)".
+            # profiles.user.databases: system-wide dconf database, written to
+            # /etc/dconf/db/ and independent of the home. Use here (not
+            # dconf.settings in HM) for any setting that must survive reboots
+            # with an ephemeral home.
             profiles.user.databases = [
               {
                 settings = {
@@ -118,8 +119,8 @@ _: {
                     ];
                   };
 
-                  # Layout br+abnt2 para todos os usuários.
-                  # Espelha services.xserver.xkb definido em localization.nix.
+                  # br+abnt2 layout for all users.
+                  # Mirrors services.xserver.xkb defined in localization.nix.
                   "org/gnome/desktop/input-sources" = {
                     sources = [
                       (lib.gvariant.mkTuple [
@@ -129,9 +130,9 @@ _: {
                     ];
                   };
 
-                  # Quake Terminal — desktop entry definido em ghostty.nix
-                  # O ID usa --class=com.mitchellh.ghostty.quake para que o GNOME Shell
-                  # atribua a janela ao Shell.App correto via app_id Wayland.
+                  # Quake Terminal — desktop entry defined in ghostty.nix
+                  # The ID uses --class=com.mitchellh.ghostty.quake so GNOME Shell
+                  # assigns the window to the right Shell.App via the Wayland app_id.
                   "org/gnome/shell/extensions/quake-terminal" = {
                     terminal-id = "com.mitchellh.ghostty.quake.desktop";
                     terminal-shortcut = [ "F12" ];
@@ -143,23 +144,23 @@ _: {
             ];
           };
 
-          # Cria ~/.config/ibus/Compose para todos os usuários ao iniciar a sessão.
-          # A diretiva 'f' só cria o arquivo se ainda não existir.
-          # A regra 'd' garante que o diretório pai exista (inclusive para gdm-greeter).
+          # Creates ~/.config/ibus/Compose for all users on session start.
+          # The 'f' directive only creates the file if it doesn't already exist.
+          # The 'd' rule ensures the parent directory exists (including for gdm-greeter).
           systemd.user.tmpfiles.rules = [
             "d %h/.config/ibus 0755 - - -"
             ''f %h/.config/ibus/Compose 0644 - - - include "%%L"''
           ];
 
-          # Aguardar conectividade antes de instalar/atualizar Flatpaks.
+          # Wait for connectivity before installing/updating Flatpaks.
           systemd.services.flatpak-managed-install = {
             after = [ "network-online.target" ];
             wants = [ "network-online.target" ];
           };
 
-          # Regra Polkit para permitir instalação de Flatpaks system-wide sem senha.
+          # Polkit rule allowing system-wide Flatpak installs without a password.
           security.polkit.extraConfig = ''
-            // Permitir que usuários do grupo 'wheel' gerenciem Flatpaks sem senha
+            // Allow users in the 'wheel' group to manage Flatpaks without a password
             polkit.addRule(function(action, subject) {
               if (action.id.indexOf("org.freedesktop.Flatpak") === 0 &&
                   subject.isInGroup("wheel")) {

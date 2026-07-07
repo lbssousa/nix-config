@@ -1,10 +1,10 @@
-# Template de particionamento ZFS com LUKS
-# A raiz (/) usa um dataset ZFS revertido ao snapshot @blank a cada boot
-# (impermanência sem tmpfs — permite rollback e snapshots nativos do ZFS)
-# Os demais filesystems usam datasets ZFS persistentes
-# Utilizado pelos hosts via: import ../../disko-zfs.nix { inherit lib; device = "..."; swapSize = "..."; }
+# ZFS partitioning template with LUKS
+# The root (/) uses a ZFS dataset reverted to the @blank snapshot on every boot
+# (impermanence without tmpfs — enables native ZFS rollback and snapshots)
+# The other filesystems use persistent ZFS datasets
+# Used by hosts via: import ../../disko-zfs.nix { inherit lib; device = "..."; swapSize = "..."; }
 {
-  device ? throw "Defina o dispositivo de disco, ex: /dev/nvme0n1",
+  device ? throw "Set the disk device, e.g.: /dev/nvme0n1",
   swapSize ? "20G",
   lib,
   ...
@@ -20,7 +20,7 @@ in
       content = {
         type = "gpt";
         partitions = {
-          # Partição EFI para systemd-boot / Limine
+          # EFI partition for systemd-boot / Limine
           esp = {
             name = "ESP";
             size = "512M";
@@ -35,7 +35,7 @@ in
               ];
             };
           };
-          # Partição principal criptografada com LUKS, contendo o pool ZFS
+          # Main LUKS-encrypted partition, containing the ZFS pool
           luks = {
             name = "luks";
             size = "100%";
@@ -45,7 +45,7 @@ in
               settings = {
                 allowDiscards = true;
               };
-              # Dentro do LUKS, o pool ZFS é criado diretamente no dispositivo
+              # Inside LUKS, the ZFS pool is created directly on the device
               content = {
                 type = "zfs";
                 pool = "zroot";
@@ -56,26 +56,26 @@ in
       };
     };
 
-    # Pool ZFS principal
+    # Main ZFS pool
     zpool.zroot = {
       type = "zpool";
       options = {
-        ashift = "12"; # Otimizado para discos com setor de 4K (NVMe, SSDs modernos)
-        autotrim = "on"; # TRIM automático para SSDs/NVMe
+        ashift = "12"; # Optimized for disks with 4K sectors (NVMe, modern SSDs)
+        autotrim = "on"; # Automatic TRIM for SSDs/NVMe
       };
       rootFsOptions = {
-        compression = "zstd"; # Compressão eficiente para dados gerais
-        "com.sun:auto-snapshot" = "false"; # Desabilitar auto-snapshot (gerenciado manualmente)
-        mountpoint = "none"; # Não montar o pool raiz diretamente
-        xattr = "sa"; # Atributos estendidos como atributos de sistema (mais eficiente)
-        acltype = "posixacl"; # ACLs POSIX (necessário para aplicações modernas)
-        dnodesize = "auto"; # Tamanho do dnode adaptável (melhora compatibilidade)
+        compression = "zstd"; # Efficient compression for general data
+        "com.sun:auto-snapshot" = "false"; # Disable auto-snapshot (managed manually)
+        mountpoint = "none"; # Don't mount the root pool directly
+        xattr = "sa"; # Extended attributes as system attributes (more efficient)
+        acltype = "posixacl"; # POSIX ACLs (required by modern applications)
+        dnodesize = "auto"; # Adaptive dnode size (improves compatibility)
       };
 
       datasets = lib.mkMerge [
-        # Swap em ZVOL (somente se swapSize != "0")
-        # NOTA: ZVOL swap não suporta hibernação (suspend-to-disk).
-        # Para hibernação, use o perfil Btrfs (com swap em LVM+LUKS e resumeDevice=true).
+        # Swap on ZVOL (only if swapSize != "0")
+        # NOTE: ZVOL swap does not support hibernation (suspend-to-disk).
+        # For hibernation, use the Btrfs profile (swap on LVM+LUKS with resumeDevice=true).
         (lib.mkIf hasSwap {
           swap = {
             type = "zfs_volume";
@@ -85,23 +85,23 @@ in
             };
             options = {
               volblocksize = "4096";
-              compression = "lz4"; # Compressão leve para swap (melhor ratio que zle)
+              compression = "lz4"; # Lightweight compression for swap (better ratio than zle)
               "com.sun:auto-snapshot" = "false";
             };
           };
         })
         {
-          # ── Datasets locais (sem backup necessário — recriáveis) ──────────
+          # ── Local datasets (no backup needed — recreatable) ───────────────
 
-          # Contêiner para datasets locais
+          # Container for local datasets
           "local" = {
             type = "zfs_fs";
             options.mountpoint = "none";
           };
 
-          # Raiz efêmera — revertida ao snapshot @blank a cada boot pelo initrd
-          # O módulo preservation-zfs.nix configura o rollback automático via
-          # boot.initrd.postDeviceCommands (initrd legado) ou systemd initrd service.
+          # Ephemeral root — reverted to the @blank snapshot on every boot by the initrd
+          # The preservation-zfs.nix module configures automatic rollback via
+          # boot.initrd.postDeviceCommands (legacy initrd) or a systemd initrd service.
           "local/root" = {
             type = "zfs_fs";
             mountpoint = "/";
@@ -109,61 +109,61 @@ in
               mountpoint = "legacy";
               "com.sun:auto-snapshot" = "false";
             };
-            # Snapshot blank criado logo após a formatação; usado para rollback no boot
+            # Blank snapshot created right after formatting; used for rollback on boot
             postCreateHook = "zfs snapshot zroot/local/root@blank";
           };
 
-          # Nix store — preservado (essencial para o sistema funcionar), sem backup
+          # Nix store — preserved (essential for the system to work), no backup
           "local/nix" = {
             type = "zfs_fs";
             mountpoint = "/nix";
             options = {
               mountpoint = "legacy";
               "com.sun:auto-snapshot" = "false";
-              atime = "off"; # Desabilitar atime para melhor performance no /nix
+              atime = "off"; # Disable atime for better performance on /nix
             };
           };
 
-          # ── Datasets seguros (dados persistentes — backup recomendado) ────
+          # ── Safe datasets (persistent data — backup recommended) ──────────
 
-          # Contêiner para datasets persistentes
+          # Container for persistent datasets
           "safe" = {
             type = "zfs_fs";
             options.mountpoint = "none";
           };
 
-          # Diretórios de usuário — preservados entre boots
+          # User directories — preserved across boots
           "safe/home" = {
             type = "zfs_fs";
             mountpoint = "/home";
             options.mountpoint = "legacy";
           };
 
-          # Dados persistentes do sistema — usados pelo módulo preservation
+          # Persistent system data — used by the preservation module
           "safe/persist" = {
             type = "zfs_fs";
             mountpoint = "/persist";
             options.mountpoint = "legacy";
           };
 
-          # Logs do sistema
+          # System logs
           "safe/log" = {
             type = "zfs_fs";
             mountpoint = "/var/log";
             options = {
               mountpoint = "legacy";
-              compression = "lz4"; # lz4 é eficiente para logs de texto com baixo overhead
+              compression = "lz4"; # lz4 is efficient for text logs with low overhead
             };
           };
 
-          # Dados de containers (Podman, Docker, etc.) — preservados
+          # Container data (Podman, Docker, etc.) — preserved
           "safe/containers" = {
             type = "zfs_fs";
             mountpoint = "/var/lib/containers";
             options.mountpoint = "legacy";
           };
 
-          # Aplicações Flatpak — preservadas entre boots
+          # Flatpak apps — preserved across boots
           "safe/flatpak" = {
             type = "zfs_fs";
             mountpoint = "/var/lib/flatpak";

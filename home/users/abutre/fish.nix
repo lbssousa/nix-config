@@ -1,6 +1,6 @@
-# Plugins do Fish exclusivos do usuário abutre, incluindo o fish-ai ("ai"),
-# que usa a variável OPENAI_API_KEY. Os demais usuários usam o Fish sem
-# plugins (ver home/common.nix).
+# Fish plugins exclusive to the abutre user, including fish-ai ("ai"),
+# which uses the OPENAI_API_KEY variable. Other users use Fish without
+# plugins (see home/common.nix).
 {
   config,
   pkgs,
@@ -39,12 +39,12 @@
     ];
   };
 
-  # fish-ai (plugin "ai") lê a chave da API da OpenAI da variável
-  # OPENAI_API_KEY. A chave é decifrada em tempo de execução pelo sops-nix
-  # e nunca gravada no Nix store. O Fish sempre carrega conf.d/*.fish antes
-  # de config.fish, então este export precisa estar em conf.d — ordenado
-  # antes de "plugin-ai.fish" — para já existir quando o próprio conf.d
-  # do plugin verifica a variável.
+  # fish-ai (the "ai" plugin) reads the OpenAI API key from the
+  # OPENAI_API_KEY variable. The key is decrypted at runtime by sops-nix
+  # and never written to the Nix store. Fish always loads conf.d/*.fish
+  # before config.fish, so this export needs to live in conf.d — ordered
+  # before "plugin-ai.fish" — so it already exists when the plugin's own
+  # conf.d checks the variable.
   xdg.configFile."fish/conf.d/00-openai-api-key.fish".text = ''
     if test -f ${config.sops.secrets."openai-api-key".path}
       set -gx OPENAI_API_KEY (cat ${config.sops.secrets."openai-api-key".path})

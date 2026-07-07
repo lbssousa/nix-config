@@ -1,98 +1,98 @@
-# Guia de Instalação do NixOS
+# NixOS Installation Guide
 
-Este guia cobre a instalação do NixOS usando esta configuração baseada em Flakes com Btrfs, disko, preservation e swap híbrida.
+This guide covers installing NixOS using this Flakes-based configuration with Btrfs, disko, preservation and hybrid swap.
 
-## 📋 Pré-requisitos
+## 📋 Prerequisites
 
-1. Baixe a ISO do NixOS: [https://nixos.org/download.html](https://nixos.org/download.html)
-2. Crie um USB bootável com a ISO
-3. Boot no USB do NixOS
-4. **YubiKey com chave GPG** (recomendado): necessária para desbloquear o repositório
-   `nix-keys` via git-crypt. Sem ela, secrets do sops-nix (ex: senha do Wi-Fi) não
-   serão configurados durante a instalação e precisarão ser restaurados manualmente.
+1. Download the NixOS ISO: [https://nixos.org/download.html](https://nixos.org/download.html)
+2. Create a bootable USB with the ISO
+3. Boot from the NixOS USB
+4. **YubiKey with a GPG key** (recommended): needed to unlock the `nix-keys`
+   repository via git-crypt. Without it, sops-nix secrets (e.g. Wi-Fi password)
+   won't be configured during installation and will need to be restored manually.
 
-## 🚀 Instalação
+## 🚀 Installation
 
-### Script de Instalação Automatizada (`install.sh`)
+### Automated Installation Script (`install.sh`)
 
-O repositório inclui o script `scripts/install.sh` que automatiza todos os passos de instalação descritos neste guia. É a forma mais rápida e segura de instalar o sistema.
+The repository includes the `scripts/install.sh` script, which automates every installation step described in this guide. It's the fastest and safest way to install the system.
 
-#### Como usar
+#### How to use it
 
 ```bash
-# 1. Boot no USB do NixOS
+# 1. Boot from the NixOS USB
 
-# 2. Clonar o repositório de configuração
+# 2. Clone the configuration repository
 nix-shell -p git
 git clone https://github.com/lbssousa/nix-config.git /tmp/nixos-config
 cd /tmp/nixos-config
 
-# 3. (Opcional, mas recomendado) Clonar e desbloquear o nix-keys
-#    O nix-keys armazena as chaves age do sops-nix (criptografadas com git-crypt).
-#    Sem ele, secrets de sistema (ex: Wi-Fi via sops-nix) não funcionarão após o boot.
+# 3. (Optional, but recommended) Clone and unlock nix-keys
+#    nix-keys stores sops-nix's age keys (encrypted with git-crypt).
+#    Without it, system secrets (e.g. Wi-Fi via sops-nix) won't work after boot.
 nix-shell -p git git-crypt gnupg
 git clone git@github.com:lbssousa/nix-keys.git /tmp/nix-keys
-cd /tmp/nix-keys && git-crypt unlock  # requer YubiKey inserida
+cd /tmp/nix-keys && git-crypt unlock  # requires the YubiKey to be inserted
 cd /tmp/nixos-config
 
-# 4. Executar o script como root (modo interativo — recomendado para a maioria dos casos)
+# 4. Run the script as root (interactive mode — recommended for most cases)
 sudo bash scripts/install.sh
-#    O script detectará automaticamente o nix-keys em /tmp/nix-keys e copiará
-#    a chave age de sistema para /persist/etc/sops/age/keys.txt.
+#    The script will automatically detect nix-keys at /tmp/nix-keys and copy
+#    the system age key to /persist/etc/sops/age/keys.txt.
 ```
 
-O script irá guiar você por cada etapa, perguntando as informações necessárias.
+The script will guide you through each step, asking for the required information.
 
-#### Opções do script
+#### Script options
 
 ```text
-Uso:
+Usage:
   bash scripts/install.sh [--host <hostname>] [--disk <device>]
                           [--partition-profile <btrfs|zfs>]
-                          [--user "login:Nome Completo:sudo"]
-                          [--user "login2:Nome2:nosudo"] ...
-                          [--nix-keys-dir <caminho>]
-                          [--age-keys-backup <arquivo>]
+                          [--user "login:Full Name:sudo"]
+                          [--user "login2:Name2:nosudo"] ...
+                          [--nix-keys-dir <path>]
+                          [--age-keys-backup <file>]
                           [--non-interactive]
                           [--help]
 
-Opções:
-  --host              Nome do host NixOS (ex: barbudus, bigodon).
-                      Se omitido, é perguntado interativamente.
-  --disk              Dispositivo de disco de destino (ex: /dev/nvme0n1, /dev/sda).
-                      Se omitido, é perguntado interativamente.
-  --partition-profile Perfil de particionamento: btrfs (padrão) ou zfs.
-                      Se omitido, é perguntado interativamente.
-  --user              Usuário no formato "login:Nome Completo:sudo|nosudo".
-                      Pode ser repetido para criar múltiplos usuários.
-                      "sudo" (padrão) inclui o usuário no grupo wheel (sudo).
-                      "nosudo" cria o usuário sem permissão de sudo.
-                      Se omitido, é perguntado interativamente.
-  --nix-keys-dir      Caminho para o clone local do repositório nix-keys
-                      (repositório privado com chaves age do sops-nix, cifrado com
-                      git-crypt). Se omitido, procura em ../nix-keys (irmão de nix-config).
-  --age-keys-backup   Caminho direto para o arquivo keys.txt da chave age de sistema.
-                      Alternativa a --nix-keys-dir quando você tem apenas o arquivo.
-  --non-interactive   Não faz perguntas; falha se informações obrigatórias
-                      não forem fornecidas via flags.
-  --help, -h          Exibe esta ajuda e sai.
+Options:
+  --host              NixOS host name (e.g. barbudus, bigodon).
+                      If omitted, it's asked interactively.
+  --disk              Target disk device (e.g. /dev/nvme0n1, /dev/sda).
+                      If omitted, it's asked interactively.
+  --partition-profile Partitioning profile: btrfs (default) or zfs.
+                      If omitted, it's asked interactively.
+  --user              User in the format "login:Full Name:sudo|nosudo".
+                      Can be repeated to create multiple users.
+                      "sudo" (default) adds the user to the wheel (sudo) group.
+                      "nosudo" creates the user without sudo permission.
+                      If omitted, it's asked interactively.
+  --nix-keys-dir      Path to the local clone of the nix-keys repository
+                      (private repository with sops-nix age keys, encrypted with
+                      git-crypt). If omitted, looks in ../nix-keys (sibling of nix-config).
+  --age-keys-backup   Direct path to the system age key's keys.txt file.
+                      Alternative to --nix-keys-dir when you only have the file.
+  --non-interactive   Doesn't ask questions; fails if required information
+                      isn't provided via flags.
+  --help, -h          Show this help and exit.
 ```
 
-Para ver a ajuda diretamente:
+To see the help directly:
 
 ```bash
 sudo bash scripts/install.sh --help
 ```
 
-#### Exemplos
+#### Examples
 
-**Instalação totalmente interativa** (recomendado para iniciantes):
+**Fully interactive installation** (recommended for beginners):
 
 ```bash
 sudo bash scripts/install.sh
 ```
 
-**Instalação não-interativa** (útil para automação ou reinstalações):
+**Non-interactive installation** (useful for automation or reinstalls):
 
 ```bash
 sudo bash scripts/install.sh \
@@ -105,50 +105,50 @@ sudo bash scripts/install.sh \
   --non-interactive
 ```
 
-**Pré-selecionar host e disco, mas confirmar usuários interativamente:**
+**Pre-select the host and disk, but confirm users interactively:**
 
 ```bash
 sudo bash scripts/install.sh --host bigodon --disk /dev/sda
 ```
 
-#### O que o script faz
+#### What the script does
 
-1. Habilita Flakes e o cache nix-community para o root no ambiente live
-2. Clona e desbloqueia o repositório `nix-keys` via git-crypt (requer YubiKey ou chave simétrica)
-3. Lista hosts e discos disponíveis para seleção
-4. Seleciona o perfil de particionamento (Btrfs ou ZFS)
-5. Atualiza o `disko.nix` do host com o disco escolhido
-6. Particiona e formata o disco com disko (⚠️ apaga todos os dados!)
-   - A raiz (`/`) é configurada como tmpfs — limpa automaticamente a cada boot
-   - Os dados persistentes ficam em subvolumes Btrfs (ou datasets ZFS) dedicados
-7. Cria arquivos de usuário a partir do skeleton
-8. Adiciona os arquivos de usuário ao índice do git (`git add`)
-9. Atualiza `configuration.nix` com os imports dos usuários
-10. Cria chaves Secure Boot em `/persist/etc/secureboot` (apenas hosts com Secure Boot via Limine)
-11. Copia a chave age de sistema do `nix-keys` para `/persist/etc/sops/age/keys.txt`
-    — permite que o sops-nix descriptografe secrets (Wi-Fi etc.) no primeiro boot
-12. Copia a configuração para `/mnt/etc/nixos` e executa `nixos-install`
-13. Copia automaticamente as conexões Wi-Fi do live CD para `/persist/etc/NetworkManager/system-connections`
-    — o Wi-Fi já estará configurado no primeiro boot, sem precisar redigitar credenciais
-14. Define senhas via `passwd --root` e copia `/etc/shadow` para `/persist`
+1. Enables Flakes and the nix-community cache for root in the live environment
+2. Clones and unlocks the `nix-keys` repository via git-crypt (requires a YubiKey or symmetric key)
+3. Lists available hosts and disks for selection
+4. Selects the partitioning profile (Btrfs or ZFS)
+5. Updates the host's `disko.nix` with the chosen disk
+6. Partitions and formats the disk with disko (⚠️ erases all data!)
+   - The root (`/`) is configured as tmpfs — automatically wiped on every boot
+   - Persistent data lives in dedicated Btrfs subvolumes (or ZFS datasets)
+7. Creates user files from the skeleton
+8. Adds the user files to the git index (`git add`)
+9. Updates `configuration.nix` with the user imports
+10. Creates Secure Boot keys in `/persist/etc/secureboot` (only for hosts with Secure Boot via Limine)
+11. Copies the system age key from `nix-keys` to `/persist/etc/sops/age/keys.txt`
+    — lets sops-nix decrypt secrets (Wi-Fi, etc.) on the first boot
+12. Copies the configuration to `/mnt/etc/nixos` and runs `nixos-install`
+13. Automatically copies Wi-Fi connections from the live CD to `/persist/etc/NetworkManager/system-connections`
+    — Wi-Fi will already be configured on the first boot, no need to retype credentials
+14. Sets passwords via `passwd --root` and copies `/etc/shadow` to `/persist`
 
-### Instalação Manual (passo a passo)
+### Manual Installation (step by step)
 
 ```bash
-# Conectar à internet (se necessário)
-# Para Wi-Fi via NetworkManager:
+# Connect to the internet (if needed)
+# For Wi-Fi via NetworkManager:
 nmcli device wifi list
-nmcli device wifi connect "SSID" password "senha"
+nmcli device wifi connect "SSID" password "password"
 
-# Definir layout do teclado
+# Set the keyboard layout
 loadkeys br-abnt2
 
-# Ativar SSH para instalação remota (opcional)
+# Enable SSH for remote installation (optional)
 sudo systemctl start sshd
-passwd  # Definir senha temporária para o live environment
+passwd  # Set a temporary password for the live environment
 
-# Habilitar Flakes e o cache nix-community temporariamente.
-# O cache evita compilar dependências do zero e falhas de download.
+# Temporarily enable Flakes and the nix-community cache.
+# The cache avoids compiling dependencies from scratch and download failures.
 mkdir -p ~/.config/nix
 cat >> ~/.config/nix/nix.conf <<EOF
 experimental-features = nix-command flakes
@@ -157,97 +157,97 @@ extra-trusted-public-keys = nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq
 EOF
 ```
 
-### 2. Clonar os repositórios
+### 2. Clone the repositories
 
 ```bash
-# Instalar git no live environment
+# Install git in the live environment
 nix-shell -p git git-crypt gnupg
 
-# Clonar a configuração do sistema (repositório público)
+# Clone the system configuration (public repository)
 git clone https://github.com/lbssousa/nix-config.git /tmp/nixos-config
 cd /tmp/nixos-config
 ```
 
-#### 2b. Clonar e desbloquear o nix-keys (repositório de chaves)
+#### 2b. Clone and unlock nix-keys (the keys repository)
 
-O repositório `nix-keys` é um repositório **privado** (SSH) que armazena as chaves age
-do `sops-nix`, criptografadas com `git-crypt`. É necessário para que os secrets de sistema
-sejam configurados corretamente após a instalação.
+The `nix-keys` repository is a **private** (SSH) repository that stores `sops-nix`'s
+age keys, encrypted with `git-crypt`. It's required for the system secrets to be
+configured correctly after installation.
 
-Estrutura do `nix-keys`:
-- `sops/age/keys.txt` — **chave age de sistema** (descriptografa secrets do NixOS, como a
-  senha do Wi-Fi). Copiada para `/persist/etc/sops/age/keys.txt` durante a instalação.
-- `sops/age/<usuario>/keys.txt` — **chave age pessoal** de cada usuário (descriptografa
-  secrets do Home Manager, como credenciais do rclone). Copiada automaticamente pelo
-  script de ativação do Home Manager no **primeiro login** — não é necessária durante a
-  instalação.
+`nix-keys` structure:
+- `sops/age/keys.txt` — **system age key** (decrypts NixOS secrets, like the
+  Wi-Fi password). Copied to `/persist/etc/sops/age/keys.txt` during installation.
+- `sops/age/<user>/keys.txt` — each user's **personal age key** (decrypts
+  Home Manager secrets, like rclone credentials). Copied automatically by
+  the Home Manager activation script on **first login** — not needed during
+  installation.
 
 ```bash
-# Clonar o nix-keys como irmão do nix-config (detectado automaticamente pelo install.sh)
+# Clone nix-keys as a sibling of nix-config (auto-detected by install.sh)
 git clone git@github.com:lbssousa/nix-keys.git /tmp/nix-keys
 
-# Desbloquear com git-crypt (requer YubiKey inserida ou chave simétrica exportada)
+# Unlock with git-crypt (requires the YubiKey inserted or an exported symmetric key)
 cd /tmp/nix-keys
-gpg --card-status              # verificar que o YubiKey está reconhecido pelo GPG
-git-crypt unlock               # desbloquear via GPG (YubiKey)
-# ou: git-crypt unlock /caminho/para/git-crypt.key  # via chave simétrica
+gpg --card-status              # verify the YubiKey is recognized by GPG
+git-crypt unlock               # unlock via GPG (YubiKey)
+# or: git-crypt unlock /path/to/git-crypt.key  # via symmetric key
 
 cd /tmp/nixos-config
 ```
 
-> Se o `nix-keys` não estiver disponível durante a instalação, o sistema será instalado
-> normalmente mas os secrets do sops-nix (ex: conexões Wi-Fi gerenciadas pelo sops) não
-> estarão ativos até que a chave seja restaurada manualmente em
+> If `nix-keys` isn't available during installation, the system will install
+> normally but sops-nix secrets (e.g. Wi-Fi connections managed by sops) won't
+> be active until the key is restored manually to
 > `/persist/etc/sops/age/keys.txt`.
 
-### 3. Identificar o disco de instalação
+### 3. Identify the installation disk
 
 ```bash
-# Listar discos disponíveis
+# List available disks
 lsblk
 
-# Ou com mais detalhes:
+# Or with more detail:
 fdisk -l
 
-# Identificar o disco correto (ex: /dev/nvme0n1 para NVMe, /dev/sda para SATA)
+# Identify the correct disk (e.g. /dev/nvme0n1 for NVMe, /dev/sda for SATA)
 ```
 
-### 4. Ajustar configuração de disco
+### 4. Adjust the disk configuration
 
-Edite o arquivo de disko do host desejado para definir o dispositivo correto:
+Edit the desired host's disko file to set the correct device:
 
 ```bash
-# Para barbudus (Dell Inspiron 14 5490):
+# For barbudus (Dell Inspiron 14 5490):
 nano hosts/barbudus/disko.nix
 
-# Para bigodon (Morefine M6):
+# For bigodon (Morefine M6):
 nano hosts/bigodon/disko.nix
 ```
 
-Altere `device = "/dev/nvme0n1"` para o disco correto identificado no passo anterior.
+Change `device = "/dev/nvme0n1"` to the correct disk identified in the previous step.
 
-### 5. Particionar e formatar o disco
+### 5. Partition and format the disk
 
-⚠️ **ATENÇÃO**: Este comando IRÁ APAGAR TODOS OS DADOS DO DISCO SELECIONADO!
+⚠️ **WARNING**: This command WILL ERASE ALL DATA ON THE SELECTED DISK!
 
 ```bash
-# Escolha o host apropriado
-HOST=barbudus  # ou bigodon
+# Choose the appropriate host
+HOST=barbudus  # or bigodon
 
-# Executar disko para particionar e formatar
+# Run disko to partition and format
 sudo nix run github:nix-community/disko \
   --option extra-substituters "https://nix-community.cachix.org" \
   --option extra-trusted-public-keys "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCUSeBs=" \
   -- --mode disko ./hosts/$HOST/disko.nix
 ```
 
-Este comando irá:
+This command will:
 
-1. Criar partições GPT (EFI 512MB + partição LUKS)
-2. Configurar criptografia LUKS (será solicitada senha durante o processo)
-3. Criar volumes LVM (swap 20GB + volume Btrfs)
-4. Configurar a raiz (`/`) como **tmpfs** — limpa automaticamente a cada boot
-5. Formatar o volume Btrfs e criar os subvolumes de dados persistentes:
+1. Create GPT partitions (512MB EFI + LUKS partition)
+2. Set up LUKS encryption (you'll be asked for a password during the process)
+3. Create LVM volumes (20GB swap + Btrfs volume)
+4. Configure the root (`/`) as **tmpfs** — automatically wiped on every boot
+5. Format the Btrfs volume and create the persistent data subvolumes:
    - `@home` → `/home`
    - `@nix` → `/nix`
    - `@persist` → `/persist`
@@ -255,50 +255,50 @@ Este comando irá:
    - `@containers` → `/var/lib/containers`
    - `@flatpak` → `/var/lib/flatpak`
    - `@snapshots` → `/.snapshots`
-6. Montar tudo em `/mnt`
+6. Mount everything at `/mnt`
 
-### 6. Gerar configuração de hardware (recomendado)
+### 6. Generate the hardware configuration (recommended)
 
 ```bash
-# Gerar hardware-configuration.nix automático
+# Generate an automatic hardware-configuration.nix
 nixos-generate-config --no-filesystems --root /mnt
 
-# Mesclar com o arquivo do host (ou substituir completamente)
-# IMPORTANTE: Mantenha a linha "import ./disko.nix" nos imports
-# e as configurações de zramSwap do arquivo original
+# Merge it with the host's file (or replace it entirely)
+# IMPORTANT: Keep the "import ./disko.nix" line in the imports
+# and the zramSwap settings from the original file
 sudo cp /mnt/etc/nixos/hardware-configuration.nix ./hosts/$HOST/hardware-configuration.nix
 ```
 
-Após copiar, edite o arquivo para:
+After copying, edit the file to:
 
-1. Manter `import ./disko.nix` nos imports
-2. Adicionar as configurações de `zramSwap`
-3. Manter `fileSystems."/persist".neededForBoot = true`
+1. Keep `import ./disko.nix` in the imports
+2. Add the `zramSwap` settings
+3. Keep `fileSystems."/persist".neededForBoot = true`
 
-### 7. Criar arquivos de usuário
+### 7. Create user files
 
-É possível criar **uma ou mais contas de usuário**. Para cada conta, defina o nome de login, o nome completo e se ela terá permissão de **sudo** (grupo `wheel`) ou não.
-
-```bash
-# Copiar o template para o(s) usuário(s) desejado(s)
-cp users/skeleton.nix users/seu-usuario.nix
-
-# Editar o arquivo (substituir "skeleton" pelo nome real do usuário)
-nano users/seu-usuario.nix
-```
-
-Para **criar um segundo usuário sem sudo**, copie o skeleton novamente e remova a linha `"wheel"` do `extraGroups`:
+You can create **one or more user accounts**. For each account, set the login name, full name and whether it will have **sudo** permission (`wheel` group) or not.
 
 ```bash
-cp users/skeleton.nix users/outro-usuario.nix
-nano users/outro-usuario.nix
-# Remova a linha: "wheel" # sudo
+# Copy the template for the desired user(s)
+cp users/skeleton.nix users/your-username.nix
+
+# Edit the file (replace "skeleton" with the actual username)
+nano users/your-username.nix
 ```
 
-Com arquitetura dendrítica, o vínculo de usuários do sistema é centralizado.
-Edite `dendritic/data/users.nix` e adicione os logins na lista `config.dendritic.users`.
+To **create a second user without sudo**, copy the skeleton again and remove the `"wheel"` line from `extraGroups`:
 
-Exemplo:
+```bash
+cp users/skeleton.nix users/other-user.nix
+nano users/other-user.nix
+# Remove the line: "wheel" # sudo
+```
+
+With the dendritic architecture, wiring system users is centralized.
+Edit `dendritic/data/users.nix` and add the logins to the `config.dendritic.users` list.
+
+Example:
 
 ```nix
 config.dendritic.users = [
@@ -308,27 +308,27 @@ config.dendritic.users = [
   "camelo"
   "cavalo"
   "macaco"
-  "seu-usuario"
-  "outro-usuario"
+  "your-username"
+  "other-user"
 ];
 ```
 
-> ⚠️ **IMPORTANTE — adicionar o arquivo ao índice do git**
+> ⚠️ **IMPORTANT — add the file to the git index**
 >
-> O Nix avalia flakes a partir do **índice do git**, não do sistema de arquivos
-> diretamente. Arquivos não rastreados que não estejam no índice são
-> **invisíveis ao Nix** e não chegam ao `/nix/store`, causando erros do tipo
-> _"module not found"_ no `nixos-install`.
+> Nix evaluates flakes from the **git index**, not the filesystem
+> directly. Untracked files not in the index are
+> **invisible to Nix** and never reach `/nix/store`, causing
+> _"module not found"_ errors in `nixos-install`.
 >
-> Execute o comando abaixo para incluir o arquivo no índice:
+> Run the command below to add the file to the index:
 >
 > ```bash
-> git add users/seu-usuario.nix
+> git add users/your-username.nix
 > ```
 
-### 8. Instalar o NixOS
+### 8. Install NixOS
 
-> **Apenas para `barbudus` (Secure Boot via Limine):** crie as chaves Secure Boot _antes_ do `nixos-install`. Sem isso, o instalador falha com `Failed to install bootloader`.
+> **Only for `barbudus` (Secure Boot via Limine):** create the Secure Boot keys _before_ `nixos-install`. Without this, the installer fails with `Failed to install bootloader`.
 >
 > ```bash
 > sudo mkdir -p /mnt/persist/etc/secureboot
@@ -340,28 +340,28 @@ config.dendritic.users = [
 >   --database-path /mnt/persist/etc/secureboot/GUID
 > ```
 >
-> > **Por quê `--disable-landlock`?** O sbctl ativa o sandbox Landlock (LSM do Linux) antes
-> > de processar as flags de caminho. O Landlock é configurado com o caminho padrão
-> > `/var/lib/sbctl`, bloqueando qualquer acesso a `/mnt/persist/etc/secureboot` — mesmo
-> > para root. Isso causa o erro `sbctl requires root to run: open ... permission denied`.
+> > **Why `--disable-landlock`?** sbctl activates the Landlock sandbox (a Linux LSM) before
+> > processing the path flags. Landlock is configured with the default path
+> > `/var/lib/sbctl`, blocking any access to `/mnt/persist/etc/secureboot` — even
+> > for root. This causes the error `sbctl requires root to run: open ... permission denied`.
 > >
-> > **Por quê dois flags de caminho?** `--database-path` define apenas o arquivo GUID;
-> > `--export` define o diretório de chaves. Juntos criam a estrutura completa que o
-> > sbctl espera em `/var/lib/sbctl` (symlink para `/persist/etc/secureboot`, criado
-> > via `systemd.tmpfiles.rules` no host — o módulo `boot.loader.limine` não tem uma
-> > opção de `pkiBundle`, o caminho é sempre fixo):
+> > **Why two path flags?** `--database-path` sets only the GUID file; `--export`
+> > sets the keys directory. Together they create the full structure that
+> > sbctl expects at `/var/lib/sbctl` (a symlink to `/persist/etc/secureboot`, created
+> > via `systemd.tmpfiles.rules` on the host — the `boot.loader.limine` module has no
+> > `pkiBundle`-style option, the path is always fixed):
 > > `GUID`, `keys/PK/`, `keys/KEK/`, `keys/db/`.
 
 ```bash
-# Copiar a configuração para /mnt
+# Copy the configuration to /mnt
 sudo cp -r /tmp/nixos-config /mnt/etc/nixos
 
-# Instalar o sistema
-# Os flags --option passam o cache nix-community explicitamente, tornando a
-# instalação resiliente a falhas de download de dependências.
-# --option accept-flake-config true aplica a nixConfig do flake (substituter + chave)
-# simultaneamente, evitando avisos de substitutos sem chave confiável.
-DESKTOP=plasma  # ou gnome
+# Install the system
+# The --option flags pass the nix-community cache explicitly, making the
+# installation resilient to dependency download failures.
+# --option accept-flake-config true applies the flake's nixConfig (substituter + key)
+# at the same time, avoiding warnings about untrusted substituters.
+DESKTOP=plasma  # or gnome
 sudo nixos-install \
   --flake /mnt/etc/nixos#${HOST}-${DESKTOP} \
   --option accept-flake-config true \
@@ -369,478 +369,478 @@ sudo nixos-install \
   --option extra-trusted-public-keys "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCUSeBs="
 ```
 
-Durante a instalação será solicitado:
+During installation you'll be asked for:
 
-- Senha para o usuário root (após a instalação)
+- A password for the root user (after installation)
 
-### 9. Configurar senhas
+### 9. Configure passwords
 
-Os usuários criados com `initialPassword = "nixos"` (padrão do skeleton) **serão solicitados a criar sua própria senha no primeiro login**. Não é necessário definir senhas manualmente.
+Users created with `initialPassword = "nixos"` (the skeleton's default) **will be prompted to create their own password on first login**. There's no need to set passwords manually.
 
-Se preferir definir senhas personalizadas durante a instalação, copie o shadow para `/persist` para que sobreviva ao próximo boot (a raiz tmpfs é reiniciada a cada boot; `/persist` é preservado via Btrfs):
+If you prefer to set custom passwords during installation, copy the shadow file to `/persist` so it survives the next boot (the tmpfs root is reset on every boot; `/persist` is preserved via Btrfs):
 
 ```bash
-# Entrar no sistema recém-instalado
+# Enter the newly installed system
 sudo nixos-enter --root /mnt
 
-# Definir senha para cada usuário criado
-passwd seu-usuario
-passwd outro-usuario  # se houver mais de um
+# Set a password for each user created
+passwd your-username
+passwd other-user  # if there's more than one
 
-# Definir senha para o root (opcional, mas recomendado)
+# Set a password for root (optional, but recommended)
 passwd root
 
 exit
 
-# IMPORTANTE: copiar shadow para /persist (persiste entre boots via preservation)
+# IMPORTANT: copy shadow to /persist (persists across boots via preservation)
 sudo mkdir -p /mnt/persist/etc
 sudo cp -p /mnt/etc/shadow /mnt/persist/etc/shadow
 
-# Criar arquivos de flag para evitar a troca forçada no primeiro login
-# (apenas para usuários que já definiram sua senha acima)
-sudo touch /mnt/persist/.password-change-required-<seu-usuario>
+# Create flag files to avoid a forced change on first login
+# (only for users who already set their password above)
+sudo touch /mnt/persist/.password-change-required-<your-username>
 ```
 
-> **Nota:** Se as senhas forem definidas via `nixos-enter` sem copiar o shadow para `/persist`, elas serão perdidas após o primeiro reboot — a raiz tmpfs é sempre reiniciada com estado vazio (a preservation só salva o que está explicitamente declarado). Os usuários receberão a senha temporária `nixos` e serão solicitados a trocá-la.
+> **Note:** If passwords are set via `nixos-enter` without copying the shadow file to `/persist`, they'll be lost after the first reboot — the tmpfs root is always reset to an empty state (preservation only saves what's explicitly declared). Users will get the temporary `nixos` password and be prompted to change it.
 
-### 10. Registrar o YubiKey para autenticação U2F
+### 10. Register the YubiKey for U2F authentication
 
-> 💡 **Recomendado para usuários do grupo `wheel`**: quando `/persist/etc/u2f-mappings` existe
-> e contém a entrada do usuário, `sudo`, `run0` e `pkexec` exigem toque na YubiKey.
-> Se o arquivo não existir ou o usuário não tiver entrada nele, o PAM cai automaticamente
-> para autenticação por **senha** — sem lockout.
+> 💡 **Recommended for users in the `wheel` group**: when `/persist/etc/u2f-mappings` exists
+> and contains the user's entry, `sudo`, `run0` and `pkexec` require a YubiKey touch.
+> If the file doesn't exist or the user has no entry in it, PAM automatically falls back
+> to **password** authentication — no lockout.
 
-Com o YubiKey inserido, execute **no ambiente live** (fora do `nixos-enter`):
+With the YubiKey inserted, run this **in the live environment** (outside `nixos-enter`):
 
 ```bash
-# Registrar o primeiro usuário wheel (cria o arquivo):
-pamu2fcfg -u seu-usuario > /mnt/persist/etc/u2f-mappings
-# Quando o LED do YubiKey piscar, toque-o
+# Register the first wheel user (creates the file):
+pamu2fcfg -u your-username > /mnt/persist/etc/u2f-mappings
+# Touch the YubiKey when its LED blinks
 
-# Adicionar cada usuário wheel adicional (acrescenta ao arquivo):
-pamu2fcfg -u outro-usuario >> /mnt/persist/etc/u2f-mappings
+# Add each additional wheel user (appends to the file):
+pamu2fcfg -u other-user >> /mnt/persist/etc/u2f-mappings
 
-# Para registrar uma segunda YubiKey de backup para o mesmo usuário,
-# use -n (sem prefixo de usuário) e concatene manualmente ao arquivo
-# ou repita o processo com a chave de backup no lugar da principal.
+# To register a second backup YubiKey for the same user,
+# use -n (without the user prefix) and concatenate it manually into the file,
+# or repeat the process with the backup key instead of the primary one.
 ```
 
-Verifique o resultado — deve existir uma linha iniciando com o nome de cada usuário `wheel`:
+Check the result — there should be a line starting with each `wheel` user's name:
 
 ```bash
 cat /mnt/persist/etc/u2f-mappings
 ```
 
-### 11. Finalizar instalação
+### 11. Finish the installation
 
 ```bash
-# Desmontar e reiniciar
+# Unmount and reboot
 sudo umount -R /mnt
 sudo reboot
 ```
 
-## 🔐 Primeiro Boot
+## 🔐 First Boot
 
-1. **Desbloqueio LUKS**: Digite a senha de criptografia definida durante o disko
-2. **Login**: Use o usuário criado com a senha definida durante a instalação.
-   Se nenhuma senha foi definida, use a senha temporária **`nixos`** — o sistema solicitará que você a troque imediatamente.
-3. **YubiKey U2F** — verificação recomendada antes de tentar `sudo` ou `run0`:
+1. **LUKS unlock**: Enter the encryption password set during disko
+2. **Login**: Use the created user with the password set during installation.
+   If no password was set, use the temporary password **`nixos`** — the system will ask you to change it immediately.
+3. **YubiKey U2F** — recommended check before trying `sudo` or `run0`:
 
    ```bash
    cat /persist/etc/u2f-mappings
    ```
 
-   O arquivo deve ter uma linha iniciando com o nome de cada usuário do grupo `wheel`.
-   Se o arquivo não existir (passo 10 foi pulado), `sudo`, `run0` e `pkexec` ainda
-   funcionam via senha — o PAM cai automaticamente para autenticação por senha quando
-   não há mapeamento U2F válido.
+   The file should have a line starting with each `wheel` group user's name.
+   If the file doesn't exist (step 10 was skipped), `sudo`, `run0` and `pkexec` still
+   work via password — PAM automatically falls back to password authentication when
+   there's no valid U2F mapping.
 
-4. **Secrets do sops-nix** (Wi-Fi e outros): se a chave age de sistema foi copiada
-   durante a instalação (passo 6b), os secrets serão ativados automaticamente. Verifique:
+4. **sops-nix secrets** (Wi-Fi and others): if the system age key was copied
+   during installation (step 6b), the secrets will activate automatically. Check:
 
    ```bash
-   ls /persist/etc/sops/age/keys.txt  # deve existir
-   systemctl status sops-nix          # deve mostrar "active"
+   ls /persist/etc/sops/age/keys.txt  # should exist
+   systemctl status sops-nix          # should show "active"
    ```
 
-   Se o arquivo não existir, clone e desbloqueie o nix-keys primeiro, depois copie a chave:
+   If the file doesn't exist, clone and unlock nix-keys first, then copy the key:
    ```bash
-   # Clonar e desbloquear o nix-keys (necessário apenas se não foi feito durante a instalação)
+   # Clone and unlock nix-keys (only needed if not done during installation)
    NIX_KEYS="$(xdg-user-dir PROJECTS)/lbssousa/nix-keys"
    git clone git@github.com:lbssousa/nix-keys.git "$NIX_KEYS"
-   cd "$NIX_KEYS" && git-crypt unlock  # requer YubiKey inserida
+   cd "$NIX_KEYS" && git-crypt unlock  # requires the YubiKey inserted
 
-   # Copiar a chave age de sistema para /persist
+   # Copy the system age key to /persist
    run0 install -Dm600 "$NIX_KEYS/sops/age/keys.txt" /persist/etc/sops/age/keys.txt
 
-   # Reagenerar os secrets com a chave disponível
+   # Regenerate the secrets now that the key is available
    cd /etc/nixos && just nixos switch
    ```
 
-5. **Flatpaks** (instalação automática):
+5. **Flatpaks** (automatic installation):
 
-   Os Flatpaks declarados na configuração são instalados automaticamente pelo serviço
-   `flatpak-managed-install` na primeira vez que o sistema iniciar com acesso à internet.
-   Nenhuma ação manual é necessária.
+   The Flatpaks declared in the configuration are installed automatically by the
+   `flatpak-managed-install` service the first time the system boots with internet access.
+   No manual action is needed.
 
 
-## 🥾 Menu de Boot (systemd-boot)
+## 🥾 Boot Menu (systemd-boot)
 
-O menu do systemd-boot está **oculto por padrão** (`timeout = 0`) para proporcionar um boot
-mais rápido e sem flickering.
+The systemd-boot menu is **hidden by default** (`timeout = 0`) for a faster,
+flicker-free boot.
 
-### Como exibir o menu de boot
+### How to show the boot menu
 
-- **Durante o boot**: mantenha pressionada a tecla **Space** (ou qualquer tecla) imediatamente
-  após a tela do firmware UEFI aparecer. O menu do systemd-boot será exibido.
+- **During boot**: hold down the **Space** key (or any key) right after the
+  UEFI firmware screen appears. The systemd-boot menu will be displayed.
 
-- **Temporariamente via terminal** (define um timeout até o próximo rebuild): `sudo bootctl set-timeout 5`
+- **Temporarily via terminal** (sets a timeout until the next rebuild): `sudo bootctl set-timeout 5`
 
-- **Para reverter ao comportamento silencioso**: `sudo bootctl set-timeout 0`
+- **To revert to the quiet behavior**: `sudo bootctl set-timeout 0`
 
-## 🔒 Configuração do Secure Boot (apenas barbudus)
+## 🔒 Secure Boot Configuration (barbudus only)
 
-As chaves PKI são criadas automaticamente durante a instalação (passo 9 do script ou manualmente antes do `nixos-install`). O que resta fazer após o primeiro boot é **registrar as chaves no firmware UEFI**.
+The PKI keys are created automatically during installation (step 9 of the script, or manually before `nixos-install`). What's left after the first boot is to **enroll the keys in the UEFI firmware**.
 
-### ⚠️ Limine vs. MOK/shim — diferença importante
+### ⚠️ Limine vs. MOK/shim — an important difference
 
-Esta configuração usa **Limine** (`boot.loader.limine.secureBoot`), que **NÃO** utiliza shim nem MOK.
+This configuration uses **Limine** (`boot.loader.limine.secureBoot`), which does **NOT** use shim or MOK.
 
-- **Não haverá** tela azul do MOKmanager durante o boot
-- **Não será solicitada** nenhuma senha de MOK
-- O firmware verifica apenas a assinatura PE do binário do Limine, feita com chaves
-  PKI próprias (PK/KEK/db) registradas no firmware UEFI
-- A integridade do kernel/initrd é garantida por checksum BLAKE2B embutido no
-  `limine.conf` (cujo hash, por sua vez, está embutido no binário assinado do
-  Limine via `enroll-config`) — não por assinatura individual de cada arquivo
-- As chaves ficam em `/persist/etc/secureboot`, symlinkado para `/var/lib/sbctl`
-  (caminho fixo esperado pelo sbctl; o módulo `boot.loader.limine` não tem uma
-  opção equivalente ao `pkiBundle` do lanzaboote)
+- **There will be no** blue MOKmanager screen during boot
+- **You won't be asked** for a MOK password
+- The firmware only verifies the PE signature of the Limine binary, made with its own
+  PKI keys (PK/KEK/db) enrolled in the UEFI firmware
+- Kernel/initrd integrity is guaranteed by a BLAKE2B checksum embedded in
+  `limine.conf` (whose hash, in turn, is embedded in the signed Limine binary
+  via `enroll-config`) — not by an individual signature on each file
+- The keys live in `/persist/etc/secureboot`, symlinked to `/var/lib/sbctl`
+  (the fixed path sbctl expects; the `boot.loader.limine` module has no
+  option equivalent to lanzaboote's `pkiBundle`)
 
-A ausência de uma tela de MOK é **esperada e correta** nesta configuração.
+The absence of a MOK screen is **expected and correct** in this configuration.
 
-### ⚠️ Pré-requisito: Setup Mode ativo
+### ⚠️ Prerequisite: Setup Mode active
 
-Para registrar as chaves PKI, o firmware precisa estar em **Setup Mode** (sem chaves de
-Secure Boot cadastradas). Se o Setup Mode não estiver ativo, o registro falhará.
+To enroll the PKI keys, the firmware needs to be in **Setup Mode** (no Secure
+Boot keys registered). If Setup Mode isn't active, enrollment will fail.
 
-**Como verificar/habilitar o Setup Mode:**
+**How to check/enable Setup Mode:**
 
-1. Reinicie e acesse a BIOS/UEFI (F2, F12, Del ou Esc durante o boot)
-2. Na seção Secure Boot, procure **"Delete All Secure Boot Keys"**, **"Setup Mode"**,
-   **"Clear Secure Boot Keys"** ou opção similar
-3. Apague as chaves existentes (isso habilita o Setup Mode)
-4. Salve e reinicie para o NixOS com Secure Boot **desabilitado**
+1. Reboot and enter the BIOS/UEFI (F2, F12, Del or Esc during boot)
+2. In the Secure Boot section, look for **"Delete All Secure Boot Keys"**, **"Setup Mode"**,
+   **"Clear Secure Boot Keys"** or a similar option
+3. Clear the existing keys (this enables Setup Mode)
+4. Save and reboot into NixOS with Secure Boot **disabled**
 
-O script `setup-secureboot.sh` verifica automaticamente o Setup Mode e aborta com
-instruções claras se o firmware não estiver em Setup Mode.
+The `setup-secureboot.sh` script automatically checks Setup Mode and aborts with
+clear instructions if the firmware isn't in Setup Mode.
 
-### Passo a passo para configurar o Secure Boot
+### Step by step to set up Secure Boot
 
 ```bash
-# 1. Entrar no sistema normalmente (Secure Boot desabilitado na BIOS, Setup Mode ativo)
+# 1. Boot into the system normally (Secure Boot disabled in the BIOS, Setup Mode active)
 
-# 2. Verificar o estado atual das chaves e do Setup Mode
+# 2. Check the current state of the keys and Setup Mode
 sudo sbctl status
 
-# 3. Executar o script de configuração (verifica Setup Mode, registra chaves e assina binários)
+# 3. Run the setup script (checks Setup Mode, enrolls keys and signs binaries)
 sudo bash /etc/nixos/scripts/setup-secureboot.sh
 
-# 4. Rebuildar para garantir que os binários mais recentes estão assinados
+# 4. Rebuild to make sure the latest binaries are signed
 sudo nixos-rebuild switch --flake /etc/nixos#barbudus
 
-# 5. Habilitar Secure Boot na BIOS/UEFI e reiniciar
+# 5. Enable Secure Boot in the BIOS/UEFI and reboot
 
-# 6. Verificar se tudo está correto após o reboot
+# 6. Verify everything is correct after the reboot
 sudo sbctl status
 sudo bash /etc/nixos/scripts/setup-secureboot.sh --verify-only
 ```
 
-> **Nota:** Se as chaves não existirem em `/persist/etc/secureboot` (instalação manual sem o passo de sbctl), crie-as com `sudo sbctl create-keys` antes de prosseguir.
+> **Note:** If the keys don't exist in `/persist/etc/secureboot` (a manual installation without the sbctl step), create them with `sudo sbctl create-keys` before proceeding.
 
-## 🔑 Desbloqueio Automático LUKS via TPM2
+## 🔑 Automatic LUKS Unlock via TPM2
 
-Esta configuração inclui suporte ao desbloqueio automático do volume LUKS utilizando o chip TPM2 do hardware. Quando configurado, o sistema desbloqueia o disco automaticamente durante o boot, sem solicitar senha — desde que as medições de integridade do sistema não tenham sido alteradas.
+This configuration includes support for automatically unlocking the LUKS volume using the hardware's TPM2 chip. When configured, the system unlocks the disk automatically during boot, without asking for a password — as long as the system's integrity measurements haven't changed.
 
-### Como Funciona
+### How It Works
 
-O TPM2 armazena a chave LUKS protegida por **PCRs (Platform Configuration Registers)** — medições do estado do firmware e do boot loader. Se o hardware ou software for adulterado, os PCRs mudam e o TPM2 recusa liberar a chave, exigindo a senha de recuperação.
+The TPM2 stores the LUKS key protected by **PCRs (Platform Configuration Registers)** — measurements of the firmware and boot loader state. If the hardware or software is tampered with, the PCRs change and the TPM2 refuses to release the key, requiring the recovery password.
 
-**PCRs configurados:**
+**Configured PCRs:**
 
-| PCR | O que mede                            |
+| PCR | What it measures                      |
 | --- | ------------------------------------- |
-| 0   | Firmware UEFI (integridade da BIOS)   |
-| 2   | Código de opção UEFI (drivers ROM)    |
-| 7   | Estado do Secure Boot                 |
+| 0   | UEFI firmware (BIOS integrity)        |
+| 2   | UEFI option code (ROM drivers)        |
+| 7   | Secure Boot state                     |
 
-### Registrar o TPM2 no Volume LUKS
+### Enroll the TPM2 for the LUKS Volume
 
-Execute após o primeiro boot com o sistema instalado:
+Run this after the first boot with the installed system:
 
 ```bash
-# Verificar se o TPM2 está disponível
+# Check whether the TPM2 is available
 ls /dev/tpm* && tpm2_getcap properties-fixed 2>/dev/null | head -5
 
-# Identificar a partição LUKS
-# (normalmente a segunda partição do disco de instalação)
+# Identify the LUKS partition
+# (usually the second partition of the installation disk)
 lsblk -f | grep crypto_LUKS
 
-# Registrar o TPM2 (substitua /dev/nvme0n1p2 pela sua partição LUKS)
+# Enroll the TPM2 (replace /dev/nvme0n1p2 with your LUKS partition)
 sudo systemd-cryptenroll \
   --tpm2-device=auto \
   --tpm2-pcrs=0+2+7 \
   /dev/disk/by-partlabel/luks
 
-# Ou usando o device diretamente:
+# Or using the device directly:
 # sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+2+7 /dev/nvme0n1p2
 ```
 
-Durante o registro, será solicitada a senha atual do LUKS para autorizar a adição do TPM2.
+During enrollment, you'll be asked for the current LUKS password to authorize adding the TPM2.
 
-### Testar o Desbloqueio
+### Test the Unlock
 
 ```bash
-# Verificar os slots LUKS configurados
+# Check the configured LUKS slots
 sudo cryptsetup luksDump /dev/disk/by-partlabel/luks | grep -A5 "Tokens\|Keyslots"
 
-# Reiniciar para testar o desbloqueio automático
+# Reboot to test the automatic unlock
 sudo reboot
 ```
 
-### Remoção do TPM2 (Revogação)
+### Removing the TPM2 (Revocation)
 
-Para revogar o acesso TPM2 (ex: antes de vender ou reparar o hardware):
+To revoke TPM2 access (e.g. before selling or repairing the hardware):
 
 ```bash
-# Remover o token TPM2 e seu keyslot associado
+# Remove the TPM2 token and its associated keyslot
 sudo systemd-cryptenroll --wipe-slot=tpm2 /dev/disk/by-partlabel/luks
 ```
 
-### Fallback para Senha Manual
+### Fallback to a Manual Password
 
-Se o TPM2 falhar (boot em hardware diferente, atualização de firmware, mudança no Secure Boot), o sistema solicitará a senha LUKS automaticamente como fallback. **Sempre mantenha a senha de recuperação em local seguro.**
+If the TPM2 fails (booting on different hardware, a firmware update, a Secure Boot change), the system will automatically prompt for the LUKS password as a fallback. **Always keep the recovery password somewhere safe.**
 
-## 🔍 Sensor de Impressão Digital (barbudus)
+## 🔍 Fingerprint Sensor (barbudus)
 
-O barbudus usa o sensor Goodix 538d (USB `27c6:538d`), suportado pelo fork
-`lbssousa/libfprint` (branch `goodix-538d-sigfm-gtls`, baseado no libfprint 1.94.10).
-Os pacotes `libfprint-goodix` e `fprintd-goodix` já estão declarados em
-`pkgs/libfprint-goodix/` e `pkgs/fprintd-goodix/` e habilitados em
-`hosts/barbudus/configuration.nix` — nenhuma configuração manual é necessária após
-a instalação.
+barbudus uses the Goodix 538d sensor (USB `27c6:538d`), supported by the
+`lbssousa/libfprint` fork (branch `goodix-538d-sigfm-gtls`, based on libfprint 1.94.10).
+The `libfprint-goodix` and `fprintd-goodix` packages are already declared in
+`pkgs/libfprint-goodix/` and `pkgs/fprintd-goodix/` and enabled in
+`hosts/barbudus/configuration.nix` — no manual configuration is needed after
+installation.
 
-Para registrar e testar a impressão digital:
+To enroll and test a fingerprint:
 
 ```bash
-# Registrar impressão digital (executa fprintd-enroll para o usuário atual)
+# Enroll a fingerprint (runs fprintd-enroll for the current user)
 fprintd-enroll
 
-# Verificar o registro
+# Verify the enrollment
 fprintd-verify
 
-# Listar dispositivos reconhecidos pelo fprintd
+# List devices recognized by fprintd
 fprintd-list "$USER"
 ```
 
-## 📝 Pós-instalação
+## 📝 Post-installation
 
-### Configurar nix-keys para o Home Manager
+### Configure nix-keys for Home Manager
 
-O script de ativação do Home Manager do usuário `abutre` copia automaticamente a chave
-age pessoal de `$(xdg-user-dir PROJECTS)/lbssousa/nix-keys/sops/age/abutre/keys.txt`
-para `~/.config/sops/age/keys.txt`. Para que isso funcione no primeiro `just switch`,
-o repositório `nix-keys` precisa estar clonado e desbloqueado no diretório de projetos:
+The `abutre` user's Home Manager activation script automatically copies the
+personal age key from `$(xdg-user-dir PROJECTS)/lbssousa/nix-keys/sops/age/abutre/keys.txt`
+to `~/.config/sops/age/keys.txt`. For this to work on the first `just switch`,
+the `nix-keys` repository needs to be cloned and unlocked in the projects directory:
 
 ```bash
-# Clonar o nix-keys no diretório de projetos do usuário
+# Clone nix-keys into the user's projects directory
 NIX_KEYS_DIR="$(xdg-user-dir PROJECTS)/lbssousa/nix-keys"
 git clone git@github.com:lbssousa/nix-keys.git "$NIX_KEYS_DIR"
 
-# Desbloquear via GPG (YubiKey)
-gpg --card-status               # verificar que o YubiKey está reconhecido
+# Unlock via GPG (YubiKey)
+gpg --card-status               # verify the YubiKey is recognized
 cd "$NIX_KEYS_DIR"
 git-crypt unlock
 
-# Aplicar NixOS + Home Manager — o script de ativação copiará a chave age pessoal automaticamente
+# Apply NixOS + Home Manager — the activation script will copy the personal age key automatically
 cd /etc/nixos
 just switch
 ```
 
-Se a chave age pessoal não estiver disponível no momento do `just switch`, o
-script de ativação emitirá um aviso indicando que deve clonar e desbloquear o nix-keys.
-Secrets do Home Manager (como credenciais do rclone) não funcionarão até que a chave
-seja restaurada.
+If the personal age key isn't available at the time of `just switch`, the
+activation script will print a warning saying to clone and unlock nix-keys.
+Home Manager secrets (like rclone credentials) won't work until the key
+is restored.
 
-### Atualizar o sistema
+### Update the system
 
 ```bash
-# Atualizar flake.lock (todos os inputs)
+# Update flake.lock (all inputs)
 cd /etc/nixos
 sudo nix flake update
 
-# Rebuildar sistema
-sudo nixos-rebuild switch --flake /etc/nixos#barbudus  # ou bigodon
+# Rebuild the system
+sudo nixos-rebuild switch --flake /etc/nixos#barbudus  # or bigodon
 ```
 
-### Verificar o sistema
+### Check the system
 
 ```bash
-# Ver subvolumes Btrfs e uso de disco
+# See Btrfs subvolumes and disk usage
 sudo btrfs subvolume list /nix
 sudo btrfs filesystem usage /nix
 
-# Ver uso da raiz tmpfs
+# See tmpfs root usage
 df -h /
 
-# Ver swap ativo
+# See active swap
 swapon --show
 zramctl
 
-# Ver status do Flatpak
+# See Flatpak status
 flatpak list --system
 
-# Ver containers Podman
+# See Podman containers
 podman system info
 ```
 
-### Snapshots Btrfs manuais
+### Manual Btrfs Snapshots
 
 ```bash
-# Snapshot do subvolume home
+# Snapshot the home subvolume
 sudo btrfs subvolume snapshot /home /.snapshots/home-$(date +%Y%m%d-%H%M%S)
 
-# Snapshot do persist (dados críticos)
+# Snapshot persist (critical data)
 sudo btrfs subvolume snapshot /persist /.snapshots/persist-$(date +%Y%m%d-%H%M%S)
 
-# Snapshot do nix (opcional, grande)
+# Snapshot nix (optional, large)
 sudo btrfs subvolume snapshot /nix /.snapshots/nix-$(date +%Y%m%d-%H%M%S)
 
-# Listar snapshots
+# List snapshots
 sudo btrfs subvolume list /.snapshots
 
-# Remover snapshot antigo
+# Remove an old snapshot
 sudo btrfs subvolume delete /.snapshots/home-20240101-120000
 ```
 
-> **Nota:** Não é necessário fazer snapshot de `/` — a raiz é um tmpfs que é sempre
-> reiniciada limpa a cada boot. Apenas `/home`, `/persist` e `/nix` precisam de backup.
+> **Note:** There's no need to snapshot `/` — the root is a tmpfs that's always
+> reset clean on every boot. Only `/home`, `/persist` and `/nix` need backups.
 
-## 🔧 Solução de Problemas
+## 🔧 Troubleshooting
 
-### Sistema não boota após primeiro setup
+### System doesn't boot after the initial setup
 
-Se o sistema não boota na primeira vez após o disko:
+If the system doesn't boot the first time after disko:
 
 ```bash
-# Boot no USB live
-# Abrir LUKS
+# Boot from the live USB
+# Open LUKS
 sudo cryptsetup open /dev/nvme0n1p2 crypted
 
-# Ativar LVM
+# Activate LVM
 sudo vgchange -ay
 
-# Montar subvolumes Btrfs manualmente
+# Mount Btrfs subvolumes manually
 sudo mount /dev/nvme0n1p1 /mnt/boot
 sudo mount -t btrfs -o subvol=@nix /dev/root_vg/root /mnt/nix
 sudo mount -t btrfs -o subvol=@persist /dev/root_vg/root /mnt/persist
 sudo mount -t btrfs -o subvol=@home /dev/root_vg/root /mnt/home
 
-# Entrar no sistema
+# Enter the system
 sudo nixos-enter --root /mnt
 ```
 
-### Verificar Btrfs
+### Check Btrfs
 
 ```bash
-# Status do filesystem
+# Filesystem status
 sudo btrfs filesystem show /
 sudo btrfs device stats /
 
-# Verificar integridade (scrub)
+# Check integrity (scrub)
 sudo btrfs scrub start /
 sudo btrfs scrub status /
 
-# Estatísticas de compressão
+# Compression stats
 sudo compsize /
 sudo compsize /home
 ```
 
-### Problemas com LUKS
+### LUKS Issues
 
 ```bash
-# Listar containers LUKS
+# List LUKS containers
 sudo cryptsetup status crypted
 
-# Verificar cabeçalho LUKS
+# Check the LUKS header
 sudo cryptsetup luksDump /dev/nvme0n1p2
 ```
 
-### Registrar YubiKey após o primeiro boot
+### Register the YubiKey after the first boot
 
-Se o passo 10 foi pulado durante a instalação, `sudo`, `run0` e `pkexec` continuam
-funcionando via senha (o PAM cai automaticamente para autenticação por senha quando
-não há mapeamento U2F válido). Para ativar a autenticação por YubiKey depois do boot:
+If step 10 was skipped during installation, `sudo`, `run0` and `pkexec` keep
+working via password (PAM automatically falls back to password authentication
+when there's no valid U2F mapping). To enable YubiKey authentication after boot:
 
-**Opção normal — via senha (caminho mais simples)**
+**Normal option — via password (simplest path)**
 
-Com o sistema rodando e a YubiKey inserida, use a senha para autenticar o `run0`:
+With the system running and the YubiKey inserted, use the password to authenticate `run0`:
 
 ```bash
-pamu2fcfg -u seu-usuario | run0 tee /persist/etc/u2f-mappings
-# Toque o YubiKey quando o LED piscar
-pamu2fcfg -u outro-usuario | run0 tee -a /persist/etc/u2f-mappings  # usuários adicionais
+pamu2fcfg -u your-username | run0 tee /persist/etc/u2f-mappings
+# Touch the YubiKey when its LED blinks
+pamu2fcfg -u other-user | run0 tee -a /persist/etc/u2f-mappings  # additional users
 ```
 
-**Opção A — Modo de emergência**
+**Option A — Emergency mode**
 
-Necessária apenas se a conta não tiver senha válida. No menu do systemd-boot (segure
-**Space** durante o boot), pressione **e** na entrada desejada e acrescente ao final
-da linha `options`:
+Only needed if the account has no valid password. In the systemd-boot menu (hold
+**Space** during boot), press **e** on the desired entry and append to the end
+of the `options` line:
 
 ```
 systemd.unit=emergency.target
 ```
 
-Isso fornece um shell root sem autenticação. Com o YubiKey inserido:
+This provides a root shell without authentication. With the YubiKey inserted:
 
 ```bash
-pamu2fcfg -u seu-usuario > /persist/etc/u2f-mappings
-pamu2fcfg -u outro-usuario >> /persist/etc/u2f-mappings  # se houver mais de um
+pamu2fcfg -u your-username > /persist/etc/u2f-mappings
+pamu2fcfg -u other-user >> /persist/etc/u2f-mappings  # if there's more than one
 ```
 
-Reinicie normalmente após criar o arquivo.
+Reboot normally after creating the file.
 
-> **barbudus (Secure Boot/Limine)**: o editor do menu de boot é desabilitado
-> quando o Secure Boot está ativo. Use a Opção B.
+> **barbudus (Secure Boot/Limine)**: the boot menu editor is disabled
+> when Secure Boot is active. Use Option B.
 
-**Opção B — Live ISO**
+**Option B — Live ISO**
 
-Boot pelo pendrive NixOS, monte o subvolume Btrfs `@persist` e crie o arquivo:
+Boot from the NixOS USB, mount the `@persist` Btrfs subvolume and create the file:
 
 ```bash
 sudo cryptsetup open /dev/nvme0n1p2 crypted
 sudo vgchange -ay
 sudo mount -t btrfs -o subvol=@persist /dev/root_vg/root /mnt
-pamu2fcfg -u seu-usuario | sudo tee /mnt/etc/u2f-mappings
-pamu2fcfg -u outro-usuario | sudo tee -a /mnt/etc/u2f-mappings
+pamu2fcfg -u your-username | sudo tee /mnt/etc/u2f-mappings
+pamu2fcfg -u other-user | sudo tee -a /mnt/etc/u2f-mappings
 sudo umount /mnt
 ```
 
-Após qualquer uma das opções, reinicie normalmente e verifique:
+After either option, reboot normally and check:
 
 ```bash
-cat /persist/etc/u2f-mappings  # deve mostrar uma linha por usuário
-run0 id                        # deve exibir uid=0(root)
+cat /persist/etc/u2f-mappings  # should show one line per user
+run0 id                        # should show uid=0(root)
 ```
 
-## 📚 Referências
+## 📚 References
 
-- [Manual do NixOS](https://nixos.org/manual/nixos/stable/)
+- [NixOS Manual](https://nixos.org/manual/nixos/stable/)
 - [Disko](https://github.com/nix-community/disko)
 - [Preservation](https://github.com/nix-community/preservation)
 - [Home Manager](https://github.com/nix-community/home-manager)
 - [Limine Bootloader](https://github.com/limine-bootloader/limine)
 - [Btrfs on NixOS](https://nixos.wiki/wiki/Btrfs)
 - [Arch Wiki — Btrfs](https://wiki.archlinux.org/title/Btrfs)
-- [Erase Your Darlings (sistema efêmero)](https://grahamc.com/blog/erase-your-darlings/)
+- [Erase Your Darlings (ephemeral system)](https://grahamc.com/blog/erase-your-darlings/)

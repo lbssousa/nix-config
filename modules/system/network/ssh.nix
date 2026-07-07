@@ -1,4 +1,4 @@
-# Módulo SSH: Servidor OpenSSH com chaves em /persist
+# SSH module: OpenSSH server with keys in /persist
 { lib, ... }:
 
 {
@@ -9,7 +9,7 @@
       KbdInteractiveAuthentication = false;
       PermitRootLogin = "no";
     };
-    # Chaves do servidor armazenadas em /persist para sobreviver ao rollback
+    # Server keys stored in /persist to survive rollback
     hostKeys = [
       {
         path = "/persist/etc/ssh/ssh_host_ed25519_key";

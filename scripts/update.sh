@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# update.sh — Atualizar o sistema NixOS
+# update.sh — Update the NixOS system
 #
-# Atualiza os inputs do flake e reconstrói o sistema com nixos-rebuild switch.
+# Updates the flake inputs and rebuilds the system with nixos-rebuild switch.
 #
-# Uso:
+# Usage:
 #   bash scripts/update.sh [--host <hostname>] [--update-only] [--rebuild-only]
 #                          [--help]
 #
-# Opções:
-#   --host <hostname>   Nome do host NixOS (padrão: hostname atual)
-#   --update-only       Apenas atualiza flake.lock, sem reconstruir o sistema
-#   --rebuild-only      Apenas reconstrói o sistema, sem atualizar o flake.lock
-#   --help, -h          Exibe ajuda e sai
+# Options:
+#   --host <hostname>   NixOS host name (default: current hostname)
+#   --update-only       Only update flake.lock, without rebuilding the system
+#   --rebuild-only      Only rebuild the system, without updating flake.lock
+#   --help, -h          Show help and exit
 
 set -euo pipefail
 
@@ -33,16 +33,16 @@ error()   { echo -e "${RED}[ERRO]${RESET} $*" >&2; }
 die()     { error "$*"; exit 1; }
 
 # ---------------------------------------------------------------------------
-# Garantir execução como root
+# Ensure running as root
 # ---------------------------------------------------------------------------
 
 if [[ $EUID -ne 0 ]]; then
-  info "Este script deve ser executado como root. Reexecutando com sudo..."
+  info "This script must run as root. Re-executing with sudo..."
   exec sudo -E bash "${BASH_SOURCE[0]}" "$@"
 fi
 
 # ---------------------------------------------------------------------------
-# Argumento parsing
+# Argument parsing
 # ---------------------------------------------------------------------------
 
 OPT_HOST=""
@@ -56,40 +56,40 @@ while [[ $# -gt 0 ]]; do
     --rebuild-only) OPT_REBUILD_ONLY=true; shift ;;
     --help|-h)
       cat <<'EOF'
-Uso:
+Usage:
   bash scripts/update.sh [--host <hostname>] [--update-only] [--rebuild-only]
                          [--help]
 
-Opções:
-  --host <hostname>   Nome do host NixOS (padrão: hostname atual)
-  --update-only       Apenas atualiza flake.lock, sem reconstruir o sistema
-  --rebuild-only      Apenas reconstrói o sistema, sem atualizar o flake.lock
-  --help, -h          Exibe esta ajuda e sai
+Options:
+  --host <hostname>   NixOS host name (default: current hostname)
+  --update-only       Only update flake.lock, without rebuilding the system
+  --rebuild-only      Only rebuild the system, without updating flake.lock
+  --help, -h          Show this help and exit
 
-Exemplos:
-  # Atualização completa (flake update + rebuild):
+Examples:
+  # Full update (flake update + rebuild):
   sudo bash scripts/update.sh
 
-  # Apenas atualizar flake inputs:
+  # Only update flake inputs:
   sudo bash scripts/update.sh --update-only
 
-  # Apenas rebuild (sem atualizar inputs):
+  # Only rebuild (without updating inputs):
   sudo bash scripts/update.sh --rebuild-only
 
-  # Atualizar host específico:
+  # Update a specific host:
   sudo bash scripts/update.sh --host barbudus
 EOF
       exit 0 ;;
-    *) die "Opção desconhecida: $1. Use --help para ver as opções disponíveis." ;;
+    *) die "Unknown option: $1. Use --help to see the available options." ;;
   esac
 done
 
 if [[ "$OPT_UPDATE_ONLY" == "true" && "$OPT_REBUILD_ONLY" == "true" ]]; then
-  die "--update-only e --rebuild-only são mutuamente exclusivos."
+  die "--update-only and --rebuild-only are mutually exclusive."
 fi
 
 # ---------------------------------------------------------------------------
-# Detectar host
+# Detect host
 # ---------------------------------------------------------------------------
 
 if [[ -z "$OPT_HOST" ]]; then
@@ -97,51 +97,51 @@ if [[ -z "$OPT_HOST" ]]; then
 fi
 HOST="$OPT_HOST"
 
-# Detectar o diretório da configuração
+# Detect the configuration directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Verificar se a configuração do NixOS está disponível
+# Check whether the NixOS configuration is available
 NIXOS_CONFIG="/etc/nixos"
 if [[ ! -f "$NIXOS_CONFIG/flake.nix" ]]; then
-  # Tentar usar o diretório do repositório
+  # Try using the repository directory
   if [[ -f "$CONFIG_DIR/flake.nix" ]]; then
     NIXOS_CONFIG="$CONFIG_DIR"
-    warn "Usando configuração de $NIXOS_CONFIG (não /etc/nixos)"
+    warn "Using configuration from $NIXOS_CONFIG (not /etc/nixos)"
   else
-    die "Configuração do NixOS não encontrada em /etc/nixos nem em $CONFIG_DIR"
+    die "NixOS configuration not found in /etc/nixos or in $CONFIG_DIR"
   fi
 fi
 
 echo
 echo -e "${BOLD}╔══════════════════════════════════════════════════════════════╗${RESET}"
-echo -e "${BOLD}║             Atualização do NixOS — ${HOST}${RESET}"
+echo -e "${BOLD}║             NixOS Update — ${HOST}${RESET}"
 echo -e "${BOLD}╚══════════════════════════════════════════════════════════════╝${RESET}"
 echo
-info "Configuração: $NIXOS_CONFIG"
+info "Configuration: $NIXOS_CONFIG"
 info "Host: $HOST"
 echo
 
 # ---------------------------------------------------------------------------
-# Passo 1: Atualizar flake inputs
+# Step 1: Update flake inputs
 # ---------------------------------------------------------------------------
 
 if [[ "$OPT_REBUILD_ONLY" != "true" ]]; then
-  info "==> Passo 1: Atualizando flake inputs..."
+  info "==> Step 1: Updating flake inputs..."
   nix flake update "$NIXOS_CONFIG"
-  success "Flake inputs atualizados."
+  success "Flake inputs updated."
   echo
 fi
 
 # ---------------------------------------------------------------------------
-# Passo 2: Reconstruir o sistema
+# Step 2: Rebuild the system
 # ---------------------------------------------------------------------------
 
 if [[ "$OPT_UPDATE_ONLY" != "true" ]]; then
-  info "==> Passo 2: Reconstruindo o sistema..."
+  info "==> Step 2: Rebuilding the system..."
   nixos-rebuild switch --flake "${NIXOS_CONFIG}#${HOST}"
-  success "Sistema reconstruído com sucesso!"
+  success "System rebuilt successfully!"
   echo
 fi
 
-echo -e "${GREEN}${BOLD}Atualização concluída!${RESET}"
+echo -e "${GREEN}${BOLD}Update complete!${RESET}"

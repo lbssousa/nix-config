@@ -1,7 +1,7 @@
-# Módulo NixOS: define o campo GECOS (/etc/passwd) com o nome
-# completo de cada usuário, lido de nix-secrets como output do flake.
+# NixOS module: sets the GECOS field (/etc/passwd) with each user's full
+# name, read from nix-secrets as a flake output.
 #
-# Uso (em dendritic/features/nixos-modules.nix):
+# Usage (in dendritic/features/nixos-modules.nix):
 #   import ../../modules/system/users/descriptions.nix { inherit inputs; users = config.dendritic.users; }
 { inputs, users }:
 { lib, ... }:

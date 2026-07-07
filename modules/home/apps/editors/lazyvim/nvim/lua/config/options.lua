@@ -1,12 +1,12 @@
--- Opções adicionais / overrides das opções padrão do LazyVim.
--- O LazyVim já define a maioria das opções sensatas; aqui só ajustamos o que
--- difere do padrão.
+-- Additional options / overrides of LazyVim's default options.
+-- LazyVim already sets most sensible options; here we only adjust what
+-- differs from the default.
 
 local opt = vim.opt
 
--- Indica o limite de coluna (linha vertical em 80 caracteres)
+-- Marks the column limit (vertical line at 80 characters)
 opt.colorcolumn = "80"
 
--- Mantém mais linhas visíveis ao rolar
+-- Keep more lines visible while scrolling
 opt.scrolloff = 8
 opt.sidescrolloff = 8

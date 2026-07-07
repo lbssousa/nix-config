@@ -1,23 +1,23 @@
-# Gitignore para o nixos-config
-# Arquivos e diretórios sensíveis que NÃO devem ser commitados
+# Gitignore for nixos-config
+# Sensitive files and directories that must NOT be committed
 
-# --- Segredos e chaves ---
+# --- Secrets and keys ---
 *.key
 *.pem
 *.p12
 *.pfx
-# Arquivos de segredo em texto simples nunca devem ser commitados.
-# Arquivos sops-encrypted (*.yaml) são seguros para commitar.
+# Plaintext secret files must never be committed.
+# sops-encrypted files (*.yaml) are safe to commit.
 secrets/*
 !secrets/*.yaml
 .secrets
 
-# --- Hardware específico ---
-# O hardware-configuration.nix gerado automaticamente pode sobrescrever os templates
-# Opcional: descomente para ignorar os arquivos de hardware gerados
+# --- Host-specific hardware ---
+# The auto-generated hardware-configuration.nix can overwrite the templates
+# Optional: uncomment to ignore generated hardware files
 # hosts/*/hardware-configuration.nix
 
-# --- Arquivos temporários ---
+# --- Temporary files ---
 *.swp
 *.swo
 *~
@@ -31,7 +31,7 @@ result-*
 .nix-defexpr
 .nix-channels
 
-# --- Flake lock (opcional - depende do workflow) ---
-# Manter o flake.lock commitado para builds reproduzíveis
+# --- Flake lock (optional - depends on the workflow) ---
+# Keep flake.lock committed for reproducible builds
 # flake.lock
 nixfmt

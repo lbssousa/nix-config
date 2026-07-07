@@ -1,4 +1,4 @@
-# PWAs dos serviços WhatsApp Web, YouTube, YouTube Music e Microsoft Teams via Brave
+# PWAs for WhatsApp Web, YouTube, YouTube Music and Microsoft Teams via Brave
 { pkgs, ... }:
 
 let
@@ -32,7 +32,7 @@ in
   xdg.desktopEntries = {
     whatsapp-web = {
       name = "WhatsApp Web";
-      comment = "Mensagens do WhatsApp no navegador";
+      comment = "WhatsApp messages in the browser";
       exec = "${brave} --app=https://web.whatsapp.com";
       icon = "${whatsappIcon}";
       terminal = false;
@@ -45,7 +45,7 @@ in
 
     youtube = {
       name = "YouTube";
-      comment = "YouTube no navegador";
+      comment = "YouTube in the browser";
       exec = "${brave} --app=https://www.youtube.com";
       icon = "${youtubeIcon}";
       terminal = false;
@@ -59,7 +59,7 @@ in
 
     youtube-music = {
       name = "YouTube Music";
-      comment = "YouTube Music no navegador";
+      comment = "YouTube Music in the browser";
       exec = "${brave} --app=https://music.youtube.com";
       icon = "${youtubeMusicIcon}";
       terminal = false;
@@ -73,7 +73,7 @@ in
 
     microsoft-teams = {
       name = "Microsoft Teams";
-      comment = "Microsoft Teams no navegador";
+      comment = "Microsoft Teams in the browser";
       exec = "${brave} --app=https://teams.microsoft.com";
       icon = "${teamsIcon}";
       terminal = false;

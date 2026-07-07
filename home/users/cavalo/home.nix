@@ -1,4 +1,4 @@
-# Configurações Home Manager específicas para o usuário cavalo
-# As configurações base (pacotes comuns, shell, etc.) vêm de home/common.nix.
+# Home Manager configuration specific to the cavalo user
+# Base settings (common packages, shell, etc.) come from home/common.nix.
 _: {
 }

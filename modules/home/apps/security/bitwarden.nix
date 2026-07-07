@@ -1,18 +1,18 @@
-# Módulo de usuário: Bitwarden Flatpak com agente SSH
+# User module: Bitwarden Flatpak with SSH agent
 #
-# Configura SSH_AUTH_SOCK apontando para o socket do agente SSH do Bitwarden
-# em duas camadas complementares:
+# Sets SSH_AUTH_SOCK pointing to Bitwarden's SSH agent socket in two
+# complementary layers:
 #
-#   1. environment.d — lido pelo systemd --user na inicialização da sessão;
-#      herdado por GNOME Shell, VSCode, Zed e todos os processos filhos,
-#      inclusive antes de o Bitwarden abrir pela primeira vez.
+#   1. environment.d — read by systemd --user at session startup;
+#      inherited by GNOME Shell, VSCode, Zed and all child processes,
+#      even before Bitwarden opens for the first time.
 #
-#   2. path unit systemd — observa o socket e, ao detectá-lo, atualiza
-#      SSH_AUTH_SOCK via `systemctl --user set-environment`; garante que
-#      processos já em execução recebam o valor correto quando o socket
-#      aparece durante a sessão.
+#   2. systemd path unit — watches the socket and, once detected, updates
+#      SSH_AUTH_SOCK via `systemctl --user set-environment`; ensures
+#      already-running processes get the correct value once the socket
+#      appears during the session.
 #
-# Caminho do socket (Flatpak):
+# Socket path (Flatpak):
 #   $HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock
 {
   config,
@@ -27,17 +27,17 @@ in
 
 {
   xdg.configFile = {
-    # Camada 1 — ambiente estático herdado por todos os processos da sessão.
+    # Layer 1 — static environment inherited by all session processes.
     "environment.d/20-bitwarden-ssh-agent.conf".text = ''
       SSH_AUTH_SOCK=${sock}
     '';
 
-    # StartLimitIntervalSec=0 desabilita o rate-limit do systemd para estes
-    # serviços oneshot idempotentes: o path unit pode disparar mais de uma
-    # vez durante o boot/ativação do HM sem causar 'start-limit-hit'.
+    # StartLimitIntervalSec=0 disables systemd's rate limit for these
+    # idempotent oneshot services: the path unit can fire more than once
+    # during boot/HM activation without triggering 'start-limit-hit'.
     "systemd/user/bitwarden-ssh-agent-env.service".text = ''
       [Unit]
-      Description=Exporta SSH_AUTH_SOCK do Bitwarden para a sessão systemd
+      Description=Exports Bitwarden's SSH_AUTH_SOCK to the systemd session
       StartLimitIntervalSec=0
 
       [Service]
@@ -49,7 +49,7 @@ in
 
     "systemd/user/bitwarden-ssh-agent.path".text = ''
       [Unit]
-      Description=Observa o socket do agente SSH do Bitwarden (Flatpak)
+      Description=Watches Bitwarden's SSH agent socket (Flatpak)
 
       [Path]
       PathExists=${sock}
@@ -61,8 +61,8 @@ in
 
   };
 
-  # Fallback para shells que não herdam o ambiente do systemd --user
-  # (ex.: sessões SSH ou abertas via `su`).
+  # Fallback for shells that don't inherit the systemd --user environment
+  # (e.g. SSH sessions or ones opened via `su`).
   programs.zsh.initContent = lib.mkAfter ''
     [[ -S "${sock}" ]] && export SSH_AUTH_SOCK="${sock}"
   '';
@@ -80,9 +80,10 @@ in
     ${pkgs.coreutils}/bin/ln -sfn ../bitwarden-ssh-agent.path \
       "$systemdUserWantsDir/bitwarden-ssh-agent.path"
 
-    # Recarregar e iniciar units apenas se há sessão de usuário ativa.
-    # Sem sessão (ex.: durante nixos-rebuild sem login), os symlinks acima são
-    # suficientes: systemd carregará as units via WantedBy=default.target ao iniciar a sessão.
+    # Reload and start units only if there's an active user session.
+    # Without a session (e.g. during nixos-rebuild without login), the
+    # symlinks above are enough: systemd will load the units via
+    # WantedBy=default.target once the session starts.
     if XDG_RUNTIME_DIR="/run/user/$(id -u)" $systemctlUser status >/dev/null 2>&1; then
       $systemctlUser daemon-reload
       $systemctlUser reset-failed \

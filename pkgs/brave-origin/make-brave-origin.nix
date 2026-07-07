@@ -1,8 +1,8 @@
-# Builder compartilhado para todas as variantes do Brave Origin.
-# Baseado em pkgs/by-name/br/brave/make-brave.nix do nixpkgs, adaptado para o
-# flavor "origin" conforme proposto no PR https://github.com/NixOS/nixpkgs/pull/513143.
+# Shared builder for all Brave Origin variants.
+# Based on nixpkgs' pkgs/by-name/br/brave/make-brave.nix, adapted for the
+# "origin" flavor as proposed in PR https://github.com/NixOS/nixpkgs/pull/513143.
 #
-# Uso:
+# Usage:
 #   callPackage ./make-brave-origin.nix { } { pname, version, archives, channel }
 {
   lib,
@@ -56,22 +56,22 @@
   libxcb,
   zlib,
 
-  # argumentos de linha de comando que sempre serão definidos
+  # command-line arguments that will always be set
   commandLineArgs ? "",
 
-  # Necessário para dispositivos de áudio USB.
+  # Needed for USB audio devices.
   pulseSupport ? stdenv.hostPlatform.isLinux,
   libpulseaudio,
 
-  # Para suporte a aceleração GPU via Wayland
+  # For GPU acceleration support via Wayland
   libGL,
 
-  # Para aceleração de vídeo via VA-API
+  # For video acceleration via VA-API
   libvaSupport ? stdenv.hostPlatform.isLinux,
   libva,
   enableVideoAcceleration ? libvaSupport,
 
-  # Para suporte a Vulkan (desabilitado por padrão pois pode quebrar VA-API)
+  # For Vulkan support (disabled by default since it can break VA-API)
   vulkanSupport ? false,
   addDriverRunpath,
   enableVulkan ? vulkanSupport,
@@ -80,10 +80,10 @@
 {
   pname,
   version,
-  # Mapa de sistema Nix → { url, hash }. Permite que arquivos por canal
-  # omitam plataformas não publicadas pelo upstream.
+  # Map of Nix system → { url, hash }. Lets per-channel files omit
+  # platforms not published upstream.
   archives,
-  # Canal de lançamento: "beta" ou "nightly".
+  # Release channel: "beta" or "nightly".
   channel,
 }:
 
@@ -103,20 +103,20 @@ let
 
   # /opt/brave.com/brave-origin-<channel>/
   optName = "brave-origin${channelSuffix}";
-  # Nome base para .desktop, xml e arquivos de ícone
+  # Base name for the .desktop, xml and icon files
   fileBase = "brave-origin${channelSuffix}";
-  # App-id secundário do .desktop
+  # Secondary app-id from the .desktop
   appId = "com.brave.Origin.${channel}";
-  # Wrapper upstream dentro de /opt
+  # Upstream wrapper inside /opt
   innerWrapper = fileBase;
-  # Destino Exec= original nos .desktop (substituído pelo wrapper gerado pelo Nix)
+  # Original Exec= target in the .desktop files (replaced by the Nix-generated wrapper)
   upstreamBin = fileBase;
-  # Sufixo dos arquivos de ícone (e.g. "_beta", "_nightly")
+  # Icon file suffix (e.g. "_beta", "_nightly")
   iconSuffix = "_${channel}";
 
   archive =
     assert lib.assertMsg (builtins.hasAttr stdenv.hostPlatform.system archives)
-      "${pname} não está disponível para ${stdenv.hostPlatform.system}";
+      "${pname} is not available for ${stdenv.hostPlatform.system}";
     archives.${stdenv.hostPlatform.system};
 
   deps = [
@@ -217,7 +217,7 @@ stdenv.mkDerivation {
 
     export BINARYWRAPPER=$out/opt/brave.com/${optName}/${innerWrapper}
 
-    # Corrigir caminho do bash no wrapper
+    # Fix the bash path in the wrapper
     substituteInPlace $BINARYWRAPPER \
         --replace-fail /bin/bash ${stdenv.shell} \
         --replace-fail 'CHROME_WRAPPER' 'WRAPPER'
@@ -230,7 +230,7 @@ stdenv.mkDerivation {
             --set-rpath "${rpath}" $exe
     done
 
-    # Corrigir caminhos nos arquivos .desktop
+    # Fix paths in the .desktop files
     substituteInPlace $out/share/applications/{${fileBase},${appId}}.desktop \
         --replace-fail /usr/bin/${upstreamBin} $out/bin/${pname}
     substituteInPlace $out/share/gnome-control-center/default-apps/${fileBase}.xml \
@@ -238,7 +238,7 @@ stdenv.mkDerivation {
     substituteInPlace $out/opt/brave.com/${optName}/default-app-block \
         --replace-fail /opt/brave.com $out/opt/brave.com
 
-    # Corrigir localização dos ícones
+    # Fix icon locations
     icon_sizes=("16" "24" "32" "48" "64" "128" "256")
 
     for icon in ''${icon_sizes[*]}
@@ -248,7 +248,7 @@ stdenv.mkDerivation {
               $out/share/icons/hicolor/''${icon}x''${icon}/apps/${fileBase}.png
     done
 
-    # Substituir xdg-settings e xdg-mime
+    # Replace xdg-settings and xdg-mime
     ln -sf ${xdg-utils}/bin/xdg-settings $out/opt/brave.com/${optName}/xdg-settings
     ln -sf ${xdg-utils}/bin/xdg-mime $out/opt/brave.com/${optName}/xdg-mime
 
@@ -286,15 +286,14 @@ stdenv.mkDerivation {
 
   meta = {
     homepage = "https://brave.com/origin/download-${channel}/";
-    description = "Navegador Brave Origin focado em privacidade (canal ${channel})";
+    description = "Privacy-focused Brave Origin browser (${channel} channel)";
     changelog =
       "https://github.com/brave/brave-browser/blob/master/CHANGELOG_DESKTOP_ORIGIN.md#"
       + lib.replaceStrings [ "." ] [ "" ] version;
     longDescription = ''
-      Brave Origin é uma variante simplificada do navegador Brave que remove a
-      maioria das funcionalidades não relacionadas à privacidade (recompensas,
-      carteira, IA, etc.), mantendo o núcleo de privacidade, bloqueio de
-      anúncios e o motor de navegação baseado em Chromium.
+      Brave Origin is a simplified variant of the Brave browser that removes
+      most non-privacy-related features (rewards, wallet, AI, etc.), while
+      keeping the privacy core, ad blocking and the Chromium-based browsing engine.
     '';
     sourceProvenance = with lib.sourceTypes; [ binaryNativeCode ];
     license = lib.licenses.mpl20;

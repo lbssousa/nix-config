@@ -1,5 +1,5 @@
-# Módulo de usuário: Brave Browser Flatpak — navegador alternativo (padrão: Firefox)
+# User module: Brave Browser Flatpak — alternate browser (default: Firefox)
 #
-# O Brave é instalado como Flatpak (com.brave.Browser) — não via programs.brave.
-# Extensões (ex.: KeePassXC-Browser) são instaladas manualmente.
+# Brave is installed as a Flatpak (com.brave.Browser) — not via programs.brave.
+# Extensions (e.g. KeePassXC-Browser) are installed manually.
 _: { }

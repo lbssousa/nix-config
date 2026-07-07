@@ -1,97 +1,97 @@
 # terminals
 
-Módulos Home Manager para emuladores de terminal.
+Home Manager modules for terminal emulators.
 
-| Arquivo | Descrição |
+| File | Description |
 |---------|-----------|
-| [`tmux.nix`](tmux.nix) | Multiplexador de terminal com integração neovim |
-| [`ghostty.nix`](ghostty.nix) | Emulador de terminal Ghostty |
+| [`tmux.nix`](tmux.nix) | Terminal multiplexer with neovim integration |
+| [`ghostty.nix`](ghostty.nix) | Ghostty terminal emulator |
 
 ---
 
-## tmux — Atalhos de Teclado
+## tmux — Keybindings
 
-Configuração baseada nas predefinições do [Omarchy](https://github.com/basecamp/omarchy),
-com integração ao neovim via `vim-tmux-navigator`.
+Configuration based on [Omarchy](https://github.com/basecamp/omarchy)'s defaults,
+with neovim integration via `vim-tmux-navigator`.
 
-**Prefixo:** `Ctrl+Space` (alternativo: `Ctrl+b`)  
-**Modo de teclas:** vi  
+**Prefix:** `Ctrl+Space` (alternate: `Ctrl+b`)
+**Key mode:** vi
 **Plugins:** `vim-tmux-navigator`, `yank`
 
-### Navegação entre painéis / splits neovim
+### Navigation between panes / neovim splits
 
-> Integração com neovim via `vim-tmux-navigator` — os mesmos atalhos funcionam
-> dentro do neovim e entre painéis tmux sem distinção.
+> Integration with neovim via `vim-tmux-navigator` — the same keybindings work
+> inside neovim and between tmux panes with no distinction.
 
-| Atalho | Ação |
+| Shortcut | Action |
 |--------|------|
-| `Ctrl+h` | Painel/split à esquerda |
-| `Ctrl+j` | Painel/split abaixo |
-| `Ctrl+k` | Painel/split acima |
-| `Ctrl+l` | Painel/split à direita |
-| `Ctrl+\` | Painel/split anterior |
+| `Ctrl+h` | Pane/split to the left |
+| `Ctrl+j` | Pane/split below |
+| `Ctrl+k` | Pane/split above |
+| `Ctrl+l` | Pane/split to the right |
+| `Ctrl+\` | Previous pane/split |
 
-### Painéis — criar e fechar
+### Panes — create and close
 
-| Atalho | Ação |
+| Shortcut | Action |
 |--------|------|
-| `Alt+Enter` | Dividir verticalmente (diretório atual) |
-| `Alt+Shift+Enter` | Dividir horizontalmente (diretório atual) |
-| `Alt+Escape` | Fechar painel atual |
-| `<prefixo> h` | Dividir verticalmente (diretório atual) |
-| `<prefixo> v` | Dividir horizontalmente (diretório atual) |
-| `<prefixo> x` | Fechar painel atual |
+| `Alt+Enter` | Split vertically (current directory) |
+| `Alt+Shift+Enter` | Split horizontally (current directory) |
+| `Alt+Escape` | Close current pane |
+| `<prefix> h` | Split vertically (current directory) |
+| `<prefix> v` | Split horizontally (current directory) |
+| `<prefix> x` | Close current pane |
 
-### Painéis — navegar e redimensionar
+### Panes — navigate and resize
 
-| Atalho | Ação |
+| Shortcut | Action |
 |--------|------|
-| `Ctrl+Alt+←` | Focar painel à esquerda |
-| `Ctrl+Alt+→` | Focar painel à direita |
-| `Ctrl+Alt+↑` | Focar painel acima |
-| `Ctrl+Alt+↓` | Focar painel abaixo |
-| `Ctrl+Alt+Shift+←` | Redimensionar painel (−5 colunas) |
-| `Ctrl+Alt+Shift+→` | Redimensionar painel (+5 colunas) |
-| `Ctrl+Alt+Shift+↑` | Redimensionar painel (+5 linhas) |
-| `Ctrl+Alt+Shift+↓` | Redimensionar painel (−5 linhas) |
+| `Ctrl+Alt+←` | Focus pane to the left |
+| `Ctrl+Alt+→` | Focus pane to the right |
+| `Ctrl+Alt+↑` | Focus pane above |
+| `Ctrl+Alt+↓` | Focus pane below |
+| `Ctrl+Alt+Shift+←` | Resize pane (−5 columns) |
+| `Ctrl+Alt+Shift+→` | Resize pane (+5 columns) |
+| `Ctrl+Alt+Shift+↑` | Resize pane (+5 rows) |
+| `Ctrl+Alt+Shift+↓` | Resize pane (−5 rows) |
 
-### Janelas
+### Windows
 
-| Atalho | Ação |
+| Shortcut | Action |
 |--------|------|
-| `<prefixo> c` | Nova janela (diretório atual) |
-| `<prefixo> r` | Renomear janela atual |
-| `<prefixo> k` | Fechar janela atual |
-| `Alt+1` … `Alt+9` | Ir direto para a janela N |
-| `Alt+←` | Janela anterior |
-| `Alt+→` | Próxima janela |
-| `Alt+Shift+←` | Mover janela para a esquerda |
-| `Alt+Shift+→` | Mover janela para a direita |
+| `<prefix> c` | New window (current directory) |
+| `<prefix> r` | Rename current window |
+| `<prefix> k` | Close current window |
+| `Alt+1` … `Alt+9` | Jump directly to window N |
+| `Alt+←` | Previous window |
+| `Alt+→` | Next window |
+| `Alt+Shift+←` | Move window to the left |
+| `Alt+Shift+→` | Move window to the right |
 
-### Sessões
+### Sessions
 
-| Atalho | Ação |
+| Shortcut | Action |
 |--------|------|
-| `<prefixo> C` | Nova sessão (diretório atual) |
-| `<prefixo> R` | Renomear sessão atual |
-| `<prefixo> K` | Fechar sessão atual |
-| `<prefixo> P` | Sessão anterior |
-| `<prefixo> N` | Próxima sessão |
-| `Alt+↑` | Sessão anterior |
-| `Alt+↓` | Próxima sessão |
+| `<prefix> C` | New session (current directory) |
+| `<prefix> R` | Rename current session |
+| `<prefix> K` | Close current session |
+| `<prefix> P` | Previous session |
+| `<prefix> N` | Next session |
+| `Alt+↑` | Previous session |
+| `Alt+↓` | Next session |
 
-### Modo de cópia (vi)
+### Copy mode (vi)
 
-Entrar no modo de cópia: `<prefixo> [`
+Enter copy mode: `<prefix> [`
 
-| Atalho | Ação |
+| Shortcut | Action |
 |--------|------|
-| `v` | Iniciar seleção |
-| `Ctrl+v` | Alternar seleção retangular |
-| `y` | Copiar seleção para o clipboard do sistema e sair |
+| `v` | Start selection |
+| `Ctrl+v` | Toggle rectangle selection |
+| `y` | Copy selection to the system clipboard and exit |
 
-### Configuração
+### Configuration
 
-| Atalho | Ação |
+| Shortcut | Action |
 |--------|------|
-| `<prefixo> q` | Recarregar configuração do tmux |
+| `<prefix> q` | Reload tmux configuration |

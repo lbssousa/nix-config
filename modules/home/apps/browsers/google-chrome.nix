@@ -1,4 +1,4 @@
-# Módulo de usuário: Google Chrome via módulo nativo do Home Manager
+# User module: Google Chrome via the native Home Manager module
 { pkgs, ... }:
 
 {

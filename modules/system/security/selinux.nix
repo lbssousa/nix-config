@@ -1,27 +1,27 @@
-# Módulo SELinux — habilita suporte a SELinux nos moldes do Fedora.
+# SELinux module — enables SELinux support Fedora-style.
 #
-# O kernel linux_latest já inclui CONFIG_SECURITY_SELINUX=y e
-# CONFIG_SECURITY_SELINUX_BOOTPARAM=y. O NixOS gerencia o parâmetro
-# `lsm=` via `security.lsm`; adicionar "selinux" a essa lista ativa o LSM.
+# The linux_latest kernel already includes CONFIG_SECURITY_SELINUX=y and
+# CONFIG_SECURITY_SELINUX_BOOTPARAM=y. NixOS manages the `lsm=` kernel
+# parameter via `security.lsm`; adding "selinux" to that list enables the LSM.
 #
-# Modo inicial: permissivo.
-# Diferente do Fedora (enforcing + targeted), o NixOS exige adaptação da
-# política para cobrir caminhos sob /nix/store. Até que isso seja feito,
-# SELinux registra violações no audit log sem bloqueá-las.
+# Initial mode: permissive.
+# Unlike Fedora (enforcing + targeted), NixOS requires adapting the policy
+# to cover paths under /nix/store. Until that's done, SELinux logs
+# violations to the audit log without blocking them.
 #
-# Para analisar as violações:
+# To review violations:
 #   ausearch -m avc -ts recent
 #   audit2allow -a
 { lib, pkgs, ... }:
 
 {
-  # Insere "selinux" no início da lista de LSMs ativos.
-  # O NixOS transforma security.lsm em `lsm=selinux:landlock:yama:bpf` —
-  # nunca use `security=` diretamente em boot.kernelParams (conflita com lsm=).
+  # Inserts "selinux" at the front of the list of active LSMs.
+  # NixOS turns security.lsm into `lsm=selinux:landlock:yama:bpf` —
+  # never use `security=` directly in boot.kernelParams (it conflicts with lsm=).
   security.lsm = lib.mkBefore [ "selinux" ];
 
-  # `selinux=1` ativa o LSM quando CONFIG_SECURITY_SELINUX_BOOTPARAM=y.
-  # `enforcing=0` força modo permissivo; remova após validar política para NixOS.
+  # `selinux=1` enables the LSM when CONFIG_SECURITY_SELINUX_BOOTPARAM=y.
+  # `enforcing=0` forces permissive mode; remove once the policy is validated for NixOS.
   boot.kernelParams = [
     "selinux=1"
     "enforcing=0"
@@ -29,32 +29,33 @@
 
   environment = {
     etc = {
-      # Arquivo de configuração principal — espelha o /etc/selinux/config do Fedora.
+      # Main config file — mirrors Fedora's /etc/selinux/config.
       "selinux/config".text = ''
-        # Configuração SELinux.
+        # SELinux configuration.
         # SELINUX: enforcing | permissive | disabled
-        # Mude para enforcing após adaptar file_contexts para /nix/store.
+        # Switch to enforcing after adapting file_contexts for /nix/store.
         SELINUX=permissive
 
-        # SELINUXTYPE: nome da política a ser carregada em /etc/selinux/<tipo>/.
-        # O Fedora usa "targeted" (política derivada); o NixOS usa "refpolicy"
-        # (referência base). A política binária (policy.XX) precisa ser compilada
-        # com checkpolicy e carregada via load_policy antes de entrar em enforcing.
+        # SELINUXTYPE: name of the policy to load from /etc/selinux/<type>/.
+        # Fedora uses "targeted" (a derived policy); NixOS uses "refpolicy"
+        # (the base reference policy). The binary policy (policy.XX) needs
+        # to be compiled with checkpolicy and loaded via load_policy before
+        # switching to enforcing.
         SELINUXTYPE=refpolicy
       '';
 
-      # Contextos da referência policy (selinux-refpolicy do nixpkgs).
-      # Nota: este caminho é somente-leitura (Nix store). Para carregar módulos
-      # adicionais em runtime, use um diretório gravável em /persist/etc/selinux/.
+      # Reference policy contexts (nixpkgs' selinux-refpolicy).
+      # Note: this path is read-only (Nix store). To load additional
+      # modules at runtime, use a writable directory under /persist/etc/selinux/.
       "selinux/refpolicy".source = "${pkgs.selinuxPackages.selinux-refpolicy}/etc/selinux/refpolicy";
     };
 
-    # Ferramentas SELinux — equivalentes ao grupo policycoreutils do Fedora.
+    # SELinux tools — equivalent to Fedora's policycoreutils group.
     systemPackages = with pkgs.selinuxPackages; [
       policycoreutils # load_policy, restorecon, chcon, seinfo, setsebool, getenforce
-      setools # seinfo, sesearch, findcon (análise de política)
-      checkpolicy # compilador de política (.te + .fc + .if → policy.XX)
-      semodule-utils # semodule, semodule_expand (gestão de módulos)
+      setools # seinfo, sesearch, findcon (policy analysis)
+      checkpolicy # policy compiler (.te + .fc + .if → policy.XX)
+      semodule-utils # semodule, semodule_expand (module management)
     ];
   };
 }

@@ -1,26 +1,25 @@
 #!/usr/bin/env bash
-# enroll-tpm2.sh — Configurar desbloqueio automático do LUKS via chip TPM2
+# enroll-tpm2.sh — Set up automatic LUKS unlock via the TPM2 chip
 #
-# Usa systemd-cryptenroll para registrar o TPM2 como fator de autenticação
-# do volume LUKS, permitindo que o sistema desbloqueie automaticamente o
-# disco na inicialização — desde que as medições de integridade (PCRs)
-# correspondam ao estado esperado.
+# Uses systemd-cryptenroll to register the TPM2 as an authentication factor
+# for the LUKS volume, letting the system automatically unlock the disk at
+# boot — as long as the integrity measurements (PCRs) match the expected state.
 #
-# ⚠️  Execute este script APÓS a primeira inicialização bem-sucedida do sistema.
+# ⚠️  Run this script AFTER the system's first successful boot.
 #
-# Uso:
-#   bash scripts/enroll-tpm2.sh [--device <partição>] [--pcrs <pcrs>]
+# Usage:
+#   bash scripts/enroll-tpm2.sh [--device <partition>] [--pcrs <pcrs>]
 #                               [--wipe] [--help]
 #
-# Opções:
-#   --device <partição>  Partição LUKS (padrão: /dev/disk/by-partlabel/luks)
-#   --pcrs <pcrs>        PCRs a monitorar (padrão: 0+2+7)
-#                        0 = Firmware UEFI
-#                        2 = Código de opção UEFI (drivers ROM)
-#                        7 = Estado do Secure Boot
-#   --wipe               Remove o slot TPM2 existente antes de reinscrever
-#                        (útil para reinscrever após mudanças no firmware)
-#   --help, -h           Exibe ajuda e sai
+# Options:
+#   --device <partition>  LUKS partition (default: /dev/disk/by-partlabel/luks)
+#   --pcrs <pcrs>         PCRs to watch (default: 0+2+7)
+#                        0 = UEFI firmware
+#                        2 = UEFI option code (ROM drivers)
+#                        7 = Secure Boot state
+#   --wipe                Remove the existing TPM2 slot before re-enrolling
+#                        (useful for re-enrolling after firmware changes)
+#   --help, -h            Show help and exit
 
 set -euo pipefail
 
@@ -42,16 +41,16 @@ error()   { echo -e "${RED}[ERRO]${RESET} $*" >&2; }
 die()     { error "$*"; exit 1; }
 
 # ---------------------------------------------------------------------------
-# Garantir execução como root
+# Ensure running as root
 # ---------------------------------------------------------------------------
 
 if [[ $EUID -ne 0 ]]; then
-  info "Este script deve ser executado como root. Reexecutando com run0..."
+  info "This script must run as root. Re-executing with run0..."
   exec run0 bash "${BASH_SOURCE[0]}" "$@"
 fi
 
 # ---------------------------------------------------------------------------
-# Argumento parsing
+# Argument parsing
 # ---------------------------------------------------------------------------
 
 OPT_DEVICE="/dev/disk/by-partlabel/luks"
@@ -65,38 +64,38 @@ while [[ $# -gt 0 ]]; do
     --wipe)   OPT_WIPE=true;   shift ;;
     --help|-h)
       cat <<'EOF'
-Uso:
-  bash scripts/enroll-tpm2.sh [--device <partição>] [--pcrs <pcrs>]
+Usage:
+  bash scripts/enroll-tpm2.sh [--device <partition>] [--pcrs <pcrs>]
                               [--wipe] [--help]
 
-Opções:
-  --device <partição>  Partição LUKS (padrão: /dev/disk/by-partlabel/luks)
-  --pcrs <pcrs>        PCRs a monitorar, separados por + (padrão: 0+2+7)
-                       0 = Firmware UEFI (integridade do firmware)
-                       2 = Código de opção UEFI (drivers ROM)
-                       7 = Estado do Secure Boot
-  --wipe               Remove o slot TPM2 existente antes de reinscrever.
-                       Use após atualizações de firmware ou mudanças no
-                       Secure Boot que tornem o slot atual inválido.
+Options:
+  --device <partition>  LUKS partition (default: /dev/disk/by-partlabel/luks)
+  --pcrs <pcrs>         PCRs to watch, + separated (default: 0+2+7)
+                       0 = UEFI firmware (firmware integrity)
+                       2 = UEFI option code (ROM drivers)
+                       7 = Secure Boot state
+  --wipe                Remove the existing TPM2 slot before re-enrolling.
+                       Use after firmware updates or Secure Boot changes
+                       that invalidate the current slot.
 
-Exemplos:
-  # Inscrição padrão (PCRs 0+2+7, recomendado com Secure Boot):
+Examples:
+  # Default enrollment (PCRs 0+2+7, recommended with Secure Boot):
   run0 bash scripts/enroll-tpm2.sh
 
-  # Sem Secure Boot (apenas firmware e código de opção):
+  # Without Secure Boot (firmware and option code only):
   run0 bash scripts/enroll-tpm2.sh --pcrs 0+2
 
-  # Reinscrever após atualização de firmware:
+  # Re-enroll after a firmware update:
   run0 bash scripts/enroll-tpm2.sh --wipe
 
-  # Partição LUKS alternativa:
+  # Alternate LUKS partition:
   run0 bash scripts/enroll-tpm2.sh --device /dev/nvme0n1p2
 
-Para revogar o acesso TPM2 (ex: antes de vender o hardware):
+To revoke TPM2 access (e.g. before selling the hardware):
   run0 systemd-cryptenroll --wipe-slot=tpm2 /dev/disk/by-partlabel/luks
 EOF
       exit 0 ;;
-    *) die "Opção desconhecida: $1. Use --help para ver as opções disponíveis." ;;
+    *) die "Unknown option: $1. Use --help to see the available options." ;;
   esac
 done
 
@@ -105,72 +104,72 @@ PCRS="$OPT_PCRS"
 
 echo
 echo -e "${BOLD}╔══════════════════════════════════════════════════════════════╗${RESET}"
-echo -e "${BOLD}║        Configuração de Desbloqueio LUKS via TPM2             ║${RESET}"
+echo -e "${BOLD}║              LUKS Unlock via TPM2 Setup                      ║${RESET}"
 echo -e "${BOLD}╚══════════════════════════════════════════════════════════════╝${RESET}"
 echo
 
 # ---------------------------------------------------------------------------
-# Verificações
+# Checks
 # ---------------------------------------------------------------------------
 
-info "==> Verificando pré-requisitos..."
+info "==> Checking prerequisites..."
 
-# Verificar se o dispositivo LUKS existe
+# Check whether the LUKS device exists
 if [[ ! -b "$DEVICE" ]]; then
-  die "Dispositivo LUKS não encontrado: $DEVICE
-  Verifique com: ls -la /dev/disk/by-partlabel/
-  Ou especifique o caminho correto com --device <partição>"
+  die "LUKS device not found: $DEVICE
+  Check with: ls -la /dev/disk/by-partlabel/
+  Or specify the correct path with --device <partition>"
 fi
-success "Dispositivo LUKS encontrado: $DEVICE"
+success "LUKS device found: $DEVICE"
 
-# Verificar se o TPM2 está disponível
+# Check whether TPM2 is available
 if ! command -v systemd-cryptenroll >/dev/null 2>&1; then
-  die "systemd-cryptenroll não encontrado. Verifique se o systemd está instalado."
+  die "systemd-cryptenroll not found. Check that systemd is installed."
 fi
 
 TPM_DEVICES=$(ls /dev/tpm* 2>/dev/null || true)
 if [[ -z "$TPM_DEVICES" ]]; then
-  die "Nenhum dispositivo TPM encontrado em /dev/tpm*.
-  Verifique se o TPM2 está habilitado na UEFI/BIOS do sistema."
+  die "No TPM device found at /dev/tpm*.
+  Check whether TPM2 is enabled in the system's UEFI/BIOS."
 fi
-success "TPM2 detectado: $TPM_DEVICES"
+success "TPM2 detected: $TPM_DEVICES"
 
-# Verificar se o cryptsetup está disponível
+# Check whether cryptsetup is available
 if ! command -v cryptsetup >/dev/null 2>&1; then
-  die "cryptsetup não encontrado."
+  die "cryptsetup not found."
 fi
 
-# Verificar se o dispositivo é um volume LUKS
+# Check whether the device is a LUKS volume
 if ! cryptsetup isLuks "$DEVICE" 2>/dev/null; then
-  die "$DEVICE não é um volume LUKS válido."
+  die "$DEVICE is not a valid LUKS volume."
 fi
-success "Volume LUKS válido: $DEVICE"
+success "Valid LUKS volume: $DEVICE"
 
 echo
-info "Dispositivo: $DEVICE"
-info "PCRs:        $PCRS"
+info "Device: $DEVICE"
+info "PCRs:   $PCRS"
 echo
 
 # ---------------------------------------------------------------------------
-# Remover slot TPM2 existente (se --wipe)
+# Remove existing TPM2 slot (if --wipe)
 # ---------------------------------------------------------------------------
 
 if [[ "$OPT_WIPE" == "true" ]]; then
-  info "==> Removendo slot TPM2 existente..."
+  info "==> Removing existing TPM2 slot..."
   if systemd-cryptenroll --wipe-slot=tpm2 "$DEVICE"; then
-    success "Slot TPM2 removido."
+    success "TPM2 slot removed."
   else
-    warn "Nenhum slot TPM2 encontrado para remover (ou remoção falhou)."
+    warn "No TPM2 slot found to remove (or removal failed)."
   fi
   echo
 fi
 
 # ---------------------------------------------------------------------------
-# Inscrever o TPM2
+# Enroll the TPM2
 # ---------------------------------------------------------------------------
 
-info "==> Inscrevendo o TPM2 no volume LUKS..."
-info "    (Você pode ser solicitado a digitar a senha LUKS para autorizar)"
+info "==> Enrolling the TPM2 for the LUKS volume..."
+info "    (You may be prompted for the LUKS password to authorize this)"
 echo
 
 systemd-cryptenroll \
@@ -179,15 +178,15 @@ systemd-cryptenroll \
   "$DEVICE"
 
 echo
-success "TPM2 inscrito com sucesso!"
+success "TPM2 enrolled successfully!"
 echo
-info "O sistema desbloqueará automaticamente o disco na próxima inicialização,"
-info "desde que as medições dos PCRs [$PCRS] correspondam ao estado atual."
+info "The system will automatically unlock the disk on the next boot,"
+info "as long as the PCR measurements [$PCRS] match the current state."
 echo
-warn "IMPORTANTE: Reinscreva o TPM2 após:"
-warn "  • Atualizações de firmware (UEFI/BIOS)"
-warn "  • Mudanças nas configurações do Secure Boot"
-warn "  • Troca de hardware (placa-mãe, chip TPM)"
+warn "IMPORTANT: Re-enroll the TPM2 after:"
+warn "  • Firmware updates (UEFI/BIOS)"
+warn "  • Secure Boot configuration changes"
+warn "  • Hardware swaps (motherboard, TPM chip)"
 echo
-info "Para revogar o acesso TPM2:"
+info "To revoke TPM2 access:"
 echo "  run0 systemd-cryptenroll --wipe-slot=tpm2 $DEVICE"

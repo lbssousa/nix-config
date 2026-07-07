@@ -1,29 +1,29 @@
 #!/usr/bin/env bash
-# setup-secureboot.sh — Configurar Secure Boot e assinar módulos do kernel (NVIDIA)
+# setup-secureboot.sh — Configure Secure Boot and sign kernel modules (NVIDIA)
 #
-# Este script realiza as etapas pós-instalação necessárias para o Secure Boot
-# funcionar com o Limine:
+# This script performs the post-installation steps needed for Secure Boot
+# to work with Limine:
 #
-#   1. Verificar o estado atual do Secure Boot e do sbctl
-#   2. Verificar banco de chaves PKI (sbctl)
-#   3. Assinar todos os binários EFI ANTES do registro no firmware
-#   4. Verificar que todos os binários estão assinados (pré-condição para enrollment)
-#   5. Registrar as chaves PKI no firmware UEFI (sbctl enroll-keys)
-#   6. Verificação final das assinaturas
+#   1. Check the current state of Secure Boot and sbctl
+#   2. Check the PKI key store (sbctl)
+#   3. Sign all EFI binaries BEFORE enrolling them in the firmware
+#   4. Verify that all binaries are signed (precondition for enrollment)
+#   5. Enroll the PKI keys in the UEFI firmware (sbctl enroll-keys)
+#   6. Final signature verification
 #
-# ⚠️  Execute este script APÓS a primeira inicialização do sistema,
-#     com o Secure Boot DESATIVADO no firmware (modo Setup Mode).
-#     Após o script, reative o Secure Boot no firmware e reinicie.
+# ⚠️  Run this script AFTER the system's first boot,
+#     with Secure Boot DISABLED in the firmware (Setup Mode).
+#     After the script, re-enable Secure Boot in the firmware and reboot.
 #
-# Uso:
+# Usage:
 #   bash scripts/setup-secureboot.sh [--enroll-only] [--sign-only]
 #                                    [--verify-only] [--help]
 #
-# Opções:
-#   --enroll-only   Apenas registra as chaves no firmware (sem sign/verify)
-#   --sign-only     Apenas assina os binários pendentes (sem enroll/verify)
-#   --verify-only   Apenas verifica as assinaturas (sem enroll/sign)
-#   --help, -h      Exibe ajuda e sai
+# Options:
+#   --enroll-only   Only enrolls the keys in the firmware (no sign/verify)
+#   --sign-only     Only signs the pending binaries (no enroll/verify)
+#   --verify-only   Only verifies the signatures (no enroll/sign)
+#   --help, -h      Show help and exit
 
 set -euo pipefail
 
@@ -56,15 +56,15 @@ verify_signed_efi_binaries() {
   fi
   echo "$_verify_output"
 
-  # Em algumas versões do sbctl, o exit code pode não refletir binários pendentes.
-  # Então também validamos o conteúdo textual da saída.
+  # On some sbctl versions, the exit code may not reflect pending binaries.
+  # So we also validate the textual content of the output.
   if echo "$_verify_output" | grep -Eiq 'is not signed|not signed'; then
     _unsigned_actionable=$(extract_unsigned_efi_paths "$_verify_output")
     if [[ -n "$_unsigned_actionable" ]]; then
       return 1
     fi
 
-    warn "Há entradas 'not signed' não acionáveis (ex.: initrd-*.efi não-PE); ignorando."
+    warn "There are non-actionable 'not signed' entries (e.g. non-PE initrd-*.efi); ignoring."
     return 0
   fi
 
@@ -74,19 +74,19 @@ verify_signed_efi_binaries() {
 extract_unsigned_efi_paths() {
   local _verify_output="$1"
 
-  # Exclui do conjunto "precisa ser assinado" os artefatos que o Limine NÃO
-  # verifica via assinatura PE/Authenticode:
-  #   • /boot/EFI/nixos/kernel-*.efi e initrd-*.efi: artefatos genéricos do
-  #     bootspec do NixOS, não usados pelo Limine para bootar (o firmware
-  #     nunca os carrega diretamente).
-  #   • /boot/limine/kernels/*: o kernel/initrd que o Limine de fato usa. A
-  #     integridade deles é garantida por checksum BLAKE2B embutido no
-  #     limine.conf (boot.loader.limine.validateChecksums), cujo hash por sua
-  #     vez está embutido no binário assinado do Limine (enroll-config) — não
-  #     por assinatura individual de cada arquivo.
-  # O único binário que PRECISA estar assinado para o boot funcionar é o
-  # próprio bootloader (/boot/EFI/limine/BOOTX64.EFI), e o instalador do
-  # Limine já o assina automaticamente a cada nixos-rebuild switch/boot.
+  # Excludes from the "needs signing" set the artifacts that Limine does
+  # NOT verify via PE/Authenticode signature:
+  #   • /boot/EFI/nixos/kernel-*.efi and initrd-*.efi: generic NixOS bootspec
+  #     artifacts, not used by Limine to boot (the firmware never loads
+  #     them directly).
+  #   • /boot/limine/kernels/*: the kernel/initrd Limine actually uses.
+  #     Their integrity is guaranteed by a BLAKE2B checksum embedded in
+  #     limine.conf (boot.loader.limine.validateChecksums), whose hash is
+  #     itself embedded in the signed Limine binary (enroll-config) — not
+  #     by an individual signature on each file.
+  # The only binary that MUST be signed for boot to work is the bootloader
+  # itself (/boot/EFI/limine/BOOTX64.EFI), and the Limine installer already
+  # signs it automatically on every nixos-rebuild switch/boot.
   echo "$_verify_output" \
     | grep -E 'not signed' \
     | grep -Eo '/[^[:space:]]+\.efi' \
@@ -99,28 +99,28 @@ sign_explicit_efi_path() {
   local _sign_output
 
   if [[ ! -f "$_path" ]]; then
-    warn "Arquivo EFI não encontrado para assinatura explícita: $_path"
+    warn "EFI file not found for explicit signing: $_path"
     return 1
   fi
 
-  # Nenhum arquivo em /boot/EFI/nixos/ deve ser assinado pelo sbctl:
-  #   • kernel-*.efi: artefato genérico do bootspec do NixOS, não carregado
-  #     diretamente pelo firmware sob o Limine.
-  #   • initrd-*.efi: não são imagens PE/COFF, o sbctl não consegue assiná-las.
-  # O bootloader (/boot/EFI/limine/BOOTX64.EFI) já é assinado automaticamente
-  # pelo instalador do Limine a cada nixos-rebuild switch/boot.
+  # No file in /boot/EFI/nixos/ should be signed by sbctl:
+  #   • kernel-*.efi: a generic NixOS bootspec artifact, not loaded
+  #     directly by the firmware under Limine.
+  #   • initrd-*.efi: not PE/COFF images, sbctl can't sign them.
+  # The bootloader (/boot/EFI/limine/BOOTX64.EFI) is already signed
+  # automatically by the Limine installer on every nixos-rebuild switch/boot.
   if [[ "$_path" =~ ^/boot/EFI/nixos/ ]]; then
-    warn "Ignorando artefato de bootspec não usado pelo Limine (não deve ser assinado por sbctl): $_path"
+    warn "Skipping bootspec artifact not used by Limine (should not be signed by sbctl): $_path"
     return 3
   fi
 
-  # Algumas versões usam 'sbctl sign -s <path>', outras aceitam 'sbctl sign <path>'.
+  # Some versions use 'sbctl sign -s <path>', others accept 'sbctl sign <path>'.
   if _sign_output=$(sbctl sign -s "$_path" 2>&1); then
     return 0
   fi
 
   if echo "$_sign_output" | grep -qi 'unrecognized PE machine'; then
-    warn "Arquivo não é uma imagem PE/COFF assinável: $_path"
+    warn "File is not a signable PE/COFF image: $_path"
     return 3
   fi
 
@@ -129,7 +129,7 @@ sign_explicit_efi_path() {
   fi
 
   if echo "$_sign_output" | grep -qi 'unrecognized PE machine'; then
-    warn "Arquivo não é uma imagem PE/COFF assinável: $_path"
+    warn "File is not a signable PE/COFF image: $_path"
     return 3
   fi
 
@@ -149,18 +149,18 @@ try_fix_unsigned_efi_binaries() {
     return 1
   fi
 
-  warn "Foram detectados binários EFI não assinados. Tentando assinatura explícita..."
+  warn "Unsigned EFI binaries detected. Trying explicit signing..."
   while IFS= read -r _path; do
     [[ -z "$_path" ]] && continue
     if sign_explicit_efi_path "$_path"; then
-      success "Assinatura explícita aplicada: $_path"
+      success "Explicit signature applied: $_path"
       _fixed_any=true
     else
       _sign_rc=$?
       if [[ $_sign_rc -eq 3 ]]; then
-        warn "Arquivo não assinável pelo sbctl (ignorado): $_path"
+        warn "File not signable by sbctl (ignored): $_path"
       else
-        warn "Falha ao assinar explicitamente: $_path"
+        warn "Failed to sign explicitly: $_path"
         _failed_any=true
       fi
     fi
@@ -177,16 +177,16 @@ try_fix_unsigned_efi_binaries() {
   return 1
 }
 
-# NOTA: A função sign_nixos_efi_binaries_explicitly foi removida.
-# /boot/EFI/nixos/ contém artefatos genéricos do bootspec do NixOS que o
-# Limine NÃO usa para bootar (kernel/initrd reais ficam em /boot/limine/kernels/,
-# verificados por checksum, não por assinatura) e que portanto NÃO devem ser
-# assinados manualmente pelo sbctl:
-#   • kernel-*.efi: não carregado pelo firmware sob o Limine.
-#   • initrd-*.efi: não são PE/COFF, impossível assinar com sbctl.
-# O bootloader (/boot/EFI/limine/BOOTX64.EFI) já vem assinado automaticamente
-# pelo instalador do Limine durante o nixos-rebuild. Somente bootloaders
-# extras (ex: fwupd-efi) podem precisar de assinatura manual via 'sbctl sign-all'.
+# NOTE: The sign_nixos_efi_binaries_explicitly function was removed.
+# /boot/EFI/nixos/ contains generic NixOS bootspec artifacts that Limine
+# does NOT use to boot (the real kernel/initrd live in
+# /boot/limine/kernels/, verified by checksum, not signature), and
+# therefore must NOT be manually signed by sbctl:
+#   • kernel-*.efi: not loaded by the firmware under Limine.
+#   • initrd-*.efi: not PE/COFF, impossible to sign with sbctl.
+# The bootloader (/boot/EFI/limine/BOOTX64.EFI) is already signed
+# automatically by the Limine installer during nixos-rebuild. Only extra
+# bootloaders (e.g. fwupd-efi) may need manual signing via 'sbctl sign-all'.
 
 unlock_efivarfs_immutables() {
   local _efivarfs=/sys/firmware/efi/efivars
@@ -195,12 +195,12 @@ unlock_efivarfs_immutables() {
   local _f
 
   if [[ ! -d "$_efivarfs" ]]; then
-    warn "efivarfs não está montado em $_efivarfs."
+    warn "efivarfs is not mounted at $_efivarfs."
     return 1
   fi
 
   if ! command -v chattr >/dev/null 2>&1; then
-    warn "'chattr' não encontrado. Não foi possível desbloquear variáveis EFI imutáveis."
+    warn "'chattr' not found. Could not unlock immutable EFI variables."
     return 1
   fi
 
@@ -214,7 +214,7 @@ unlock_efivarfs_immutables() {
         _had_immutable=true
       fi
 
-      # Tenta remover imutabilidade de forma idempotente.
+      # Try to clear the immutable bit idempotently.
       if chattr -i "$_f" 2>/dev/null; then
         _cleared_any=true
       fi
@@ -222,8 +222,8 @@ unlock_efivarfs_immutables() {
   done
 
   if [ "$_had_immutable" = "true" ]; then
-    warn "Atributo imutável (chattr +i) detectado e tratado nas variáveis EFI."
-    warn "Isso ocorre em alguns firmwares que bloqueiam efivars mesmo em Setup Mode."
+    warn "Immutable attribute (chattr +i) detected and cleared on the EFI variables."
+    warn "This happens on some firmwares that lock efivars even in Setup Mode."
     echo
   fi
 
@@ -235,16 +235,16 @@ unlock_efivarfs_immutables() {
 }
 
 # ---------------------------------------------------------------------------
-# Garantir execução como root
+# Ensure running as root
 # ---------------------------------------------------------------------------
 
 if [[ $EUID -ne 0 ]]; then
-  info "Este script deve ser executado como root. Reexecutando com run0..."
+  info "This script must run as root. Re-executing with run0..."
   exec run0 bash "${BASH_SOURCE[0]}" "$@"
 fi
 
 # ---------------------------------------------------------------------------
-# Argumento parsing
+# Argument parsing
 # ---------------------------------------------------------------------------
 
 OPT_ENROLL_ONLY=false
@@ -258,130 +258,130 @@ while [[ $# -gt 0 ]]; do
     --verify-only) OPT_VERIFY_ONLY=true; shift ;;
     --help|-h)
       cat <<'EOF'
-Uso:
+Usage:
   bash scripts/setup-secureboot.sh [--enroll-only] [--sign-only]
                                    [--verify-only] [--help]
 
-Opções:
-  --enroll-only   Apenas registra as chaves PKI no firmware UEFI
-  --sign-only     Apenas assina os binários EFI (e verifica antes de registrar)
-  --verify-only   Apenas verifica se todos os binários estão assinados
-  --help, -h      Exibe esta ajuda e sai
+Options:
+  --enroll-only   Only enrolls the PKI keys in the UEFI firmware
+  --sign-only     Only signs the EFI binaries (and verifies before enrolling)
+  --verify-only   Only checks whether all binaries are signed
+  --help, -h      Show this help and exit
 
-Passos para configurar o Secure Boot:
-  1. Inicialize o sistema com o Secure Boot DESATIVADO (Setup Mode na UEFI)
-     (para ativar o Setup Mode: BIOS → Secure Boot → apagar chaves existentes)
-  2. Execute este script para assinar binários e registrar chaves:
+Steps to set up Secure Boot:
+  1. Boot the system with Secure Boot DISABLED (Setup Mode in the UEFI)
+     (to enable Setup Mode: BIOS → Secure Boot → clear existing keys)
+  2. Run this script to sign the binaries and enroll the keys:
        run0 bash scripts/setup-secureboot.sh
-     O script:
-       a) Assina todos os binários EFI com as chaves PKI (sign-all)
-       b) Verifica que TODOS os binários estão assinados (obrigatório)
-       c) Registra as chaves no firmware UEFI (enroll-keys --microsoft)
-  3. Reinicie e ative o Secure Boot na UEFI/BIOS
-  4. Verifique se tudo está correto:
+     The script:
+       a) Signs all EFI binaries with the PKI keys (sign-all)
+       b) Verifies that ALL binaries are signed (mandatory)
+       c) Enrolls the keys in the UEFI firmware (enroll-keys --microsoft)
+  3. Reboot and enable Secure Boot in the UEFI/BIOS
+  4. Verify everything is correct:
        run0 bash scripts/setup-secureboot.sh --verify-only
 
-NOTA IMPORTANTE — Limine vs. MOK/shim:
-  Esta configuração usa Limine, que NÃO utiliza shim nem MOK.
-  • Não haverá tela azul do MOKmanager durante o boot
-  • Não será solicitada nenhuma senha de MOK
-  • A ausência do MOK é ESPERADA e CORRETA com Limine
-  • O firmware verifica apenas a assinatura PE do binário do Limine
-    (chaves PKI PK/KEK/db registradas no firmware UEFI via sbctl)
-  • A integridade do kernel/initrd é garantida por checksum BLAKE2B
-    embutido no limine.conf, cujo hash está embutido no binário assinado
-    (enroll-config) — não por assinatura individual de cada arquivo
-  • A cada nixos-rebuild switch/boot, o instalador do Limine reassina o
-    binário e reenrola o checksum do config atualizado
+IMPORTANT NOTE — Limine vs. MOK/shim:
+  This configuration uses Limine, which does NOT use shim or MOK.
+  • There will be no blue MOKmanager screen during boot
+  • You won't be asked for a MOK password
+  • The absence of MOK is EXPECTED and CORRECT with Limine
+  • The firmware only verifies the PE signature of the Limine binary
+    (PKI keys PK/KEK/db enrolled in the UEFI firmware via sbctl)
+  • Kernel/initrd integrity is guaranteed by a BLAKE2B checksum embedded
+    in limine.conf, whose hash is embedded in the signed binary
+    (enroll-config) — not by an individual signature on each file
+  • On every nixos-rebuild switch/boot, the Limine installer re-signs the
+    binary and re-enrolls the checksum of the updated config
 
-Notas:
-  • As chaves PKI são criadas automaticamente durante a instalação (install.sh)
-    e ficam em /persist/etc/secureboot (symlink de /var/lib/sbctl, ver
-    systemd.tmpfiles.rules no host)
-  • O Limine assina automaticamente o próprio binário a cada nixos-rebuild
-  • Use sbctl verify para verificar quais binários não estão assinados
-    (kernel/initrd em /boot/limine/kernels/ aparecem como "not signed" por
-    design — são verificados por checksum, não por assinatura)
+Notes:
+  • The PKI keys are created automatically during installation (install.sh)
+    and live in /persist/etc/secureboot (symlinked from /var/lib/sbctl, see
+    systemd.tmpfiles.rules on the host)
+  • Limine automatically signs its own binary on every nixos-rebuild
+  • Use sbctl verify to check which binaries aren't signed
+    (kernel/initrd under /boot/limine/kernels/ show up as "not signed" by
+    design — they're verified by checksum, not signature)
 EOF
       exit 0 ;;
-    *) die "Opção desconhecida: $1. Use --help para ver as opções disponíveis." ;;
+    *) die "Unknown option: $1. Use --help to see the available options." ;;
   esac
 done
 
-# Verificar se apenas uma das flags exclusivas está ativa
+# Check that at most one exclusive flag is active
 _exclusive_count=0
 [[ "$OPT_ENROLL_ONLY" == "true" ]] && (( _exclusive_count++ )) || true
 [[ "$OPT_SIGN_ONLY"   == "true" ]] && (( _exclusive_count++ )) || true
 [[ "$OPT_VERIFY_ONLY" == "true" ]] && (( _exclusive_count++ )) || true
 if [[ $_exclusive_count -gt 1 ]]; then
-  die "--enroll-only, --sign-only e --verify-only são mutuamente exclusivos."
+  die "--enroll-only, --sign-only and --verify-only are mutually exclusive."
 fi
 
 echo
 echo -e "${BOLD}╔══════════════════════════════════════════════════════════════╗${RESET}"
-echo -e "${BOLD}║             Configuração do Secure Boot (Limine)             ║${RESET}"
+echo -e "${BOLD}║              Secure Boot Configuration (Limine)              ║${RESET}"
 echo -e "${BOLD}╚══════════════════════════════════════════════════════════════╝${RESET}"
 echo
 
 # ---------------------------------------------------------------------------
-# Verificações
+# Checks
 # ---------------------------------------------------------------------------
 
 if ! command -v sbctl >/dev/null 2>&1; then
-  die "sbctl não encontrado. Certifique-se de que boot.loader.limine.secureBoot.enable
-  está ativo e que o sistema foi reconstruído com 'nixos-rebuild switch'."
+  die "sbctl not found. Make sure boot.loader.limine.secureBoot.enable
+  is active and the system was rebuilt with 'nixos-rebuild switch'."
 fi
 
 # ---------------------------------------------------------------------------
-# Passo 1: Estado atual
+# Step 1: Current state
 # ---------------------------------------------------------------------------
 
-info "==> Estado atual do Secure Boot:"
+info "==> Current Secure Boot state:"
 sbctl status || true
 echo
 
 # ---------------------------------------------------------------------------
-# Passo 2: Verificar banco de chaves PKI
+# Step 2: Check the PKI key store
 # ---------------------------------------------------------------------------
 
-# Verificar se o banco de chaves sbctl está acessível.
-# A configuração do host cria um symlink /var/lib/sbctl → /persist/etc/secureboot
-# via systemd-tmpfiles (regra "L+ /var/lib/sbctl"). Se as chaves não forem encontradas,
-# o sbctl não consegue assinar binários nem registrar chaves no firmware.
-# Usa verificação via sistema de arquivos para robustez (independente de locale/encoding).
+# Check whether the sbctl key store is accessible.
+# The host configuration creates a /var/lib/sbctl → /persist/etc/secureboot
+# symlink via systemd-tmpfiles (rule "L+ /var/lib/sbctl"). If the keys
+# aren't found, sbctl can't sign binaries or enroll keys in the firmware.
+# Uses a filesystem check for robustness (independent of locale/encoding).
 _sbctl_db=/var/lib/sbctl
 if [[ ! -d "$_sbctl_db/keys" ]] && [[ ! -f "$_sbctl_db/GUID" ]]; then
-  error "Banco de chaves sbctl não encontrado em $_sbctl_db."
-  warn "As chaves PKI devem estar em /var/lib/sbctl (→ /persist/etc/secureboot)."
-  warn "Verifique se:"
-  warn "  • A instalação foi concluída com sucesso (install.sh criou as chaves)"
-  warn "  • O symlink /var/lib/sbctl → /persist/etc/secureboot existe"
-  warn "  • O sistema foi reconstruído com 'nixos-rebuild switch'"
-  die "Banco de chaves não encontrado. Verifique a instalação."
+  error "sbctl key store not found at $_sbctl_db."
+  warn "The PKI keys must be at /var/lib/sbctl (→ /persist/etc/secureboot)."
+  warn "Check that:"
+  warn "  • The installation completed successfully (install.sh created the keys)"
+  warn "  • The /var/lib/sbctl → /persist/etc/secureboot symlink exists"
+  warn "  • The system was rebuilt with 'nixos-rebuild switch'"
+  die "Key store not found. Check the installation."
 fi
 _sbctl_status_output=$(sbctl status 2>&1)
 
 # ---------------------------------------------------------------------------
-# Passo 3: Assinar binários EFI ANTES do registro no firmware
+# Step 3: Sign EFI binaries BEFORE enrolling them in the firmware
 # ---------------------------------------------------------------------------
-# Assinar antes de registrar garante que, se o processo de assinatura falhar
-# (chave ausente, binário inválido), o firmware não é alterado desnecessariamente.
+# Signing before enrolling ensures that, if the signing process fails
+# (missing key, invalid binary), the firmware isn't changed unnecessarily.
 
 if [[ "$OPT_ENROLL_ONLY" != "true" && "$OPT_VERIFY_ONLY" != "true" ]]; then
-  info "==> Assinando binários EFI com as chaves PKI..."
+  info "==> Signing EFI binaries with the PKI keys..."
   echo
 
   if sbctl sign-all; then
-    success "Todos os binários EFI assinados."
+    success "All EFI binaries signed."
   else
-    warn "Alguns binários podem não ter sido assinados."
-    warn "Execute 'sbctl verify' para verificar quais estão pendentes."
+    warn "Some binaries may not have been signed."
+    warn "Run 'sbctl verify' to check which ones are pending."
   fi
   echo
 
-  # Verificar assinaturas ANTES de prosseguir com o registro no firmware.
-  # Se houver binários não assinados, o boot com Secure Boot ativo falhará.
-  info "==> Verificando assinaturas antes do registro no firmware..."
+  # Verify signatures BEFORE proceeding with firmware enrollment.
+  # If there are unsigned binaries, booting with Secure Boot active will fail.
+  info "==> Verifying signatures before firmware enrollment..."
   if _verify_before_enroll_output=$(verify_signed_efi_binaries); then
     echo "$_verify_before_enroll_output"
   else
@@ -390,55 +390,55 @@ if [[ "$OPT_ENROLL_ONLY" != "true" && "$OPT_VERIFY_ONLY" != "true" ]]; then
 
     if try_fix_unsigned_efi_binaries "$_verify_before_enroll_output"; then
       echo
-      info "==> Revalidando assinaturas EFI após correção automática..."
+      info "==> Revalidating EFI signatures after automatic fix..."
       if ! verify_signed_efi_binaries; then
         echo
-        error "Há binários EFI sem assinatura válida após tentativa de correção automática."
-        warn "O Secure Boot falhará se o firmware for configurado agora."
-        warn "Execute os seguintes comandos para corrigir e tente novamente:"
-        warn "  1. run0 nixos-rebuild switch   (regenera e assina o binário do Limine)"
-        warn "  2. run0 sbctl sign-all         (assina binários adicionais)"
-        warn "  3. run0 bash scripts/setup-secureboot.sh   (execute este script novamente)"
-        die "Assinaturas incompletas. Corrija antes de registrar as chaves no firmware."
+        error "There are EFI binaries without a valid signature after the automatic fix attempt."
+        warn "Secure Boot will fail if the firmware is configured now."
+        warn "Run the following commands to fix it and try again:"
+        warn "  1. run0 nixos-rebuild switch   (regenerates and signs the Limine binary)"
+        warn "  2. run0 sbctl sign-all         (signs additional binaries)"
+        warn "  3. run0 bash scripts/setup-secureboot.sh   (run this script again)"
+        die "Incomplete signatures. Fix this before enrolling the keys in the firmware."
       fi
     else
-      error "Há binários EFI sem assinatura válida."
-      warn "O Secure Boot falhará se o firmware for configurado agora."
-      warn "Execute os seguintes comandos para corrigir e tente novamente:"
-      warn "  1. run0 nixos-rebuild switch   (regenera e assina o binário do Limine)"
-      warn "  2. run0 sbctl sign-all         (assina binários adicionais)"
-      warn "  3. run0 bash scripts/setup-secureboot.sh   (execute este script novamente)"
-      die "Assinaturas incompletas. Corrija antes de registrar as chaves no firmware."
+      error "There are EFI binaries without a valid signature."
+      warn "Secure Boot will fail if the firmware is configured now."
+      warn "Run the following commands to fix it and try again:"
+      warn "  1. run0 nixos-rebuild switch   (regenerates and signs the Limine binary)"
+      warn "  2. run0 sbctl sign-all         (signs additional binaries)"
+      warn "  3. run0 bash scripts/setup-secureboot.sh   (run this script again)"
+      die "Incomplete signatures. Fix this before enrolling the keys in the firmware."
     fi
   fi
-  success "Todos os binários EFI estão assinados. Prosseguindo com o registro."
+  success "All EFI binaries are signed. Proceeding with enrollment."
   echo
 fi
 
 # ---------------------------------------------------------------------------
-# Passo 4: Registrar chaves PKI no firmware UEFI
+# Step 4: Enroll the PKI keys in the UEFI firmware
 # ---------------------------------------------------------------------------
 
 if [[ "$OPT_SIGN_ONLY" != "true" && "$OPT_VERIFY_ONLY" != "true" ]]; then
-  info "==> Registrando chaves PKI no firmware UEFI..."
+  info "==> Enrolling the PKI keys in the UEFI firmware..."
   echo
 
-  # Verificar se o firmware está em Setup Mode (pré-requisito para enroll-keys)
-  # Com Limine, NÃO existe senha de MOK nem tela do MOKmanager.
-  # O Limine usa suas próprias chaves PKI (PK/KEK/db) — não usa shim/MOK.
-  # Usa verificação via EFI efivars para robustez (independente de locale/encoding do sbctl).
+  # Check whether the firmware is in Setup Mode (a precondition for enroll-keys)
+  # With Limine, there is NO MOK password or MOKmanager screen.
+  # Limine uses its own PKI keys (PK/KEK/db) — it doesn't use shim/MOK.
+  # Uses an EFI efivars check for robustness (independent of sbctl's locale/encoding).
   _in_setup_mode=false
-  # GUID da variável EFI global (EFI_GLOBAL_VARIABLE) — padrão UEFI Spec Apêndice B
+  # GUID of the global EFI variable (EFI_GLOBAL_VARIABLE) — UEFI Spec Appendix B standard
   _EFI_GLOBAL_GUID="8be4df61-93ca-11d2-aa0d-00e098032b8c"
-  # Tenta verificar pelo conteúdo da variável EFI SetupMode (1 = Setup Mode ativo)
+  # Try checking the content of the SetupMode EFI variable (1 = Setup Mode active)
   if [[ -f /sys/firmware/efi/efivars/SetupMode-${_EFI_GLOBAL_GUID} ]]; then
-    # O byte de atributo é os primeiros 4 bytes; o valor é o 5º byte (0x01 = Setup Mode)
+    # The attribute byte is the first 4 bytes; the value is the 5th byte (0x01 = Setup Mode)
     _setup_byte=$(od -An -tx1 -j4 -N1 \
       /sys/firmware/efi/efivars/SetupMode-${_EFI_GLOBAL_GUID} 2>/dev/null \
       | tr -d ' \n')
     [[ "$_setup_byte" == "01" ]] && _in_setup_mode=true
   fi
-  # Fallback: verificar saída do sbctl (padrões sem caracteres Unicode especiais)
+  # Fallback: check sbctl's output (patterns without special Unicode characters)
   if [[ "$_in_setup_mode" == "false" ]]; then
     if echo "$_sbctl_status_output" | grep -qi "setup mode[[:space:]]*:.*enabled\|setup mode[[:space:]]*:.*yes"; then
       _in_setup_mode=true
@@ -446,33 +446,33 @@ if [[ "$OPT_SIGN_ONLY" != "true" && "$OPT_VERIFY_ONLY" != "true" ]]; then
   fi
 
   if [[ "$_in_setup_mode" == "false" ]]; then
-    error "O firmware NÃO está em Setup Mode (Modo de Configuração)."
+    error "The firmware is NOT in Setup Mode."
     echo
-    warn "Para registrar as chaves PKI, o firmware precisa estar em Setup Mode."
-    warn "Como habilitar o Setup Mode:"
-    warn "  1. Reinicie e acesse a BIOS/UEFI (F2, F12, Del ou Esc durante o boot)"
-    warn "  2. Na seção Secure Boot, procure 'Setup Mode', 'Clear Secure Boot Keys',"
-    warn "     'Delete All Secure Boot Keys' ou opção similar"
-    warn "  3. Apague as chaves existentes (isso habilita o Setup Mode)"
-    warn "  4. Salve as configurações e reinicie o sistema"
-    warn "  5. Execute este script novamente"
+    warn "To enroll the PKI keys, the firmware needs to be in Setup Mode."
+    warn "How to enable Setup Mode:"
+    warn "  1. Reboot and enter the BIOS/UEFI (F2, F12, Del or Esc during boot)"
+    warn "  2. In the Secure Boot section, look for 'Setup Mode', 'Clear Secure Boot Keys',"
+    warn "     'Delete All Secure Boot Keys' or a similar option"
+    warn "  3. Clear the existing keys (this enables Setup Mode)"
+    warn "  4. Save the settings and reboot the system"
+    warn "  5. Run this script again"
     echo
-    warn "NOTA IMPORTANTE: Esta configuração usa Limine — NÃO usa shim/MOK."
-    warn "Não haverá tela do MOKmanager nem solicitação de senha de MOK."
-    warn "O Limine assina o próprio binário diretamente com chaves PKI próprias."
+    warn "IMPORTANT NOTE: This configuration uses Limine — it does NOT use shim/MOK."
+    warn "There will be no MOKmanager screen or MOK password prompt."
+    warn "Limine signs its own binary directly with its own PKI keys."
     echo
-    die "Firmware não está em Setup Mode. Corrija e execute o script novamente."
+    die "Firmware is not in Setup Mode. Fix this and run the script again."
   fi
 
-  success "Firmware em Setup Mode. Prosseguindo com o registro de chaves."
+  success "Firmware in Setup Mode. Proceeding with key enrollment."
   echo
 
-  # Alguns firmwares marcam efivars como imutáveis mesmo em Setup Mode.
-  # Faz uma tentativa preventiva de desbloqueio antes do enrollment.
+  # Some firmwares mark efivars as immutable even in Setup Mode.
+  # Make a preventive attempt to unlock them before enrollment.
   unlock_efivarfs_immutables || true
 
-  warn "As chaves Microsoft são incluídas para garantir compatibilidade com"
-  warn "drivers de firmware assinados pela Microsoft (ex: drivers de GPU)."
+  warn "The Microsoft keys are included to ensure compatibility with"
+  warn "firmware drivers signed by Microsoft (e.g. GPU drivers)."
   echo
 
   if _enroll_output=$(sbctl enroll-keys --microsoft 2>&1); then
@@ -483,10 +483,10 @@ if [[ "$OPT_SIGN_ONLY" != "true" && "$OPT_VERIFY_ONLY" != "true" ]]; then
   echo "$_enroll_output"
 
   if [[ $_enroll_exit -eq 0 ]]; then
-    success "Chaves PKI registradas no firmware UEFI."
+    success "PKI keys enrolled in the UEFI firmware."
   else
     if echo "$_enroll_output" | grep -Eiq 'file is immutable|chattr -i files in efivarfs'; then
-      warn "Falha detectada por efivars imutáveis. Tentando desbloquear e repetir enrollment..."
+      warn "Failure detected due to immutable efivars. Trying to unlock and retry enrollment..."
       unlock_efivarfs_immutables || true
 
       if _retry_output=$(sbctl enroll-keys --microsoft 2>&1); then
@@ -497,63 +497,63 @@ if [[ "$OPT_SIGN_ONLY" != "true" && "$OPT_VERIFY_ONLY" != "true" ]]; then
       echo "$_retry_output"
 
       if [[ $_retry_exit -eq 0 ]]; then
-        success "Chaves PKI registradas no firmware UEFI (após desbloquear efivars)."
+        success "PKI keys enrolled in the UEFI firmware (after unlocking efivars)."
       else
-        error "Falha ao registrar chaves PKI após tentativa de desbloqueio (código: $_retry_exit)."
-        warn "Possíveis causas:"
-        warn "  • O firmware não aceitou as chaves (verifique o Setup Mode na UEFI)"
-        warn "  • As chaves já foram registradas anteriormente (execute --verify-only)"
-        warn "  • UEFI com restrição de escrita (tente sbctl enroll-keys --yes-this-might-brick-my-machine)"
-        die "Registro de chaves falhou. Corrija e tente novamente."
+        error "Failed to enroll the PKI keys after the unlock attempt (code: $_retry_exit)."
+        warn "Possible causes:"
+        warn "  • The firmware did not accept the keys (check Setup Mode in the UEFI)"
+        warn "  • The keys were already enrolled previously (run --verify-only)"
+        warn "  • Write-restricted UEFI (try sbctl enroll-keys --yes-this-might-brick-my-machine)"
+        die "Key enrollment failed. Fix this and try again."
       fi
     else
-      error "Falha ao registrar chaves PKI (código: $_enroll_exit)."
-      warn "Possíveis causas:"
-      warn "  • O firmware não aceitou as chaves (verifique o Setup Mode na UEFI)"
-      warn "  • As chaves já foram registradas anteriormente (execute --verify-only)"
-      warn "  • UEFI com restrição de escrita (tente sbctl enroll-keys --yes-this-might-brick-my-machine)"
-      die "Registro de chaves falhou. Corrija e tente novamente."
+      error "Failed to enroll the PKI keys (code: $_enroll_exit)."
+      warn "Possible causes:"
+      warn "  • The firmware did not accept the keys (check Setup Mode in the UEFI)"
+      warn "  • The keys were already enrolled previously (run --verify-only)"
+      warn "  • Write-restricted UEFI (try sbctl enroll-keys --yes-this-might-brick-my-machine)"
+      die "Key enrollment failed. Fix this and try again."
     fi
   fi
   echo
 fi
 
 # ---------------------------------------------------------------------------
-# Passo 5: Verificação final das assinaturas
+# Step 5: Final signature verification
 # ---------------------------------------------------------------------------
 
 if [[ "$OPT_ENROLL_ONLY" != "true" && "$OPT_SIGN_ONLY" != "true" ]]; then
-  info "==> Verificação final dos binários EFI..."
+  info "==> Final EFI binary verification..."
   echo
 
   if verify_signed_efi_binaries; then
     echo
-    success "Todos os binários EFI estão devidamente assinados!"
+    success "All EFI binaries are properly signed!"
   else
     echo
-    warn "Alguns binários EFI não estão assinados (verificação pós-registro)."
-    warn "Execute 'nixos-rebuild switch' para regenerar e assinar os binários,"
-    warn "em seguida, execute 'run0 sbctl sign-all' para assinar os pendentes."
+    warn "Some EFI binaries are not signed (post-enrollment check)."
+    warn "Run 'nixos-rebuild switch' to regenerate and sign the binaries,"
+    warn "then run 'run0 sbctl sign-all' to sign the pending ones."
   fi
   echo
 fi
 
 # ---------------------------------------------------------------------------
-# Instruções finais
+# Final instructions
 # ---------------------------------------------------------------------------
 
 if [[ "$OPT_VERIFY_ONLY" != "true" ]]; then
   echo
-  echo -e "${GREEN}${BOLD}Configuração do Secure Boot concluída!${RESET}"
+  echo -e "${GREEN}${BOLD}Secure Boot setup complete!${RESET}"
   echo
-  info "Próximos passos:"
-  echo "  1. Reinicie o sistema"
-  echo "  2. Acesse a UEFI/BIOS e ATIVE o Secure Boot"
-  echo "  3. Salve e reinicie novamente"
-  echo "  4. Verifique o estado com:"
+  info "Next steps:"
+  echo "  1. Reboot the system"
+  echo "  2. Enter the UEFI/BIOS and ENABLE Secure Boot"
+  echo "  3. Save and reboot again"
+  echo "  4. Verify the state with:"
   echo "       run0 sbctl status"
   echo "       run0 bash scripts/setup-secureboot.sh --verify-only"
   echo
-  warn "Se o sistema não inicializar com o Secure Boot ativo, desative-o"
-  warn "na UEFI e execute este script novamente."
+  warn "If the system doesn't boot with Secure Boot active, disable it"
+  warn "in the UEFI and run this script again."
 fi

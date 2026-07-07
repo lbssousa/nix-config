@@ -1,31 +1,31 @@
 #!/usr/bin/env bash
-# inspect-installation.sh — Inspeciona uma instalação do NixOS feita pelo install.sh
+# inspect-installation.sh — Inspect a NixOS installation made by install.sh
 #
-# Execute este script a partir de um ambiente live do NixOS para verificar
-# o estado de uma instalação já realizada pelo scripts/install.sh.
+# Run this script from a NixOS live environment to check the state of an
+# installation already performed by scripts/install.sh.
 #
-# O script verifica:
-#   1. Montagem do sistema em /mnt (subvolumes Btrfs, etc.)
-#   2. Instalação do NixOS (Nix store, perfis, bootloader)
-#   3. Usuários definidos (/mnt/etc/passwd)
-#   4. Estado das senhas (/mnt/etc/shadow e /mnt/persist/etc/shadow)
-#   5. Configuração do flake (/mnt/etc/nixos)
-#   6. Arquivos de usuário e imports em configuration.nix
-#   7. Bind mounts ativos que afetam /mnt/etc/shadow
+# The script checks:
+#   1. System mount at /mnt (Btrfs subvolumes, etc.)
+#   2. NixOS installation (Nix store, profiles, bootloader)
+#   3. Defined users (/mnt/etc/passwd)
+#   4. Password state (/mnt/etc/shadow and /mnt/persist/etc/shadow)
+#   5. Flake configuration (/mnt/etc/nixos)
+#   6. User files and imports in configuration.nix
+#   7. Active bind mounts affecting /mnt/etc/shadow
 #
-# Uso:
+# Usage:
 #   bash scripts/inspect-installation.sh [--root <path>] [--mount] [--help]
 #
-# Opções:
-#   --root  <path>  Caminho raiz do sistema instalado (padrão: /mnt)
-#   --mount         Tentar montar o sistema antes de inspecionar
-#                   (requer que os subvolumes Btrfs estejam disponíveis)
-#   --help, -h      Exibe esta ajuda e sai
+# Options:
+#   --root  <path>  Root path of the installed system (default: /mnt)
+#   --mount         Try to mount the system before inspecting
+#                   (requires the Btrfs subvolumes to be available)
+#   --help, -h      Show this help and exit
 
 set -euo pipefail
 
 # ---------------------------------------------------------------------------
-# Helpers de saída
+# Output helpers
 # ---------------------------------------------------------------------------
 
 RED='\033[0;31m'
@@ -43,7 +43,7 @@ info()   { echo -e "  ${CYAN}ℹ${RESET}  $*"; }
 section(){ echo; echo -e "${BOLD}${BLUE}══ $* ══${RESET}"; }
 
 # ---------------------------------------------------------------------------
-# Argumentos
+# Arguments
 # ---------------------------------------------------------------------------
 
 ROOT=/mnt
@@ -55,56 +55,56 @@ while [[ $# -gt 0 ]]; do
     --mount) DO_MOUNT=true; shift ;;
     --help|-h)
       cat <<'EOF'
-Uso:
+Usage:
   bash scripts/inspect-installation.sh [--root <path>] [--mount] [--help]
 
-Opções:
-  --root <path>  Caminho raiz do sistema instalado (padrão: /mnt)
-  --mount        Tentar montar o sistema antes de inspecionar
-  --help, -h     Exibe esta ajuda e sai
+Options:
+  --root <path>  Root path of the installed system (default: /mnt)
+  --mount        Try to mount the system before inspecting
+  --help, -h     Show this help and exit
 EOF
       exit 0 ;;
-    *) echo "Opção desconhecida: $1. Use --help para ver as opções." >&2; exit 1 ;;
+    *) echo "Unknown option: $1. Use --help to see the available options." >&2; exit 1 ;;
   esac
 done
 
-# Requer root para a maioria das operações
+# Requires root for most operations
 if [[ $EUID -ne 0 ]]; then
-  echo "Este script deve ser executado como root (use sudo)." >&2
+  echo "This script must run as root (use sudo)." >&2
   exit 1
 fi
 
 # ---------------------------------------------------------------------------
-# 0. Opcionalmente montar o sistema
+# 0. Optionally mount the system
 # ---------------------------------------------------------------------------
 
 if [[ "$DO_MOUNT" == "true" ]]; then
-  section "Montando o sistema instalado em $ROOT"
+  section "Mounting the installed system at $ROOT"
 
-  # Detectar o dispositivo de destino
+  # Detect the target device
   if [[ -b /dev/nvme0n1 ]]; then
     DISK=/dev/nvme0n1
   elif [[ -b /dev/sda ]]; then
     DISK=/dev/sda
   else
-    warn "Não foi possível detectar o disco automaticamente."
-    warn "Monte manualmente em $ROOT e execute novamente sem --mount."
+    warn "Could not auto-detect the disk."
+    warn "Mount it manually at $ROOT and run again without --mount."
     exit 1
   fi
 
-  info "Disco detectado: $DISK"
+  info "Disk detected: $DISK"
 
-  # Desbloquear LUKS se necessário
+  # Unlock LUKS if needed
   if lsblk -o TYPE "$DISK" 2>/dev/null | grep -q crypt; then
-    info "LUKS já desbloqueado."
+    info "LUKS already unlocked."
   elif [[ -b "${DISK}p3" ]] || [[ -b "${DISK}3" ]]; then
     _luks_part="${DISK}p3"
     [[ -b "${DISK}3" ]] && _luks_part="${DISK}3"
-    info "Tentando desbloquear LUKS em $_luks_part..."
-    cryptsetup open "$_luks_part" cryptroot || warn "Falha ao desbloquear LUKS."
+    info "Trying to unlock LUKS at $_luks_part..."
+    cryptsetup open "$_luks_part" cryptroot || warn "Failed to unlock LUKS."
   fi
 
-  # Montar volume group e subvolumes Btrfs
+  # Mount volume group and Btrfs subvolumes
   if command -v vgchange >/dev/null 2>&1; then
     vgchange -ay 2>/dev/null || true
   fi
@@ -116,22 +116,22 @@ if [[ "$DO_MOUNT" == "true" ]]; then
       break
     fi
   done
-  # Fallback: procurar primeiro dispositivo Btrfs disponível
+  # Fallback: look for the first available Btrfs device
   if [[ -z "$_btrfs_dev" ]]; then
     _btrfs_dev=$(lsblk -o PATH,FSTYPE --noheadings 2>/dev/null \
       | awk '$2=="btrfs"{print $1; exit}' || true)
   fi
 
   if [[ -n "$_btrfs_dev" ]]; then
-    info "Dispositivo Btrfs: $_btrfs_dev"
+    info "Btrfs device: $_btrfs_dev"
     mkdir -p "$ROOT"
-    # A raiz é tmpfs no setup de impermanência; montar antes dos subvolumes
+    # The root is tmpfs in the impermanence setup; mount it before the subvolumes
     mount -t tmpfs tmpfs "$ROOT" 2>/dev/null || true
     mkdir -p "$ROOT/nix" "$ROOT/persist" "$ROOT/home"
     mount -o subvol=@nix     "$_btrfs_dev" "$ROOT/nix"     2>/dev/null || true
     mount -o subvol=@persist "$_btrfs_dev" "$ROOT/persist" 2>/dev/null || true
     mount -o subvol=@home    "$_btrfs_dev" "$ROOT/home"    2>/dev/null || true
-    # Montar /boot/efi se disponível
+    # Mount /boot/efi if available
     _efi_part=""
     for _p in "${DISK}p1" "${DISK}1"; do
       [[ -b "$_p" ]] && _efi_part="$_p" && break
@@ -140,26 +140,26 @@ if [[ "$DO_MOUNT" == "true" ]]; then
       mkdir -p "$ROOT/boot/efi"
       mount "$_efi_part" "$ROOT/boot/efi" 2>/dev/null || true
     fi
-    ok "Subvolumes montados."
+    ok "Subvolumes mounted."
   else
-    warn "Nenhum dispositivo Btrfs encontrado. Monte manualmente em $ROOT."
+    warn "No Btrfs device found. Mount it manually at $ROOT."
   fi
 fi
 
 # ---------------------------------------------------------------------------
-# 1. Verificar montagem básica
+# 1. Check basic mounts
 # ---------------------------------------------------------------------------
 
-section "1. Montagem do sistema em $ROOT"
+section "1. System mount at $ROOT"
 
 _issues=0
 
 _check_dir() {
   local path="$1" label="${2:-$1}"
   if [[ -d "$ROOT$path" ]]; then
-    ok "$label existe ($ROOT$path)"
+    ok "$label exists ($ROOT$path)"
   else
-    fail "$label não encontrado ($ROOT$path)"
+    fail "$label not found ($ROOT$path)"
     ((_issues++)) || true
   fi
 }
@@ -167,161 +167,161 @@ _check_dir() {
 _check_file() {
   local path="$1" label="${2:-$1}"
   if [[ -f "$ROOT$path" ]]; then
-    ok "$label existe ($ROOT$path)"
+    ok "$label exists ($ROOT$path)"
   else
-    fail "$label não encontrado ($ROOT$path)"
+    fail "$label not found ($ROOT$path)"
     ((_issues++)) || true
   fi
 }
 
-_check_dir "" "Raiz do sistema instalado"
+_check_dir "" "Root of the installed system"
 _check_dir "/nix/store" "Nix store"
-_check_dir "/persist" "/persist (subvolume Btrfs)"
-_check_dir "/home" "/home (subvolume Btrfs)"
-_check_dir "/nix" "/nix (subvolume Btrfs)"
+_check_dir "/persist" "/persist (Btrfs subvolume)"
+_check_dir "/home" "/home (Btrfs subvolume)"
+_check_dir "/nix" "/nix (Btrfs subvolume)"
 
-# Verificar se é um tmpfs (root deve ser tmpfs em impermanence)
+# Check whether it's a tmpfs (root should be tmpfs under impermanence)
 if findmnt --target "$ROOT" --output FSTYPE --noheadings 2>/dev/null | grep -q tmpfs; then
-  ok "Raiz ($ROOT) é tmpfs (impermanence ativo)"
+  ok "Root ($ROOT) is tmpfs (impermanence active)"
 elif findmnt --target "$ROOT" --output FSTYPE --noheadings 2>/dev/null | grep -q btrfs; then
-  warn "Raiz ($ROOT) é Btrfs — esperado tmpfs para impermanence"
+  warn "Root ($ROOT) is Btrfs — tmpfs expected for impermanence"
 else
-  info "Tipo de filesystem da raiz: $(findmnt --target "$ROOT" --output FSTYPE --noheadings 2>/dev/null || echo 'desconhecido')"
+  info "Root filesystem type: $(findmnt --target "$ROOT" --output FSTYPE --noheadings 2>/dev/null || echo 'unknown')"
 fi
 
-# Verificar subvolumes Btrfs
+# Check Btrfs subvolumes
 if command -v btrfs >/dev/null 2>&1; then
   _btrfs_root=$(findmnt --target "$ROOT/persist" --output SOURCE --noheadings 2>/dev/null || true)
   if [[ -n "$_btrfs_root" ]]; then
-    info "Subvolumes Btrfs montados em $ROOT/persist:"
+    info "Btrfs subvolumes mounted at $ROOT/persist:"
     btrfs subvolume list "$ROOT/persist" 2>/dev/null | sed 's/^/    /' || true
   fi
 fi
 
 # ---------------------------------------------------------------------------
-# 2. Verificar instalação do NixOS
+# 2. Check the NixOS installation
 # ---------------------------------------------------------------------------
 
-section "2. Instalação do NixOS"
+section "2. NixOS installation"
 
 if [[ -L "$ROOT/run/current-system" ]]; then
   _sys="$ROOT/run/current-system"
-  ok "Perfil do sistema: $(readlink -f "$_sys" 2>/dev/null || echo 'desconhecido')"
+  ok "System profile: $(readlink -f "$_sys" 2>/dev/null || echo 'unknown')"
 elif [[ -L "$ROOT/nix/var/nix/profiles/system" ]]; then
-  ok "Perfil do sistema: $(readlink -f "$ROOT/nix/var/nix/profiles/system" 2>/dev/null)"
+  ok "System profile: $(readlink -f "$ROOT/nix/var/nix/profiles/system" 2>/dev/null)"
 else
-  fail "Perfil do sistema NixOS não encontrado"
+  fail "NixOS system profile not found"
   ((_issues++)) || true
 fi
 
-# Verificar bootloader
+# Check bootloader
 if [[ -d "$ROOT/boot/efi" ]]; then
-  ok "/boot/efi montado"
+  ok "/boot/efi mounted"
   if [[ -d "$ROOT/boot/efi/EFI/nixos" ]]; then
-    ok "Entradas EFI do NixOS presentes"
+    ok "NixOS EFI entries present"
   elif [[ -d "$ROOT/boot/efi/EFI" ]]; then
-    warn "Diretório EFI existe mas sem entradas NixOS"
+    warn "EFI directory exists but has no NixOS entries"
   else
-    fail "Nenhuma entrada EFI encontrada"
+    fail "No EFI entry found"
     ((_issues++)) || true
   fi
 else
-  warn "/boot/efi não montado (bootloader não inspecionado)"
+  warn "/boot/efi not mounted (bootloader not inspected)"
 fi
 
 # Limine / systemd-boot
 if [[ -f "$ROOT/boot/efi/EFI/limine/BOOTX64.EFI" || -f "$ROOT/boot/efi/EFI/BOOT/BOOTX64.EFI" ]]; then
-  ok "Limine: binário do bootloader presente na ESP"
+  ok "Limine: bootloader binary present on the ESP"
 fi
 
-# Chaves Secure Boot
+# Secure Boot keys
 if [[ -f "$ROOT/persist/etc/secureboot/GUID" ]]; then
-  ok "Chaves Secure Boot presentes em /persist/etc/secureboot/"
-  info "Para registrar no firmware: sbctl enroll-keys --microsoft"
+  ok "Secure Boot keys present in /persist/etc/secureboot/"
+  info "To enroll them in the firmware: sbctl enroll-keys --microsoft"
 else
-  info "Chaves Secure Boot não encontradas em /persist/etc/secureboot/ (pode ser normal)"
+  info "Secure Boot keys not found in /persist/etc/secureboot/ (this can be normal)"
 fi
 
 # ---------------------------------------------------------------------------
-# 3. Usuários definidos
+# 3. Defined users
 # ---------------------------------------------------------------------------
 
-section "3. Usuários definidos (/etc/passwd)"
+section "3. Defined users (/etc/passwd)"
 
 if [[ -f "$ROOT/etc/passwd" ]]; then
-  ok "/etc/passwd encontrado"
-  # Mostrar usuários normais (UID >= 1000, exceto nobody)
+  ok "/etc/passwd found"
+  # Show normal users (UID >= 1000, except nobody)
   _normal_users=$(awk -F: '$3 >= 1000 && $1 != "nobody" {print $1, "(UID=" $3 ")"}' \
     "$ROOT/etc/passwd" || true)
   if [[ -n "$_normal_users" ]]; then
-    ok "Usuários normais definidos:"
+    ok "Normal users defined:"
     echo "$_normal_users" | while read -r _line; do
       info "  → $_line"
     done
   else
-    fail "Nenhum usuário normal (UID >= 1000) encontrado em /etc/passwd"
-    warn "Verifique se os imports de usuário estão em hosts/*/configuration.nix"
-    warn "e se o nixos-install foi concluído com sucesso."
+    fail "No normal user (UID >= 1000) found in /etc/passwd"
+    warn "Check that the user imports are in hosts/*/configuration.nix"
+    warn "and that nixos-install completed successfully."
     ((_issues++)) || true
   fi
 else
-  fail "/etc/passwd não encontrado — o NixOS provavelmente não foi instalado"
+  fail "/etc/passwd not found — NixOS was probably not installed"
   ((_issues++)) || true
 fi
 
 # ---------------------------------------------------------------------------
-# 4. Estado das senhas
+# 4. Password state
 # ---------------------------------------------------------------------------
 
-section "4. Estado das senhas"
+section "4. Password state"
 
-# Função auxiliar: decodifica o estado de senha do campo hash no shadow
+# Helper: decodes the password state from the shadow hash field
 _password_status() {
   local hash="$1"
   case "$hash" in
-    '!')  echo "bloqueada (sem login por senha)" ;;
-    '!!'| '*') echo "não definida" ;;
-    '$'*) echo "definida (hash presente)" ;;
-    '')   echo "vazia (sem senha — INSEGURO)" ;;
-    *)    echo "estado desconhecido: $hash" ;;
+    '!')  echo "locked (no password login)" ;;
+    '!!'| '*') echo "not set" ;;
+    '$'*) echo "set (hash present)" ;;
+    '')   echo "empty (no password — INSECURE)" ;;
+    *)    echo "unknown state: $hash" ;;
   esac
 }
 
 # --- /mnt/etc/shadow ---
 echo
-info "==> /mnt/etc/shadow (shadow gerado pelo NixOS activation)"
+info "==> /mnt/etc/shadow (shadow generated by NixOS activation)"
 if [[ -f "$ROOT/etc/shadow" ]]; then
-  ok "/etc/shadow encontrado"
-  # Verificar se é um bind mount (para /persist/etc/shadow)
+  ok "/etc/shadow found"
+  # Check whether it's a bind mount (to /persist/etc/shadow)
   _shadow_mountsrc=$(findmnt --target "$ROOT/etc/shadow" --output SOURCE --noheadings 2>/dev/null || true)
   if [[ -n "$_shadow_mountsrc" ]]; then
-    warn "/etc/shadow está bind-montado de: $_shadow_mountsrc"
-    info "Isso é esperado APÓS o primeiro boot (restoreShadow bind monta /persist/etc/shadow)."
-    info "Durante a instalação (antes do primeiro boot), /etc/shadow NÃO deve estar bind-montado."
+    warn "/etc/shadow is bind-mounted from: $_shadow_mountsrc"
+    info "This is expected AFTER the first boot (restoreShadow bind-mounts /persist/etc/shadow)."
+    info "During installation (before the first boot), /etc/shadow should NOT be bind-mounted."
   fi
 
-  # Mostrar estado de senha para usuários relevantes
+  # Show password state for relevant users
   while IFS=: read -r _user _hash _rest; do
     case "$_user" in
       root|nobody|systemd-*|messagebus|polkituser) ;;  # skip system accounts
-      *) [[ -z "$_rest" ]] && continue ;;  # pular se linha malformada
+      *) [[ -z "$_rest" ]] && continue ;;  # skip malformed lines
     esac
-    # Mostrar root e usuários normais
+    # Show root and normal users
     _uid=$(grep "^${_user}:" "$ROOT/etc/passwd" 2>/dev/null | cut -d: -f3 || echo "")
     if [[ "$_user" == "root" ]] || { [[ -n "$_uid" ]] && [[ "$_uid" -ge 1000 ]] 2>/dev/null; }; then
       info "  $_user: $(_password_status "$_hash")"
     fi
   done < "$ROOT/etc/shadow" 2>/dev/null || true
 else
-  fail "/etc/shadow não encontrado"
+  fail "/etc/shadow not found"
   ((_issues++)) || true
 fi
 
 # --- /mnt/persist/etc/shadow ---
 echo
-info "==> /mnt/persist/etc/shadow (shadow persistido entre boots)"
+info "==> /mnt/persist/etc/shadow (shadow persisted across boots)"
 if [[ -f "$ROOT/persist/etc/shadow" ]]; then
-  ok "/persist/etc/shadow encontrado"
+  ok "/persist/etc/shadow found"
   _has_password=false
   while IFS=: read -r _user _hash _rest; do
     _uid=$(grep "^${_user}:" "$ROOT/etc/passwd" 2>/dev/null | cut -d: -f3 || echo "")
@@ -332,92 +332,92 @@ if [[ -f "$ROOT/persist/etc/shadow" ]]; then
     fi
   done < "$ROOT/persist/etc/shadow" 2>/dev/null || true
   if [[ "$_has_password" == "false" ]]; then
-    warn "Nenhum usuário ou root com senha definida em /persist/etc/shadow."
-    warn "As senhas podem ter sido perdidas. Verifique o passo 8 do install.sh."
+    warn "No user or root has a password set in /persist/etc/shadow."
+    warn "Passwords may have been lost. Check step 8 of install.sh."
   fi
 else
-  fail "/persist/etc/shadow não encontrado"
-  warn "Sem esse arquivo, as senhas serão perdidas no primeiro boot."
-  warn "Execute o passo 8 do install.sh para definir senhas e copiar o shadow."
+  fail "/persist/etc/shadow not found"
+  warn "Without this file, passwords will be lost on the first boot."
+  warn "Run step 8 of install.sh to set passwords and copy the shadow file."
   ((_issues++)) || true
 fi
 
-# Comparar /etc/shadow e /persist/etc/shadow
+# Compare /etc/shadow and /persist/etc/shadow
 if [[ -f "$ROOT/etc/shadow" && -f "$ROOT/persist/etc/shadow" ]]; then
   if cmp -s "$ROOT/etc/shadow" "$ROOT/persist/etc/shadow"; then
-    info "/etc/shadow e /persist/etc/shadow são idênticos (nenhuma senha diferenciada)"
+    info "/etc/shadow and /persist/etc/shadow are identical (no password diff)"
   else
     _diff=$(diff "$ROOT/etc/shadow" "$ROOT/persist/etc/shadow" 2>/dev/null | head -20 || true)
     if [[ -n "$_diff" ]]; then
-      info "/etc/shadow e /persist/etc/shadow diferem (estado esperado após definir senhas):"
+      info "/etc/shadow and /persist/etc/shadow differ (expected after setting passwords):"
       echo "$_diff" | sed 's/^/    /'
     fi
   fi
 fi
 
-# Flag files de troca de senha
+# Password-change flag files
 echo
-info "==> Arquivos de flag de troca de senha (/persist/.password-change-required-*)"
+info "==> Password change flag files (/persist/.password-change-required-*)"
 _flags=$(ls -1 "$ROOT/persist/.password-change-required-"* 2>/dev/null || true)
 if [[ -n "$_flags" ]]; then
-  ok "Flags de senha pré-definida encontradas (sem troca forçada no primeiro login):"
+  ok "Pre-set password flags found (no forced change on first login):"
   echo "$_flags" | while read -r _f; do
     info "  $_f"
   done
 else
-  info "Nenhuma flag de senha pré-definida encontrada."
-  info "(Os usuários com initialPassword='nixos' terão troca de senha forçada no 1º login)"
+  info "No pre-set password flag found."
+  info "(Users with initialPassword='nixos' will be forced to change it on 1st login)"
 fi
 
 # ---------------------------------------------------------------------------
-# 5. Configuração do flake (/etc/nixos)
+# 5. Flake configuration (/etc/nixos)
 # ---------------------------------------------------------------------------
 
-section "5. Configuração do flake (/etc/nixos)"
+section "5. Flake configuration (/etc/nixos)"
 
 if [[ -d "$ROOT/etc/nixos" ]]; then
-  ok "/etc/nixos existe"
+  ok "/etc/nixos exists"
 
   if [[ -f "$ROOT/etc/nixos/flake.nix" ]]; then
-    ok "flake.nix encontrado"
+    ok "flake.nix found"
   else
-    fail "flake.nix não encontrado em /etc/nixos"
+    fail "flake.nix not found in /etc/nixos"
     ((_issues++)) || true
   fi
 
   if [[ -f "$ROOT/etc/nixos/flake.lock" ]]; then
-    ok "flake.lock encontrado"
+    ok "flake.lock found"
   else
-    warn "flake.lock não encontrado (pode causar problemas com nixos-rebuild)"
+    warn "flake.lock not found (may cause issues with nixos-rebuild)"
   fi
 
-  # Verificar índice git
+  # Check the git index
   if [[ -d "$ROOT/etc/nixos/.git" ]]; then
-    ok "Repositório git encontrado em /etc/nixos"
-    info "Status do índice git:"
+    ok "git repository found at /etc/nixos"
+    info "git index status:"
     git -C "$ROOT/etc/nixos" status --short 2>/dev/null | sed 's/^/    /' \
-      || info "    (não foi possível obter status)"
-    # Listar arquivos staged (no índice)
-    info "Arquivos no índice git (staged):"
+      || info "    (could not get status)"
+    # List staged files (in the index)
+    info "Files in the git index (staged):"
     git -C "$ROOT/etc/nixos" ls-files 2>/dev/null | grep -E '^(private/users/|hosts/)' \
       | sed 's/^/    /' \
-      || info "    (não foi possível listar)"
+      || info "    (could not list)"
   else
-    warn ".git não encontrado em /etc/nixos — Nix avaliará como diretório simples"
-    info "(Todos os arquivos presentes serão incluídos na avaliação do flake)"
+    warn ".git not found at /etc/nixos — Nix will evaluate it as a plain directory"
+    info "(All present files will be included in the flake evaluation)"
   fi
 else
-  fail "/etc/nixos não encontrado"
+  fail "/etc/nixos not found"
   ((_issues++)) || true
 fi
 
 # ---------------------------------------------------------------------------
-# 6. Arquivos de usuário e imports em configuration.nix
+# 6. User files and imports in configuration.nix
 # ---------------------------------------------------------------------------
 
-section "6. Arquivos de usuário e imports"
+section "6. User files and imports"
 
-# Detectar hosts disponíveis
+# Detect available hosts
 _hosts=()
 if [[ -d "$ROOT/etc/nixos/hosts" ]]; then
   while IFS= read -r _h; do
@@ -426,121 +426,121 @@ if [[ -d "$ROOT/etc/nixos/hosts" ]]; then
 fi
 
 if [[ ${#_hosts[@]} -eq 0 ]]; then
-  warn "Nenhum host encontrado em /etc/nixos/hosts/"
+  warn "No host found in /etc/nixos/hosts/"
 else
-  info "Hosts disponíveis: ${_hosts[*]}"
+  info "Available hosts: ${_hosts[*]}"
 fi
 
-# Verificar arquivos de usuário em /etc/nixos/private/users/
+# Check user files in /etc/nixos/private/users/
 echo
-info "==> Arquivos de usuário em /etc/nixos/private/users/"
+info "==> User files in /etc/nixos/private/users/"
 _user_files=$(ls -1 "$ROOT/etc/nixos/private/users/"*.nix 2>/dev/null \
   | grep -v "skeleton.nix" || true)
 if [[ -n "$_user_files" ]]; then
-  ok "Arquivos de usuário encontrados:"
+  ok "User files found:"
   echo "$_user_files" | while read -r _f; do
     _fname=$(basename "$_f")
     _username="${_fname%.nix}"
-    # Verificar se está no índice git
+    # Check whether it's in the git index
     if [[ -d "$ROOT/etc/nixos/.git" ]]; then
       if git -C "$ROOT/etc/nixos" ls-files --error-unmatch "private/users/$_fname" &>/dev/null; then
-        info "  ✔ private/users/$_fname (indexado no git — visível ao Nix)"
+        info "  ✔ private/users/$_fname (indexed in git — visible to Nix)"
       else
-        fail "  ✖ private/users/$_fname (NÃO indexado no git — invisível ao Nix!)"
-        warn "    Execute: git -C $ROOT/etc/nixos add --force private/users/$_fname"
+        fail "  ✖ private/users/$_fname (NOT indexed in git — invisible to Nix!)"
+        warn "    Run: git -C $ROOT/etc/nixos add --force private/users/$_fname"
         ((_issues++)) || true
       fi
     else
       info "  → private/users/$_fname"
     fi
-    # Verificar se o usuário está em /etc/passwd
+    # Check whether the user is in /etc/passwd
     if grep -q "^${_username}:" "$ROOT/etc/passwd" 2>/dev/null; then
-      info "    └─ usuário '$_username' presente em /etc/passwd ✔"
+      info "    └─ user '$_username' present in /etc/passwd ✔"
     else
-      warn "    └─ usuário '$_username' NÃO encontrado em /etc/passwd"
-      warn "       O import pode estar faltando em configuration.nix, ou o nixos-install falhou."
+      warn "    └─ user '$_username' NOT found in /etc/passwd"
+      warn "       The import may be missing from configuration.nix, or nixos-install failed."
     fi
   done
 else
-  warn "Nenhum arquivo de usuário encontrado em /etc/nixos/private/users/"
-  info "(Apenas private/users/skeleton.nix encontrado ou diretório vazio)"
+  warn "No user file found in /etc/nixos/private/users/"
+  info "(Only private/users/skeleton.nix found, or the directory is empty)"
 fi
 
-# Verificar imports em configuration.nix de cada host
+# Check imports in each host's configuration.nix
 echo
 for _host in "${_hosts[@]}"; do
   _cfgfile="$ROOT/etc/nixos/hosts/$_host/configuration.nix"
   if [[ ! -f "$_cfgfile" ]]; then
     continue
   fi
-  info "==> Imports de usuário em hosts/$_host/configuration.nix:"
+  info "==> User imports in hosts/$_host/configuration.nix:"
   _user_imports=$(grep -E '^\s+\.\/\.\.\/(\.\.\/)?private/users/[^.]+\.nix' "$_cfgfile" 2>/dev/null || true)
   _placeholder=$(grep -E '#.*seu-usuario\.nix|#.*<seu-usuario>' "$_cfgfile" 2>/dev/null || true)
   if [[ -n "$_user_imports" ]]; then
-    ok "Imports de usuário encontrados:"
+    ok "User imports found:"
     echo "$_user_imports" | while read -r _line; do
       info "  $_line"
     done
   elif [[ -n "$_placeholder" ]]; then
-    fail "Apenas placeholder comentado encontrado (nenhum usuário importado):"
+    fail "Only a commented-out placeholder found (no user imported):"
     echo "$_placeholder" | while read -r _line; do
       warn "  $_line"
     done
-    warn "O install.sh deveria ter substituído o placeholder pelo import real."
+    warn "install.sh should have replaced the placeholder with the real import."
     ((_issues++)) || true
   else
-    warn "Nenhum import de usuário encontrado em hosts/$_host/configuration.nix"
+    warn "No user import found in hosts/$_host/configuration.nix"
   fi
 done
 
 # ---------------------------------------------------------------------------
-# 7. Bind mounts ativos em /etc/shadow
+# 7. Active bind mounts on /etc/shadow
 # ---------------------------------------------------------------------------
 
-section "7. Bind mounts em /mnt/etc/shadow"
+section "7. Bind mounts on /mnt/etc/shadow"
 
 _shadow_mount=$(findmnt --target "$ROOT/etc/shadow" --output SOURCE,TARGET,FSTYPE --noheadings \
   2>/dev/null || true)
 if [[ -n "$_shadow_mount" ]]; then
-  warn "Bind mount ATIVO em $ROOT/etc/shadow:"
+  warn "ACTIVE bind mount on $ROOT/etc/shadow:"
   echo "  $_shadow_mount"
-  warn "Isso significa que o script de ativação 'restoreShadow' do nixos-install"
-  warn "propagou o bind mount para o namespace do live CD."
+  warn "This means nixos-install's 'restoreShadow' activation script"
+  warn "propagated the bind mount into the live CD's namespace."
   warn ""
-  warn "ATENÇÃO: Se você definir senhas agora com nixos-enter, elas serão escritas em"
-  warn "/mnt/persist/etc/shadow via bind mount. Mas o comando final do install.sh"
+  warn "WARNING: If you set passwords now with nixos-enter, they'll be written to"
+  warn "/mnt/persist/etc/shadow via the bind mount. But install.sh's final command"
   warn "  install -m 640 /mnt/etc/shadow /mnt/persist/etc/shadow"
-  warn "usaria /mnt/etc/shadow (= /mnt/persist/etc/shadow via bind mount) como fonte,"
-  warn "o que seria correto nesse caso. Use passwd --root /mnt para evitar ambiguidades."
+  warn "would use /mnt/etc/shadow (= /mnt/persist/etc/shadow via the bind mount) as the"
+  warn "source, which would be correct in that case. Use passwd --root /mnt to avoid ambiguity."
 else
-  ok "Nenhum bind mount ativo em $ROOT/etc/shadow (estado esperado antes do 1º boot)"
+  ok "No active bind mount on $ROOT/etc/shadow (expected state before the 1st boot)"
 fi
 
 # ---------------------------------------------------------------------------
-# Sumário
+# Summary
 # ---------------------------------------------------------------------------
 
-section "Sumário"
+section "Summary"
 
 if [[ "$_issues" -eq 0 ]]; then
-  echo -e "${GREEN}${BOLD}✔ Nenhum problema detectado.${RESET}"
-  echo "  A instalação parece estar em bom estado."
+  echo -e "${GREEN}${BOLD}✔ No issues detected.${RESET}"
+  echo "  The installation looks to be in good shape."
 else
-  echo -e "${RED}${BOLD}✖ ${_issues} problema(s) encontrado(s).${RESET}"
-  echo "  Verifique os itens marcados com ✖ ou ⚠ acima."
+  echo -e "${RED}${BOLD}✖ ${_issues} issue(s) found.${RESET}"
+  echo "  Check the items marked with ✖ or ⚠ above."
 fi
 
 echo
-echo -e "${BOLD}Próximos passos comuns:${RESET}"
-echo "  • Se senhas não foram definidas:"
-echo "      passwd --root /mnt <usuario>"
+echo -e "${BOLD}Common next steps:${RESET}"
+echo "  • If passwords haven't been set:"
+echo "      passwd --root /mnt <user>"
 echo "      passwd --root /mnt root"
 echo "      install -m 640 /mnt/etc/shadow /mnt/persist/etc/shadow"
-echo "  • Se arquivos de usuário não estão indexados:"
-echo "      git -C /mnt/etc/nixos add private/users/<usuario>.nix"
+echo "  • If user files aren't indexed:"
+echo "      git -C /mnt/etc/nixos add private/users/<user>.nix"
 echo "      nixos-install --flake /mnt/etc/nixos#<host>"
-echo "  • Se o sistema ainda não foi instalado:"
+echo "  • If the system hasn't been installed yet:"
 echo "      bash scripts/install.sh"
-echo "  • Para desmontar e reiniciar:"
+echo "  • To unmount and reboot:"
 echo "      umount -R /mnt && reboot"
 echo

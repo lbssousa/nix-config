@@ -1,20 +1,20 @@
-# Módulo de áudio: PipeWire com compatibilidade PulseAudio/JACK
+# Audio module: PipeWire with PulseAudio/JACK compatibility
 { lib, ... }:
 
 {
-  # Desabilitar PulseAudio (substituído pelo PipeWire)
+  # Disable PulseAudio (replaced by PipeWire)
   services.pulseaudio.enable = false;
 
-  # RTKit para prioridade em tempo real
+  # RTKit for real-time priority
   security.rtkit.enable = true;
 
-  # PipeWire como servidor de áudio
+  # PipeWire as the audio server
   services.pipewire = {
     enable = true;
     alsa.enable = true;
     alsa.support32Bit = lib.mkDefault true;
-    pulse.enable = true; # Compatibilidade com PulseAudio
-    jack.enable = lib.mkDefault true; # Compatibilidade com JACK
+    pulse.enable = true; # PulseAudio compatibility
+    jack.enable = lib.mkDefault true; # JACK compatibility
     wireplumber.enable = true;
   };
 }

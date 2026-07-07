@@ -3,9 +3,9 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 flake_root := env_var_or_default("FLAKE_DIR", justfile_directory())
 justfile_file := justfile_directory() + "/justfile"
 
-# Quando "true", commit e push do flake.lock são feitos automaticamente após
-# update/upgrade, caso o arquivo tenha sido modificado.
-# Uso: just auto_commit=false update   ou   AUTO_COMMIT=false just update
+# When "true", flake.lock is committed and pushed automatically after
+# update/upgrade, if the file was modified.
+# Usage: just auto_commit=false update   or   AUTO_COMMIT=false just update
 auto_commit := env_var_or_default("AUTO_COMMIT", "true")
 
 u2f_authfile := "/persist/etc/u2f-mappings"
@@ -40,7 +40,7 @@ _run_nixos action host='' *args:
         new_system="$(readlink -f /run/current-system)"
         if [[ "$old_system" != "$new_system" ]]; then
           echo ""
-          echo "Pacotes alterados neste switch:"
+          echo "Packages changed in this switch:"
           nix run nixpkgs#nvd -- diff "$old_system" "$new_system"
         fi
       fi
@@ -56,7 +56,7 @@ _run_nixos action host='' *args:
       nix run nixpkgs#nvd -- diff /run/current-system "$next_drv"
       ;;
     *)
-      echo "Ação inválida para nixos: '$action'" >&2
+      echo "Invalid action for nixos: '$action'" >&2
       exit 1
       ;;
   esac
@@ -66,14 +66,14 @@ default:
 
 [group("help")]
 help:
-  @echo 'Receitas Just para operar este flake NixOS'
+  @echo 'Just recipes for operating this NixOS flake'
   @echo ''
-  @echo "FLAKE_DIR atual: {{flake_root}}"
-  @echo 'switch, boot e test elevam com run0 (polkit/YubiKey) quando necessário.'
-  @echo 'Home Manager é módulo NixOS: just switch aplica NixOS + HM em conjunto.'
-  @echo 'just upgrade atualiza os inputs e em seguida aplica switch.'
+  @echo "Current FLAKE_DIR: {{flake_root}}"
+  @echo 'switch, boot and test elevate with run0 (polkit/YubiKey) when needed.'
+  @echo 'Home Manager is a NixOS module: just switch applies NixOS + HM together.'
+  @echo 'just upgrade updates the inputs and then applies switch.'
   @echo ''
-  @echo 'Exemplos:'
+  @echo 'Examples:'
   @echo '  just update'
   @echo '  just auto_commit=false update'
   @echo '  just auto_commit=false upgrade'
@@ -99,7 +99,7 @@ systems:
 [group("info")]
 whoami:
   @echo "host: $(hostname)"
-  @echo "usuário: $(whoami)"
+  @echo "user: $(whoami)"
   @echo "flake: {{flake_root}}"
 
 nixos action='' host='' *args:
@@ -139,7 +139,7 @@ update *inputs:
   nix flake update "$@"
   if ! diff -q "$old_lock" flake.lock > /dev/null 2>&1; then
     echo ""
-    echo "Resumo das atualizações de inputs:"
+    echo "Input update summary:"
     jq -r --slurpfile old "$old_lock" '
       def short: if . == null then "-" else .[0:7] end;
       def date: if . == null then "-" else (. | gmtime | strftime("%Y-%m-%d")) end;
@@ -156,14 +156,14 @@ update *inputs:
         select($ol != $nl) |
         "  ~ \(.): \($ol.rev | short) (\($ol.lastModified | date)) -> \($nl.rev | short) (\($nl.lastModified | date))"
       ),
-      ( $added[] | "  + \(.): novo input" ),
-      ( $removed[] | "  - \(.): removido" )
+      ( $added[] | "  + \(.): new input" ),
+      ( $removed[] | "  - \(.): removed" )
     ' flake.lock
     echo ""
   fi
   if [[ "{{auto_commit}}" == "true" ]] && ! git diff --quiet flake.lock; then
     git add flake.lock
-    git commit -m "flake: atualiza flake.lock"
+    git commit -m "flake: update flake.lock"
     git push
   fi
 
@@ -214,7 +214,7 @@ fmt-check:
 [group("verification")]
 hooks:
   git config core.hooksPath .githooks
-  @echo "✅ Git hooks configurados em .githooks/"
+  @echo "✅ Git hooks configured in .githooks/"
 
 [group("verification")]
 validate:
@@ -223,146 +223,146 @@ validate:
   nix run nixpkgs#just -- --justfile "{{justfile_file}}" deadcode
   nix run nixpkgs#just -- --justfile "{{justfile_file}}" check --show-trace
 
-# Registra uma YubiKey no authfile do sistema para o usuário indicado (padrão: usuário atual).
-# Primeira chave: cria a linha no authfile. Chave adicional: acrescenta à linha existente.
-# Referência: security/yubikey/setup.sh (dotfiles)
+# Registers a YubiKey in the system authfile for the given user (default: current user).
+# First key: creates the line in the authfile. Additional key: appends to the existing line.
+# Reference: security/yubikey/setup.sh (dotfiles)
 [group("yubikey")]
-yubikey-register usuario='':
+yubikey-register user='':
   #!/usr/bin/env bash
   set -euo pipefail
   authfile="{{u2f_authfile}}"
-  alvo="{{usuario}}"
-  alvo="${alvo:-$(id -un)}"
+  target="{{user}}"
+  target="${target:-$(id -un)}"
 
-  echo "Registrando YubiKey para '${alvo}'..."
-  echo "Insira a YubiKey e toque-a quando solicitado."
+  echo "Registering YubiKey for '${target}'..."
+  echo "Insert the YubiKey and touch it when prompted."
   echo ""
 
-  if [ -f "${authfile}" ] && grep -q "^${alvo}:" "${authfile}"; then
-    nova_cred=$(pamu2fcfg -n -u "${alvo}")
-    run0 sed -i "/^${alvo}:/ s|$|:${nova_cred}|" "${authfile}"
-    echo "Chave adicional registrada para '${alvo}'."
+  if [ -f "${authfile}" ] && grep -q "^${target}:" "${authfile}"; then
+    new_cred=$(pamu2fcfg -n -u "${target}")
+    run0 sed -i "/^${target}:/ s|$|:${new_cred}|" "${authfile}"
+    echo "Additional key registered for '${target}'."
   else
-    nova_linha=$(pamu2fcfg -u "${alvo}")
-    printf '%s\n' "${nova_linha}" | run0 tee -a "${authfile}" > /dev/null
-    echo "Primeira chave registrada para '${alvo}'."
+    new_line=$(pamu2fcfg -u "${target}")
+    printf '%s\n' "${new_line}" | run0 tee -a "${authfile}" > /dev/null
+    echo "First key registered for '${target}'."
   fi
 
   echo ""
-  n=$(grep "^${alvo}:" "${authfile}" | tr ':' '\n' | tail -n +2 | grep ',' | wc -l)
-  echo "Total de chaves para '${alvo}': ${n}"
+  n=$(grep "^${target}:" "${authfile}" | tr ':' '\n' | tail -n +2 | grep ',' | wc -l)
+  echo "Total keys for '${target}': ${n}"
 
-# Remove todas as chaves de um usuário do authfile (pede confirmação).
-# Referência: security/yubikey/uninstall.sh (dotfiles)
+# Removes all keys for a user from the authfile (asks for confirmation).
+# Reference: security/yubikey/uninstall.sh (dotfiles)
 [group("yubikey")]
-yubikey-remove usuario:
+yubikey-remove user:
   #!/usr/bin/env bash
   set -euo pipefail
   authfile="{{u2f_authfile}}"
-  alvo="{{usuario}}"
+  target="{{user}}"
 
-  if [ ! -f "${authfile}" ] || ! grep -q "^${alvo}:" "${authfile}"; then
-    echo "Nenhuma chave registrada para '${alvo}'."
+  if [ ! -f "${authfile}" ] || ! grep -q "^${target}:" "${authfile}"; then
+    echo "No key registered for '${target}'."
     exit 0
   fi
 
-  n=$(grep "^${alvo}:" "${authfile}" | tr ':' '\n' | tail -n +2 | grep ',' | wc -l)
-  read -rp "Remover ${n} chave(s) de '${alvo}'? [s/N] " resposta
-  case "${resposta}" in
-    [sS]*)
-      run0 sed -i "/^${alvo}:/d" "${authfile}"
-      echo "Entradas de '${alvo}' removidas do authfile."
+  n=$(grep "^${target}:" "${authfile}" | tr ':' '\n' | tail -n +2 | grep ',' | wc -l)
+  read -rp "Remove ${n} key(s) from '${target}'? [y/N] " answer
+  case "${answer}" in
+    [yY]*)
+      run0 sed -i "/^${target}:/d" "${authfile}"
+      echo "Entries for '${target}' removed from the authfile."
       ;;
     *)
-      echo "Operação cancelada."
+      echo "Operation cancelled."
       ;;
   esac
 
-# Lista chaves U2F registradas. Sem argumento: todos os usuários com contagem.
+# Lists registered U2F keys. No argument: all users with a count.
 [group("yubikey")]
-yubikey-list usuario='':
+yubikey-list user='':
   #!/usr/bin/env bash
   set -euo pipefail
   authfile="{{u2f_authfile}}"
-  filtro="{{usuario}}"
+  filter="{{user}}"
 
   if [ ! -f "${authfile}" ]; then
-    echo "Authfile não encontrado: ${authfile}"
+    echo "Authfile not found: ${authfile}"
     exit 1
   fi
 
-  if [ -n "${filtro}" ]; then
-    if grep -q "^${filtro}:" "${authfile}"; then
-      n=$(grep "^${filtro}:" "${authfile}" | tr ':' '\n' | tail -n +2 | grep ',' | wc -l)
-      echo "${filtro}: ${n} chave(s) registrada(s)"
+  if [ -n "${filter}" ]; then
+    if grep -q "^${filter}:" "${authfile}"; then
+      n=$(grep "^${filter}:" "${authfile}" | tr ':' '\n' | tail -n +2 | grep ',' | wc -l)
+      echo "${filter}: ${n} key(s) registered"
     else
-      echo "Nenhuma chave registrada para '${filtro}'."
+      echo "No key registered for '${filter}'."
     fi
   else
-    while IFS= read -r linha; do
-      u="${linha%%:*}"
-      n=$(printf '%s' "${linha#*:}" | tr ':' '\n' | grep ',' | wc -l)
-      printf "%-20s %s chave(s)\n" "${u}" "${n}"
+    while IFS= read -r line; do
+      u="${line%%:*}"
+      n=$(printf '%s' "${line#*:}" | tr ':' '\n' | grep ',' | wc -l)
+      printf "%-20s %s key(s)\n" "${u}" "${n}"
     done < "${authfile}"
   fi
 
-# Verifica hardware, authfile e stack PAM para diagnóstico de autenticação U2F.
-# Referência: security/yubikey/troubleshoot.sh (dotfiles)
+# Checks hardware, authfile and PAM stack for U2F authentication diagnostics.
+# Reference: security/yubikey/troubleshoot.sh (dotfiles)
 [group("yubikey")]
 yubikey-check:
   #!/usr/bin/env bash
   set -euo pipefail
   authfile="{{u2f_authfile}}"
-  usuario=$(id -un)
+  current_user=$(id -un)
 
-  echo "=== Diagnóstico U2F/FIDO2 ==="
+  echo "=== U2F/FIDO2 diagnostics ==="
   echo ""
 
   echo "Hardware:"
   if lsusb 2>/dev/null | grep -qi yubico; then
-    echo "  OK  YubiKey detectada via USB"
+    echo "  OK  YubiKey detected via USB"
     lsusb | grep -i yubico | sed 's/^/       /'
   else
-    echo "  --  YubiKey não detectada (conecte a YubiKey)"
+    echo "  --  YubiKey not detected (plug in the YubiKey)"
   fi
 
   echo ""
   echo "Authfile (${authfile}):"
   if [ -f "${authfile}" ]; then
-    echo "  OK  Arquivo existe"
-    if grep -q "^${usuario}:" "${authfile}"; then
-      n=$(grep "^${usuario}:" "${authfile}" | tr ':' '\n' | tail -n +2 | grep ',' | wc -l)
-      echo "  OK  ${n} chave(s) para '${usuario}'"
+    echo "  OK  File exists"
+    if grep -q "^${current_user}:" "${authfile}"; then
+      n=$(grep "^${current_user}:" "${authfile}" | tr ':' '\n' | tail -n +2 | grep ',' | wc -l)
+      echo "  OK  ${n} key(s) for '${current_user}'"
     else
-      echo "  --  Sem entrada para '${usuario}' — execute: just yubikey-register"
+      echo "  --  No entry for '${current_user}' — run: just yubikey-register"
     fi
     echo ""
-    echo "  Usuários registrados:"
-    while IFS= read -r linha; do
-      u="${linha%%:*}"
-      n=$(printf '%s' "${linha#*:}" | tr ':' '\n' | grep ',' | wc -l)
-      printf "       %-20s %s chave(s)\n" "${u}" "${n}"
+    echo "  Registered users:"
+    while IFS= read -r line; do
+      u="${line%%:*}"
+      n=$(printf '%s' "${line#*:}" | tr ':' '\n' | grep ',' | wc -l)
+      printf "       %-20s %s key(s)\n" "${u}" "${n}"
     done < "${authfile}"
   else
-    echo "  --  Authfile não encontrado — execute: just yubikey-register"
+    echo "  --  Authfile not found — run: just yubikey-register"
   fi
 
   echo ""
   echo "PAM sudo (auth):"
   grep "^auth" /etc/pam.d/sudo | sed 's|/nix/store/[^/]*/||g; s/^/  /'
 
-# Testa a autenticação interativa (digital → YubiKey → senha) via run0.
+# Tests interactive authentication (fingerprint → YubiKey → password) via run0.
 [group("yubikey")]
 yubikey-test:
   #!/usr/bin/env bash
   set -euo pipefail
-  echo "Testando autenticação (digital → YubiKey → senha)..."
+  echo "Testing authentication (fingerprint → YubiKey → password)..."
   echo ""
   if run0 true; then
     echo ""
-    echo "OK  Autenticação bem-sucedida."
+    echo "OK  Authentication succeeded."
   else
     echo ""
-    echo "--  Falha na autenticação."
+    echo "--  Authentication failed."
     exit 1
   fi

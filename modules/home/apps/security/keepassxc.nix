@@ -6,7 +6,7 @@
     settings = {
       Browser = {
         Enabled = true;
-        UpdateBinaryPath = false; # HM gerencia o manifest; impede sobrescrita no startup
+        UpdateBinaryPath = false; # HM manages the manifest; prevents overwrite on startup
       };
       GUI = {
         ColorPasswords = true;
@@ -23,32 +23,35 @@
       SSHAgent.Enabled = true;
     };
 
-    # Três sobreposições de ambiente são necessárias para integração correta com GNOME:
+    # Three environment overrides are needed for proper GNOME integration:
     #
     # 1. QT_WAYLAND_DECORATION=adwaita
-    #    O plugin qgnomeplatform 0.8.4 (padrão do sistema via QT_WAYLAND_DECORATION=gnome)
-    #    define as cores da decoração uma única vez no construtor e não monitora
-    #    mudanças em org.gnome.desktop.interface.color-scheme. O plugin qadwaitadecorations
-    #    assina o sinal SettingChanged do org.freedesktop.portal.Settings e chama
-    #    updateColors() + forceRepaint() a cada alteração, mantendo a barra de título
-    #    sincronizada com o modo claro/escuro do sistema.
+    #    The qgnomeplatform 0.8.4 plugin (system default via
+    #    QT_WAYLAND_DECORATION=gnome) sets decoration colors once in its
+    #    constructor and doesn't watch for changes to
+    #    org.gnome.desktop.interface.color-scheme. The qadwaitadecorations
+    #    plugin subscribes to org.freedesktop.portal.Settings' SettingChanged
+    #    signal and calls updateColors() + forceRepaint() on every change,
+    #    keeping the title bar in sync with the system's light/dark mode.
     #
-    # 2. QT_PLUGIN_PATH prefixado com qadwaitadecorations
-    #    qadwaitadecorations não é dependência de build do keepassxc no nixpkgs,
-    #    então seu diretório não entra no QT_PLUGIN_PATH gerado pelo wrapper Qt.
-    #    Precisamos incluí-lo explicitamente para que o Qt encontre o plugin.
+    # 2. QT_PLUGIN_PATH prefixed with qadwaitadecorations
+    #    qadwaitadecorations is not a build dependency of keepassxc in
+    #    nixpkgs, so its directory isn't part of the QT_PLUGIN_PATH generated
+    #    by the Qt wrapper. We need to add it explicitly so Qt can find the plugin.
     #
     # 3. QT_QPA_PLATFORMTHEME=xdgdesktopportal
-    #    O tema "gnome" (qgnomeplatform, padrão do sistema) abre diálogos de arquivo
-    #    como widgets GTK3 dentro do processo do KeePassXC. Isso causa dois problemas:
-    #    (a) gtk-application-prefer-dark-theme no settings.ini força modo escuro
-    #        independentemente do color-scheme atual do GNOME;
-    #    (b) ao alternar claro/escuro enquanto o diálogo está aberto, o GTK3
-    #        recarrega o tema via inotify e a renderização ativa causa segfault.
-    #    Com xdgdesktopportal, o diálogo de arquivo é delegado ao portal GNOME,
-    #    que roda em processo separado e sempre reflete o modo correto do sistema.
-    #    Para fontes, cursor e demais integrações, xdgdesktopportal delega ao
-    #    tema subjacente "gnome" (determinado por XDG_CURRENT_DESKTOP=GNOME).
+    #    The "gnome" theme (qgnomeplatform, system default) opens file
+    #    dialogs as GTK3 widgets inside the KeePassXC process. This causes
+    #    two problems:
+    #    (a) gtk-application-prefer-dark-theme in settings.ini forces dark
+    #        mode regardless of GNOME's current color-scheme;
+    #    (b) toggling light/dark while the dialog is open makes GTK3 reload
+    #        the theme via inotify, and the active render causes a segfault.
+    #    With xdgdesktopportal, the file dialog is delegated to the GNOME
+    #    portal, which runs in a separate process and always reflects the
+    #    correct system mode. For fonts, cursor and other integrations,
+    #    xdgdesktopportal delegates to the underlying "gnome" theme
+    #    (determined by XDG_CURRENT_DESKTOP=GNOME).
     package = pkgs.symlinkJoin {
       name = "keepassxc";
       paths = [ pkgs.keepassxc ];

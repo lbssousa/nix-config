@@ -1,4 +1,4 @@
-# Configuração principal para barbudus (Dell Inspiron 14 5490)
+# Main configuration for barbudus (Dell Inspiron 14 5490)
 # Hardware: Intel i5-10210U, 16 GB RAM, Intel UHD 620 + NVIDIA GeForce MX230
 {
   config,
@@ -7,61 +7,61 @@
   ...
 }:
 {
-  # Nome do host
+  # Host name
   networking.hostName = "barbudus";
 
-  # --- Drivers NVIDIA (proprietary) ---
-  # GeForce MX230 com PRIME offload (Intel integrada + NVIDIA discreta)
+  # --- NVIDIA drivers (proprietary) ---
+  # GeForce MX230 with PRIME offload (integrated Intel + discrete NVIDIA)
   #
-  # COMO USAR A GPU DEDICADA:
-  # - Terminal: nvidia-offload <app>  (ex: nvidia-offload blender)
-  # - Helper: run-with-nvidia <app>   (alias com melhor UX)
-  # - Verificar: glxinfo | grep "NVIDIA" ou nvidia-smi
+  # HOW TO USE THE DEDICATED GPU:
+  # - Terminal: nvidia-offload <app>  (e.g. nvidia-offload blender)
+  # - Helper: run-with-nvidia <app>   (alias with better UX)
+  # - Check: glxinfo | grep "NVIDIA" or nvidia-smi
 
-  # Habilitar suporte OpenGL/Vulkan e VA-API
+  # Enable OpenGL/Vulkan and VA-API support
   hardware.graphics = {
     enable = true;
     enable32Bit = true;
     extraPackages = with pkgs; [
-      intel-media-driver # iHD driver para Intel UHD 620 (Comet Lake)
-      intel-vaapi-driver # i965 driver (fallback para conteúdo legado)
-      nvidia-vaapi-driver # VA-API via NVDEC para GeForce MX230
+      intel-media-driver # iHD driver for Intel UHD 620 (Comet Lake)
+      intel-vaapi-driver # i965 driver (fallback for legacy content)
+      nvidia-vaapi-driver # VA-API via NVDEC for GeForce MX230
     ];
   };
 
-  # Forçar iHD como driver VA-API padrão (evita que o i965 seja escolhido
-  # automaticamente, o que limitaria os formatos suportados)
+  # Force iHD as the default VA-API driver (avoids i965 being picked
+  # automatically, which would limit the supported formats)
   environment.sessionVariables.LIBVA_DRIVER_NAME = "iHD";
 
-  # Driver NVIDIA proprietary
+  # NVIDIA proprietary driver
   hardware.nvidia = {
-    # Forçar versão 580.x (stable = 595.x é incompatível com GeForce MX230)
+    # Force version 580.x (stable = 595.x is incompatible with GeForce MX230)
     package = config.boot.kernelPackages.nvidiaPackages.legacy_580;
     modesetting.enable = true;
-    open = false; # MX230 é GPU antiga, usar driver proprietário (não o open-source)
+    open = false; # MX230 is an old GPU, use the proprietary driver (not open-source)
     powerManagement = {
       enable = true;
-      finegrained = true; # Desligar GPU NVIDIA quando não usada (economia de bateria)
+      finegrained = true; # Power off the NVIDIA GPU when unused (battery savings)
     };
     prime = {
-      # IDs de barramento PCI (verifique com: lspci | grep -E "VGA|3D")
-      # Exemplo: 00:02.0 = Intel, 01:00.0 = NVIDIA
+      # PCI bus IDs (check with: lspci | grep -E "VGA|3D")
+      # Example: 00:02.0 = Intel, 01:00.0 = NVIDIA
       intelBusId = "PCI:0:2:0";
       nvidiaBusId = "PCI:1:0:0";
-      # PRIME offload: usa Intel por padrão, NVIDIA sob demanda
+      # PRIME offload: uses Intel by default, NVIDIA on demand
       offload = {
         enable = true;
-        enableOffloadCmd = true; # Habilita comando 'nvidia-offload'
+        enableOffloadCmd = true; # Enables the 'nvidia-offload' command
       };
     };
   };
 
-  # --- Fingerprint (sensor Goodix 538d, USB 27c6:538d) ---
-  # fprintd-goodix = fprintd 1.94.5 + libfprint do fork lbssousa (1.94.10).
-  # Ver pkgs/libfprint-goodix e pkgs/fprintd-goodix.
+  # --- Fingerprint (Goodix 538d sensor, USB 27c6:538d) ---
+  # fprintd-goodix = fprintd 1.94.5 + libfprint from the lbssousa fork (1.94.10).
+  # See pkgs/libfprint-goodix and pkgs/fprintd-goodix.
   services = {
 
-    # switcheroo-control: expõe GPUs via D-Bus (para GNOME e outras ferramentas)
+    # switcheroo-control: exposes GPUs via D-Bus (for GNOME and other tools)
     switcherooControl.enable = true;
 
     fprintd = {
@@ -69,34 +69,34 @@
       package = pkgs.fprintd-goodix;
     };
 
-    # --- Configurações de energia para laptop ---
+    # --- Power settings for laptop ---
     power-profiles-daemon.enable = true;
-    thermald.enable = true; # Gerenciamento térmico Intel
+    thermald.enable = true; # Intel thermal management
   };
 
-  # --- Bootloader: Limine com Secure Boot ---
-  # Chaves PKI geridas via sbctl, armazenadas em /persist/etc/secureboot.
-  # NOTA: Requer configuração inicial de chaves (ver INSTALLATION.md)
-  boot.loader.systemd-boot.enable = lib.mkForce false; # Substituído pelo Limine
+  # --- Bootloader: Limine with Secure Boot ---
+  # PKI keys managed via sbctl, stored in /persist/etc/secureboot.
+  # NOTE: Requires initial key setup (see INSTALLATION.md)
+  boot.loader.systemd-boot.enable = lib.mkForce false; # Replaced by Limine
   boot.loader.limine = {
     enable = true;
-    maxGenerations = 10; # equivalente ao configurationLimit do systemd-boot em boot.nix
+    maxGenerations = 10; # equivalent to systemd-boot's configurationLimit in boot.nix
     secureBoot.enable = true;
   };
 
   environment.systemPackages = [
-    # sbctl é necessário para gerenciar chaves Secure Boot e para inspeção
-    # manual (sbctl status/verify).
+    # sbctl is required to manage Secure Boot keys and for manual
+    # inspection (sbctl status/verify).
     pkgs.sbctl
 
-    # Script helper para executar aplicações com nvidia-offload
+    # Helper script to run applications with nvidia-offload
     (pkgs.writeScriptBin "run-with-nvidia" ''
       #!/usr/bin/env bash
-      # Helper para executar aplicações com GPU NVIDIA dedicada
-      # Uso: run-with-nvidia <comando> [args...]
+      # Helper to run applications with the dedicated NVIDIA GPU
+      # Usage: run-with-nvidia <command> [args...]
       if [[ -z "$1" ]]; then
-        echo "Uso: run-with-nvidia <comando> [args...]"
-        echo "Exemplo: run-with-nvidia glxinfo"
+        echo "Usage: run-with-nvidia <command> [args...]"
+        echo "Example: run-with-nvidia glxinfo"
         echo "         run-with-nvidia blender"
         exit 1
       fi
@@ -104,11 +104,11 @@
     '')
   ];
 
-  # Criar symlink /var/lib/sbctl → /persist/etc/secureboot a cada boot.
-  # Necessário porque a raiz (/) é tmpfs e é apagada a cada reinicialização.
-  # O módulo boot.loader.limine não cria este symlink automaticamente; é
-  # responsabilidade da configuração do host criá-lo via systemd-tmpfiles.
-  # Sem ele, o sbctl não localiza o banco de chaves PKI.
+  # Create a /var/lib/sbctl → /persist/etc/secureboot symlink on every boot.
+  # Needed because the root (/) is tmpfs and gets wiped on every reboot.
+  # The boot.loader.limine module does not create this symlink
+  # automatically; it's the host config's responsibility to create it via
+  # systemd-tmpfiles. Without it, sbctl can't find the PKI key store.
   systemd.tmpfiles.rules = [
     "L+ /var/lib/sbctl - - - - /persist/etc/secureboot"
   ];

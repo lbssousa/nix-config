@@ -1,16 +1,16 @@
-# Hardware configuration para barbudus (Dell Inspiron 14 5490)
-# NOTA: Este arquivo deve ser regenerado com: nixos-generate-config --no-filesystems --root /mnt
-# após a instalação do disko. O arquivo gerado deve substituir este template.
+# Hardware configuration for barbudus (Dell Inspiron 14 5490)
+# NOTE: This file should be regenerated with: nixos-generate-config --no-filesystems --root /mnt
+# after the disko install. The generated file should replace this template.
 { lib, modulesPath, ... }:
 
 {
   imports = [
     (modulesPath + "/installer/scan/not-detected.nix")
-    # Configuração de disco via disko
+    # Disk configuration via disko
     ./disko.nix
   ];
 
-  # Módulos do kernel para Intel + NVME + USB
+  # Kernel modules for Intel + NVME + USB
   boot = {
     initrd = {
       availableKernelModules = [
@@ -23,7 +23,7 @@
       ];
       kernelModules = [
         "dm-snapshot"
-        # Intel KMS para boot flicker-free
+        # Intel KMS for flicker-free boot
         "i915"
       ];
     };
@@ -37,30 +37,30 @@
     extraModulePackages = [ ];
   };
 
-  # Microcode Intel
+  # Intel microcode
   hardware.cpu.intel.updateMicrocode = true;
 
-  # Filesystems configurados via disko.nix
-  # Deixar vazio para o disko configurar
+  # Filesystems configured via disko.nix
+  # Leave empty for disko to configure
   swapDevices = lib.mkForce [ ];
 
-  # Marcar /persist como necessário no boot (preservation)
+  # Mark /persist as needed for boot (preservation)
   fileSystems."/persist".neededForBoot = true;
 
-  # Swap híbrida: 20 GB em disco (hibernação) + 8 GB zram (performance)
+  # Hybrid swap: 20 GB on disk (hibernation) + 8 GB zram (performance)
   zramSwap = {
     enable = true;
-    # 8 GB de zram (50% da RAM física de 16 GB)
-    # Com compressão zstd 2:1 a 3:1, oferece ~12-16 GB efetivos
+    # 8 GB of zram (50% of the 16 GB physical RAM)
+    # With zstd compression at 2:1 to 3:1, gives ~12-16 GB effective
     memoryPercent = 50;
     algorithm = "zstd";
-    priority = 100; # Prioridade maior que swap em disco
+    priority = 100; # Higher priority than disk swap
   };
 
-  # Otimizações de kernel para swap híbrida
+  # Kernel tuning for hybrid swap
   boot.kernel.sysctl = {
-    "vm.swappiness" = 10; # Tendência menor de usar swap (bom para laptops)
-    "vm.vfs_cache_pressure" = 50; # Manter páginas em cache
+    "vm.swappiness" = 10; # Lower tendency to use swap (good for laptops)
+    "vm.vfs_cache_pressure" = 50; # Keep pages in cache
     "vm.dirty_ratio" = 10;
     "vm.dirty_background_ratio" = 5;
   };

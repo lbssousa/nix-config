@@ -1,28 +1,28 @@
 # modules/system
 
-Módulos NixOS system-wide — utilizados pelo `nixos-rebuild switch`.
+System-wide NixOS modules — used by `nixos-rebuild switch`.
 
-Cada subpasta agrupa módulos por categoria funcional.
+Each subfolder groups modules by functional category.
 
-## Categorias
+## Categories
 
-| Pasta | Descrição |
+| Folder | Description |
 |-------|-----------|
-| [audio/](audio/) | Servidor de áudio PipeWire com compatibilidade PulseAudio/JACK |
-| [boot/](boot/) | Gerenciador de boot (systemd-boot/Limine) e Plymouth |
-| [containers/](containers/) | Podman rootless e Distrobox |
-| [core/](core/) | Configurações base do sistema e impermanência |
-| [desktop/](desktop/) | Ambiente GNOME + Flatpak (experiência tipo Silverblue/Bluefin) |
-| [hardware/](hardware/) | Impressão (CUPS + drivers Epson) e hardware específico |
-| [network/](network/) | Servidor SSH e redes Wi-Fi declarativas (NetworkManager) |
-| [security/](security/) | TPM2 para desbloqueio automático do LUKS |
-| [shell/](shell/) | Shells disponíveis no sistema (Bash, Fish, Zsh) |
-| [tools/](tools/) | Pacotes essenciais do sistema |
-| [users/](users/) | Definição de usuários, grupos e política de sudo |
+| [audio/](audio/) | PipeWire audio server with PulseAudio/JACK compatibility |
+| [boot/](boot/) | Boot manager (systemd-boot/Limine) and Plymouth |
+| [containers/](containers/) | Rootless Podman and Distrobox |
+| [core/](core/) | Base system settings and impermanence |
+| [desktop/](desktop/) | GNOME + Flatpak environment (Silverblue/Bluefin-like experience) |
+| [hardware/](hardware/) | Printing (CUPS + Epson drivers) and hardware-specific config |
+| [network/](network/) | SSH server and declarative Wi-Fi networks (NetworkManager) |
+| [security/](security/) | TPM2 for automatic LUKS unlock |
+| [shell/](shell/) | Shells available on the system (Bash, Fish, Zsh) |
+| [tools/](tools/) | Essential system packages |
+| [users/](users/) | User, group and sudo policy definitions |
 
-## Uso
+## Usage
 
-Importe os módulos desejados no arquivo de configuração do host:
+Import the desired modules in the host's configuration file:
 
 ```nix
 # hosts/<host>/configuration.nix

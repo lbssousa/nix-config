@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# update-gregorio-pkgs.sh — Verificar novas versões e hashes dos pacotes Gregorio
+# update-gregorio-pkgs.sh — Check for new versions and hashes of the Gregorio packages
 #
-# Consulta o repositório gregorio-lsp no GitHub e exibe as informações
-# necessárias para atualizar pkgs/gregorio-lsp/package.nix.
-# Desde a versão 0.4.0, o gregolint é um binário do mesmo crate.
+# Queries the gregorio-lsp repository on GitHub and prints the information
+# needed to update pkgs/gregorio-lsp/package.nix.
+# Since version 0.4.0, gregolint is a binary from the same crate.
 #
-# Uso:
+# Usage:
 #   bash scripts/update-gregorio-pkgs.sh [--apply] [--help]
 #
-# Opções:
-#   --apply   Aplica as atualizações diretamente em pkgs/gregorio-lsp/package.nix
-#   --help    Exibe esta ajuda e sai
+# Options:
+#   --apply   Applies the updates directly to pkgs/gregorio-lsp/package.nix
+#   --help    Shows this help and exits
 
 set -euo pipefail
 
@@ -33,12 +33,12 @@ die()     { error "$*"; exit 1; }
 
 require() {
   for cmd in "$@"; do
-    command -v "$cmd" &>/dev/null || die "Dependência não encontrada: $cmd"
+    command -v "$cmd" &>/dev/null || die "Dependency not found: $cmd"
   done
 }
 
 # ---------------------------------------------------------------------------
-# Constantes
+# Constants
 # ---------------------------------------------------------------------------
 
 OWNER="AISCGre-BR"
@@ -46,7 +46,7 @@ REPO="gregorio-lsp"
 PACKAGE_NIX="$(cd "$(dirname "$0")/.." && pwd)/pkgs/gregorio-lsp/package.nix"
 
 # ---------------------------------------------------------------------------
-# Argumentos
+# Arguments
 # ---------------------------------------------------------------------------
 
 APPLY=false
@@ -58,23 +58,23 @@ for arg in "$@"; do
       sed -n '2,15p' "$0" | sed 's/^# *//'
       exit 0
       ;;
-    *) die "Argumento desconhecido: $arg" ;;
+    *) die "Unknown argument: $arg" ;;
   esac
 done
 
 # ---------------------------------------------------------------------------
-# Verificar dependências
+# Check dependencies
 # ---------------------------------------------------------------------------
 
 require gh nix jq
 
 # ---------------------------------------------------------------------------
-# Buscar última versão e commit
+# Fetch the latest version and commit
 # ---------------------------------------------------------------------------
 
-info "Consultando releases de ${OWNER}/${REPO}..."
+info "Querying releases for ${OWNER}/${REPO}..."
 
-# /latest retorna 404 para pré-releases; usar a listagem completa como fallback
+# /latest returns 404 for pre-releases; use the full listing as a fallback
 LATEST_TAG=""
 if gh api "repos/${OWNER}/${REPO}/releases/latest" --jq '.tag_name' \
      >/tmp/_gh_latest.txt 2>/dev/null; then
@@ -86,72 +86,72 @@ if [[ -z "$LATEST_TAG" || "$LATEST_TAG" == "null" ]]; then
 fi
 rm -f /tmp/_gh_latest.txt
 [[ -n "$LATEST_TAG" && "$LATEST_TAG" != "null" ]] \
-  || die "Não foi possível obter o último release de ${OWNER}/${REPO}"
+  || die "Could not fetch the latest release for ${OWNER}/${REPO}"
 
 NEW_VERSION="${LATEST_TAG#v}"
 
-info "Última versão disponível: ${BOLD}${NEW_VERSION}${RESET}"
+info "Latest version available: ${BOLD}${NEW_VERSION}${RESET}"
 
-# Obter o commit SHA apontado pela tag
+# Get the commit SHA pointed to by the tag
 NEW_REV=$(gh api "repos/${OWNER}/${REPO}/git/refs/tags/${LATEST_TAG}" \
   --jq '.object.sha' 2>/dev/null) \
-  || die "Não foi possível obter o SHA da tag ${LATEST_TAG}"
+  || die "Could not get the SHA for tag ${LATEST_TAG}"
 
-# Se a tag for anotada, resolver para o commit real
+# If the tag is annotated, resolve it to the actual commit
 OBJECT_TYPE=$(gh api "repos/${OWNER}/${REPO}/git/refs/tags/${LATEST_TAG}" \
   --jq '.object.type' 2>/dev/null)
 if [[ "$OBJECT_TYPE" == "tag" ]]; then
   NEW_REV=$(gh api "repos/${OWNER}/${REPO}/git/tags/${NEW_REV}" \
     --jq '.object.sha' 2>/dev/null) \
-    || die "Não foi possível resolver o commit da tag anotada ${LATEST_TAG}"
+    || die "Could not resolve the commit for annotated tag ${LATEST_TAG}"
 fi
 
-info "Commit da tag ${LATEST_TAG}: ${NEW_REV}"
+info "Commit for tag ${LATEST_TAG}: ${NEW_REV}"
 
 # ---------------------------------------------------------------------------
-# Verificar versão atual no package.nix
+# Check the current version in package.nix
 # ---------------------------------------------------------------------------
 
-[[ -f "$PACKAGE_NIX" ]] || die "Arquivo não encontrado: $PACKAGE_NIX"
+[[ -f "$PACKAGE_NIX" ]] || die "File not found: $PACKAGE_NIX"
 
 CURRENT_VERSION=$(grep -oP 'version = "\K[^"]+' "$PACKAGE_NIX" | head -1)
 CURRENT_REV=$(grep -oP 'rev = "\K[^"]+' "$PACKAGE_NIX" | head -1)
 
-info "Versão atual no package.nix: ${BOLD}${CURRENT_VERSION}${RESET} (rev: ${CURRENT_REV:0:12}...)"
+info "Current version in package.nix: ${BOLD}${CURRENT_VERSION}${RESET} (rev: ${CURRENT_REV:0:12}...)"
 
 if [[ "$CURRENT_VERSION" == "$NEW_VERSION" && "$CURRENT_REV" == "$NEW_REV" ]]; then
-  success "O pacote já está atualizado para a versão ${NEW_VERSION}."
+  success "The package is already up to date at version ${NEW_VERSION}."
   exit 0
 fi
 
 echo ""
-echo -e "${BOLD}Atualização disponível:${RESET}"
-echo -e "  Versão: ${CURRENT_VERSION} → ${BOLD}${NEW_VERSION}${RESET}"
-echo -e "  Rev:    ${CURRENT_REV:0:12}... → ${BOLD}${NEW_REV:0:12}...${RESET}"
+echo -e "${BOLD}Update available:${RESET}"
+echo -e "  Version: ${CURRENT_VERSION} → ${BOLD}${NEW_VERSION}${RESET}"
+echo -e "  Rev:     ${CURRENT_REV:0:12}... → ${BOLD}${NEW_REV:0:12}...${RESET}"
 echo ""
 
 # ---------------------------------------------------------------------------
-# Calcular hash da fonte
+# Compute the source hash
 # ---------------------------------------------------------------------------
 
-info "Calculando hash da fonte (fetchFromGitHub)..."
+info "Computing the source hash (fetchFromGitHub)..."
 PREFETCH_JSON=$(nix run nixpkgs#nix-prefetch-github -- \
   --rev "$NEW_REV" "$OWNER" "$REPO" 2>/dev/null) \
-  || die "Falha ao calcular o hash da fonte"
+  || die "Failed to compute the source hash"
 
 NEW_HASH=$(echo "$PREFETCH_JSON" | jq -r '.hash')
-info "Novo hash da fonte: ${NEW_HASH}"
+info "New source hash: ${NEW_HASH}"
 
 # ---------------------------------------------------------------------------
-# Calcular cargoHash usando hash falso e capturando o correto
+# Compute cargoHash using a fake hash and capturing the correct one
 # ---------------------------------------------------------------------------
 
-info "Calculando cargoHash (pode demorar alguns minutos)..."
+info "Computing cargoHash (this can take a few minutes)..."
 
 TMPFILE=$(mktemp /tmp/gregorio-lsp-pkg.XXXXXX.nix)
 trap 'rm -f "$TMPFILE"' EXIT
 
-# Copiar package.nix com versão/rev/hash atualizados e cargoHash falso
+# Copy package.nix with the updated version/rev/hash and a fake cargoHash
 sed \
   -e "s|version = \"[^\"]*\"|version = \"${NEW_VERSION}\"|" \
   -e "s|rev = \"[^\"]*\"|rev = \"${NEW_REV}\"|" \
@@ -167,25 +167,25 @@ CARGO_HASH_OUTPUT=$(nix-build -E "
 NEW_CARGO_HASH=$(echo "$CARGO_HASH_OUTPUT" | grep -oP 'got:\s+\Ksha256-\S+' | head -1)
 
 if [[ -z "$NEW_CARGO_HASH" ]]; then
-  # Pode já ter sido cacheado: a build passou com o hash falso
+  # May already be cached: the build passed with the fake hash
   if echo "$CARGO_HASH_OUTPUT" | grep -q "/nix/store/"; then
-    warn "O cargoHash não mudou em relação ao cache. Verificando hash atual..."
+    warn "cargoHash didn't change compared to the cache. Checking the current hash..."
     NEW_CARGO_HASH=$(grep -oP 'cargoHash = "\K[^"]+' "$PACKAGE_NIX" | head -1)
   else
-    error "Não foi possível determinar o novo cargoHash. Saída do build:"
+    error "Could not determine the new cargoHash. Build output:"
     echo "$CARGO_HASH_OUTPUT" | tail -20
-    die "Verifique manualmente."
+    die "Check it manually."
   fi
 fi
 
-info "Novo cargoHash: ${NEW_CARGO_HASH}"
+info "New cargoHash: ${NEW_CARGO_HASH}"
 
 # ---------------------------------------------------------------------------
-# Exibir resumo
+# Show the summary
 # ---------------------------------------------------------------------------
 
 echo ""
-echo -e "${BOLD}Valores para atualizar em pkgs/gregorio-lsp/package.nix:${RESET}"
+echo -e "${BOLD}Values to update in pkgs/gregorio-lsp/package.nix:${RESET}"
 echo ""
 printf "  %-14s %s\n" "version"    "\"${NEW_VERSION}\""
 printf "  %-14s %s\n" "rev"        "\"${NEW_REV}\""
@@ -194,11 +194,11 @@ printf "  %-14s %s\n" "cargoHash"  "\"${NEW_CARGO_HASH}\""
 echo ""
 
 # ---------------------------------------------------------------------------
-# Aplicar (opcional)
+# Apply (optional)
 # ---------------------------------------------------------------------------
 
 if $APPLY; then
-  info "Aplicando atualizações em ${PACKAGE_NIX}..."
+  info "Applying updates to ${PACKAGE_NIX}..."
 
   CURRENT_HASH=$(grep -oP 'hash = "\K[^"]+' "$PACKAGE_NIX" | head -1)
   CURRENT_CARGO_HASH=$(grep -oP 'cargoHash = "\K[^"]+' "$PACKAGE_NIX" | head -1)
@@ -210,9 +210,9 @@ if $APPLY; then
     -e "s|cargoHash = \"${CURRENT_CARGO_HASH}\"|cargoHash = \"${NEW_CARGO_HASH}\"|" \
     "$PACKAGE_NIX"
 
-  success "pkgs/gregorio-lsp/package.nix atualizado para a versão ${NEW_VERSION}."
+  success "pkgs/gregorio-lsp/package.nix updated to version ${NEW_VERSION}."
   echo ""
-  info "Verifique o resultado com:  nix-build -E 'let p = import <nixpkgs> {}; in p.callPackage ./pkgs/gregorio-lsp/package.nix {}'"
+  info "Check the result with:  nix-build -E 'let p = import <nixpkgs> {}; in p.callPackage ./pkgs/gregorio-lsp/package.nix {}'"
 else
-  info "Use ${BOLD}--apply${RESET} para aplicar as alterações automaticamente."
+  info "Use ${BOLD}--apply${RESET} to apply the changes automatically."
 fi

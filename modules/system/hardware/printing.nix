@@ -1,12 +1,12 @@
-# Módulo de impressão: Epson ESC-P/R + ecbd.service
-# Compatível com a multifuncional Epson L4160
+# Printing module: Epson ESC-P/R + ecbd.service
+# Compatible with the Epson L4160 all-in-one
 { pkgs, ... }:
 
 {
-  # Fila CUPS declarativa para sobreviver ao root efêmero (preservation).
+  # Declarative CUPS queue to survive the ephemeral root (preservation).
   #
-  # Importante: o epson-printer-utility não lida bem com filas dnssd:// e
-  # implicitclass://; por isso usamos URI baseada em IP (socket://).
+  # Important: epson-printer-utility doesn't handle dnssd:// and
+  # implicitclass:// queues well; so we use an IP-based URI (socket://).
   hardware.printers = {
     ensurePrinters = [
       {
@@ -21,41 +21,41 @@
   };
 
   services = {
-    # CUPS - sistema de impressão
+    # CUPS - printing system
     printing = {
       enable = true;
-      # Driver inkjet ESC/P-R da Epson (versão 1) - compatível com L4160, L3x50, etc.
-      # epson-printer-utility também é incluído aqui para que o backend CUPS (ecblp)
-      # seja descoberto pelo CUPS automaticamente via CUPS_SERVERBIN.
+      # Epson ESC/P-R inkjet driver (version 1) - compatible with L4160, L3x50, etc.
+      # epson-printer-utility is also included here so the CUPS backend (ecblp)
+      # is discovered by CUPS automatically via CUPS_SERVERBIN.
       drivers = with pkgs; [
-        epson-escpr # ESC/P-R driver versão 1 (L4160, L3x50, etc.)
-        epson-escpr2 # ESC/P-R driver versão 2 (modelos mais novos)
-        epson-printer-utility # backend CUPS ecblp para comunicação com ecbd
+        epson-escpr # ESC/P-R driver version 1 (L4160, L3x50, etc.)
+        epson-escpr2 # ESC/P-R driver version 2 (newer models)
+        epson-printer-utility # ecblp CUPS backend for communication with ecbd
       ];
     };
 
-    # Avahi para descoberta de impressoras na rede
+    # Avahi for network printer discovery
     avahi = {
       enable = true;
       nssmdns4 = true;
       openFirewall = true;
     };
 
-    # Regras udev do epson-printer-utility (79-udev-epson.rules):
-    # permite acesso de leitura/escrita ao dispositivo USB da impressora Epson.
+    # epson-printer-utility udev rules (79-udev-epson.rules):
+    # grants read/write access to the Epson printer's USB device.
     udev.packages = [ pkgs.epson-printer-utility ];
   };
 
-  # SNMP — necessário para o epson-printer-utility descobrir impressoras Wi-Fi.
+  # SNMP — needed for epson-printer-utility to discover Wi-Fi printers.
   #
-  # A GUI faz broadcast SNMP para 255.255.255.255:161 a partir de uma porta
-  # efêmera local. A impressora responde em unicast com sport=161, dport=efêmera.
-  # O conntrack não associa essa resposta ao broadcast de saída (IPs divergem),
-  # então o nixos-fw descarta o pacote por padrão.
+  # The GUI broadcasts SNMP to 255.255.255.255:161 from a local ephemeral
+  # port. The printer replies via unicast with sport=161, dport=ephemeral.
+  # conntrack doesn't associate that reply with the outgoing broadcast (IPs
+  # differ), so nixos-fw drops the packet by default.
   #
-  # A correção é permitir explicitamente UDP com sport 161 na entrada.
-  # allowedUDPPorts abre dpt:161 (direção errada); é necessário extraCommands
-  # para criar a regra com sport:161.
+  # The fix is to explicitly allow inbound UDP with sport 161.
+  # allowedUDPPorts opens dpt:161 (wrong direction); extraCommands is
+  # needed to create the rule with sport:161.
   networking.firewall.extraCommands = ''
     iptables -A nixos-fw -p udp --sport 161 -j nixos-fw-accept
   '';
@@ -63,21 +63,21 @@
     iptables -D nixos-fw -p udp --sport 161 -j nixos-fw-accept 2>/dev/null || true
   '';
 
-  # Utilitário de impressora Epson: monitoramento de tinta, limpeza de cabeçotes, etc.
-  # O pacote epson-printer-utility inclui o daemon ecbd (Epson Communication Bridge Daemon).
+  # Epson printer utility: ink monitoring, head cleaning, etc.
+  # The epson-printer-utility package includes the ecbd daemon (Epson Communication Bridge Daemon).
   #
-  # NOTA: ao atualizar para uma nova versão, consulte os passos no cabeçalho de
-  # pkgs/epson-printer-utility/package.nix para obter a nova URL via API da Epson
-  # e calcular o hash SHA256 do arquivo.
+  # NOTE: when upgrading to a new version, see the steps in the header of
+  # pkgs/epson-printer-utility/package.nix to get the new URL via Epson's
+  # API and compute the file's SHA256 hash.
   environment.systemPackages = with pkgs; [
-    epson-printer-utility # GUI + ecbd daemon para impressoras Epson inkjet
-    system-config-printer # Interface gráfica para configuração de impressoras CUPS
+    epson-printer-utility # GUI + ecbd daemon for Epson inkjet printers
+    system-config-printer # GUI for configuring CUPS printers
   ];
 
-  # Serviço ecbd da Epson (Epson Communication Bridge Daemon)
-  # Necessário para o utilitário epson-printer-utility funcionar corretamente.
-  # WorkingDirectory aponta para o diretório de suporte do daemon na Nix store,
-  # onde ecbd.conf e demais arquivos de configuração estão instalados.
+  # Epson's ecbd service (Epson Communication Bridge Daemon)
+  # Required for the epson-printer-utility to work correctly.
+  # WorkingDirectory points to the daemon's support directory in the Nix
+  # store, where ecbd.conf and other config files are installed.
   systemd.services.ecbd = {
     description = "Epson Communication Bridge Daemon";
     wantedBy = [ "multi-user.target" ];

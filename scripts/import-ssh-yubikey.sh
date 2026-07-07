@@ -1,32 +1,32 @@
 #!/usr/bin/env bash
-# import-ssh-yubikey.sh — Importar chaves SSH residentes da YubiKey no live CD
+# import-ssh-yubikey.sh — Import resident SSH keys from the YubiKey on the live CD
 #
-# Baixa as chaves SSH residentes (ED25519-SK) armazenadas na YubiKey para
-# ~/.ssh/, tornando-as disponíveis para autenticação SSH (GitHub, GitLab,
-# acesso a servidores etc.) durante a instalação do NixOS.
+# Downloads the resident SSH keys (ED25519-SK) stored on the YubiKey to
+# ~/.ssh/, making them available for SSH authentication (GitHub, GitLab,
+# server access, etc.) during the NixOS installation.
 #
-# Passos executados:
-#   1. Verificar pré-requisitos (ssh-keygen, YubiKey detectada via USB)
-#   2. Baixar chaves residentes com ssh-keygen -K
-#   3. Mover as chaves para ~/.ssh/ e ajustar permissões
-#   4. Carregar as chaves no ssh-agent (se disponível)
-#   5. Exibir as chaves públicas importadas para conferência
+# Steps performed:
+#   1. Check prerequisites (ssh-keygen, YubiKey detected via USB)
+#   2. Download resident keys with ssh-keygen -K
+#   3. Move the keys to ~/.ssh/ and set permissions
+#   4. Load the keys into ssh-agent (if available)
+#   5. Show the imported public keys for verification
 #
-# Uso:
-#   bash scripts/import-ssh-yubikey.sh [opções]
+# Usage:
+#   bash scripts/import-ssh-yubikey.sh [options]
 #
-# Opções:
-#   --ssh-dir <dir>   Diretório de destino das chaves (padrão: ~/.ssh)
-#   --no-agent        Não tenta carregar as chaves no ssh-agent
-#   --help, -h        Exibe ajuda e sai
+# Options:
+#   --ssh-dir <dir>   Destination directory for the keys (default: ~/.ssh)
+#   --no-agent        Don't try to load the keys into ssh-agent
+#   --help, -h        Show help and exit
 #
-# Após execução bem-sucedida, as chaves podem ser usadas para clonar
-# repositórios via SSH (ex.: nix-keys), necessário para o install.sh.
+# After a successful run, the keys can be used to clone repositories via
+# SSH (e.g. nix-keys), which install.sh needs.
 
 set -euo pipefail
 
 # ---------------------------------------------------------------------------
-# Constantes
+# Constants
 # ---------------------------------------------------------------------------
 
 YUBICO_USB_VENDOR="1050"
@@ -49,7 +49,7 @@ error()   { echo -e "${RED}[ERRO]${RESET} $*" >&2; }
 die()     { error "$*"; exit 1; }
 
 # ---------------------------------------------------------------------------
-# Argumento parsing
+# Argument parsing
 # ---------------------------------------------------------------------------
 
 OPT_SSH_DIR="$HOME/.ssh"
@@ -61,113 +61,113 @@ while [[ $# -gt 0 ]]; do
     --no-agent) OPT_NO_AGENT=true; shift ;;
     --help|-h)
       cat <<'EOF'
-Uso:
-  bash scripts/import-ssh-yubikey.sh [opções]
+Usage:
+  bash scripts/import-ssh-yubikey.sh [options]
 
-Opções:
-  --ssh-dir <dir>   Diretório de destino das chaves (padrão: ~/.ssh)
-  --no-agent        Não carrega as chaves no ssh-agent após a importação
-  --help, -h        Exibe esta ajuda e sai
+Options:
+  --ssh-dir <dir>   Destination directory for the keys (default: ~/.ssh)
+  --no-agent        Don't load the keys into ssh-agent after importing
+  --help, -h        Show this help and exit
 
-Descrição:
-  Baixa as chaves SSH residentes (ED25519-SK) da YubiKey e as instala em
-  ~/.ssh/ com as permissões corretas. As chaves são do tipo "resident":
-  a chave privada é armazenada na YubiKey e apenas um stub é salvo em disco.
-  Assim, qualquer operação de chave privada exige a presença física da YubiKey.
+Description:
+  Downloads the resident SSH keys (ED25519-SK) from the YubiKey and installs
+  them into ~/.ssh/ with the correct permissions. These are "resident" keys:
+  the private key material lives on the YubiKey and only a stub is saved to
+  disk. So any private-key operation requires the YubiKey to be physically present.
 
-  O script usa ssh-keygen -K, que solicita o PIN da YubiKey interativamente.
+  The script uses ssh-keygen -K, which prompts for the YubiKey PIN interactively.
 
-Exemplos:
-  # Uso padrão (importa para ~/.ssh/):
+Examples:
+  # Default usage (imports into ~/.ssh/):
   bash scripts/import-ssh-yubikey.sh
 
-  # Destino alternativo:
+  # Alternate destination:
   bash scripts/import-ssh-yubikey.sh --ssh-dir /tmp/ssh-keys
 EOF
       exit 0 ;;
-    *) die "Opção desconhecida: $1. Use --help para ver as opções." ;;
+    *) die "Unknown option: $1. Use --help to see the available options." ;;
   esac
 done
 
 # ---------------------------------------------------------------------------
-# Cabeçalho
+# Header
 # ---------------------------------------------------------------------------
 
 echo
 echo -e "${BOLD}╔══════════════════════════════════════════════════════════════╗${RESET}"
-echo -e "${BOLD}║   Importar chaves SSH residentes da YubiKey — live CD        ║${RESET}"
+echo -e "${BOLD}║       Import resident SSH keys from YubiKey — live CD        ║${RESET}"
 echo -e "${BOLD}╚══════════════════════════════════════════════════════════════╝${RESET}"
 echo
 
 # ---------------------------------------------------------------------------
-# Passo 1: Verificar pré-requisitos
+# Step 1: Check prerequisites
 # ---------------------------------------------------------------------------
 
-info "==> Passo 1: Verificar pré-requisitos"
+info "==> Step 1: Check prerequisites"
 
 if ! command -v ssh-keygen >/dev/null 2>&1; then
-  error "ssh-keygen não encontrado."
-  warn "Execute antes de continuar:"
+  error "ssh-keygen not found."
+  warn "Run before continuing:"
   warn "  nix-shell -p openssh"
-  die "ssh-keygen não encontrado."
+  die "ssh-keygen not found."
 fi
-success "ssh-keygen: $(ssh-keygen -V 2>&1 | head -1 || echo 'disponível')"
+success "ssh-keygen: $(ssh-keygen -V 2>&1 | head -1 || echo 'available')"
 
 if command -v lsusb >/dev/null 2>&1; then
   if ! lsusb 2>/dev/null | grep -qi ":${YUBICO_USB_VENDOR}\b\|${YUBICO_USB_VENDOR}:"; then
-    die "YubiKey não detectada (lsusb não encontrou dispositivo Yubico). Insira a YubiKey e tente novamente."
+    die "YubiKey not detected (lsusb found no Yubico device). Insert the YubiKey and try again."
   fi
   _yubikey_line=$(lsusb 2>/dev/null | grep -i "${YUBICO_USB_VENDOR}:" | head -1)
-  success "YubiKey detectada: $_yubikey_line"
+  success "YubiKey detected: $_yubikey_line"
 else
-  warn "lsusb não disponível — verificação de hardware ignorada."
+  warn "lsusb not available — hardware check skipped."
 fi
 echo
 
 # ---------------------------------------------------------------------------
-# Passo 2: Baixar chaves residentes com ssh-keygen -K
+# Step 2: Download resident keys with ssh-keygen -K
 # ---------------------------------------------------------------------------
 
-info "==> Passo 2: Baixar chaves SSH residentes da YubiKey"
+info "==> Step 2: Download resident SSH keys from the YubiKey"
 echo
 
-# ssh-keygen -K grava os arquivos no diretório corrente; usamos um diretório
-# temporário para depois mover para o destino final.
+# ssh-keygen -K writes the files to the current directory; we use a
+# temporary directory to later move them to the final destination.
 _tmpdir=$(mktemp -d)
 trap 'rm -rf "$_tmpdir"' EXIT
 
-info "O PIN da YubiKey será solicitado a seguir."
+info "You'll be prompted for the YubiKey PIN next."
 echo
 
 # ssh-keygen -K:
-#   Lê todas as chaves residentes do autenticador FIDO e grava arquivos
-#   id_ed25519_sk_rk[_<handle>] e id_ed25519_sk_rk[_<handle>].pub no CWD.
-#   O sufixo _rk indica "resident key" (chave cujo material privado fica
-#   no hardware e nunca sai do dispositivo).
+#   Reads all resident keys from the FIDO authenticator and writes
+#   id_ed25519_sk_rk[_<handle>] and id_ed25519_sk_rk[_<handle>].pub files
+#   to the CWD. The _rk suffix means "resident key" (a key whose private
+#   material lives on the hardware and never leaves the device).
 if ! (cd "$_tmpdir" && ssh-keygen -K); then
   echo
-  error "ssh-keygen -K falhou."
-  warn "Possíveis causas:"
-  warn "  • Nenhuma chave residente gravada na YubiKey"
-  warn "  • PIN incorreto ou cancelado"
-  warn "  • YubiKey removida durante a operação"
-  die "Falha ao baixar chaves residentes da YubiKey."
+  error "ssh-keygen -K failed."
+  warn "Possible causes:"
+  warn "  • No resident key enrolled on the YubiKey"
+  warn "  • Wrong or cancelled PIN"
+  warn "  • YubiKey removed during the operation"
+  die "Failed to download resident keys from the YubiKey."
 fi
 echo
 
-# Verificar se alguma chave foi gerada
+# Check whether any key was generated
 _key_count=$(find "$_tmpdir" -name "id_ed25519_sk_rk*" ! -name "*.pub" | wc -l)
 if [[ "$_key_count" -eq 0 ]]; then
-  die "Nenhuma chave residente encontrada na YubiKey."
+  die "No resident key found on the YubiKey."
 fi
-info "$_key_count chave(s) residente(s) encontrada(s)."
+info "$_key_count resident key(s) found."
 echo
 
 # ---------------------------------------------------------------------------
-# Passo 3: Mover as chaves para ~/.ssh/ e ajustar permissões
+# Step 3: Move the keys to ~/.ssh/ and set permissions
 # ---------------------------------------------------------------------------
 
-info "==> Passo 3: Instalar chaves em ${OPT_SSH_DIR}/"
+info "==> Step 3: Install keys into ${OPT_SSH_DIR}/"
 
 mkdir -p "$OPT_SSH_DIR"
 chmod 700 "$OPT_SSH_DIR"
@@ -180,7 +180,7 @@ while IFS= read -r _privkey; do
   _dst_pub="${OPT_SSH_DIR}/${_basename}.pub"
 
   if [[ -f "$_dst_priv" ]]; then
-    warn "Arquivo já existe, sobrescrevendo: $_dst_priv"
+    warn "File already exists, overwriting: $_dst_priv"
   fi
 
   cp "$_privkey" "$_dst_priv"
@@ -191,25 +191,25 @@ while IFS= read -r _privkey; do
     chmod 644 "$_dst_pub"
   fi
 
-  success "Instalada: $_dst_priv"
+  success "Installed: $_dst_priv"
   (( _installed++ )) || true
 done < <(find "$_tmpdir" -name "id_ed25519_sk_rk*" ! -name "*.pub" | sort)
 
 echo
 
 # ---------------------------------------------------------------------------
-# Passo 4: Carregar as chaves no ssh-agent
+# Step 4: Load the keys into ssh-agent
 # ---------------------------------------------------------------------------
 
 if [[ "$OPT_NO_AGENT" == "false" ]]; then
-  info "==> Passo 4: Carregar chaves no ssh-agent"
+  info "==> Step 4: Load keys into ssh-agent"
 
-  # Iniciar ssh-agent se não houver nenhum em execução
+  # Start ssh-agent if none is running
   if [[ -z "${SSH_AUTH_SOCK:-}" ]]; then
-    info "SSH_AUTH_SOCK não definido — iniciando ssh-agent..."
+    info "SSH_AUTH_SOCK not set — starting ssh-agent..."
     eval "$(ssh-agent -s)"
-    success "ssh-agent iniciado (PID: $SSH_AGENT_PID)."
-    warn "Para manter o agente nesta sessão, adicione ao shell:"
+    success "ssh-agent started (PID: $SSH_AGENT_PID)."
+    warn "To keep the agent for this session, add to your shell:"
     warn "  eval \"\$(ssh-agent -s)\""
   fi
 
@@ -217,24 +217,24 @@ if [[ "$OPT_NO_AGENT" == "false" ]]; then
   while IFS= read -r _privkey; do
     _basename=$(basename "$_privkey")
     _dst="${OPT_SSH_DIR}/${_basename}"
-    info "Adicionando ao agente: $_dst"
+    info "Adding to the agent: $_dst"
     if ssh-add "$_dst" 2>/dev/null; then
-      success "Adicionada: $_basename"
+      success "Added: $_basename"
       (( _loaded++ )) || true
     else
-      warn "Falha ao adicionar $_basename ao agente (PIN pode ser necessário)."
+      warn "Failed to add $_basename to the agent (PIN may be required)."
     fi
   done < <(find "$_tmpdir" -name "id_ed25519_sk_rk*" ! -name "*.pub" | sort)
 
-  [[ $_loaded -gt 0 ]] && info "$_loaded chave(s) carregada(s) no ssh-agent."
+  [[ $_loaded -gt 0 ]] && info "$_loaded key(s) loaded into ssh-agent."
   echo
 fi
 
 # ---------------------------------------------------------------------------
-# Passo 5: Exibir chaves públicas importadas
+# Step 5: Show the imported public keys
 # ---------------------------------------------------------------------------
 
-info "==> Passo 5: Chaves públicas importadas"
+info "==> Step 5: Imported public keys"
 echo
 
 while IFS= read -r _pubkey; do
@@ -243,12 +243,12 @@ while IFS= read -r _pubkey; do
   echo
 done < <(find "$OPT_SSH_DIR" -name "id_ed25519_sk_rk*.pub" | sort)
 
-echo -e "${GREEN}${BOLD}Chaves SSH residentes importadas com sucesso!${RESET}"
+echo -e "${GREEN}${BOLD}Resident SSH keys imported successfully!${RESET}"
 echo
-info "As chaves estão em: $OPT_SSH_DIR"
-info "Para verificar a conexão com o GitHub:"
+info "The keys are in: $OPT_SSH_DIR"
+info "To check the connection to GitHub:"
 echo "  ssh -T git@github.com"
 echo
-info "Próximo passo — instalação do sistema:"
+info "Next step — system installation:"
 echo "  bash scripts/install.sh"
 echo

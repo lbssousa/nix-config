@@ -1,22 +1,23 @@
-# Módulo de localização: idioma, fuso horário e teclado
+# Localization module: language, timezone and keyboard
 _:
 
 {
-  # Mantém o TTY alinhado com o XKB do sistema.
+  # Keeps the TTY aligned with the system's XKB config.
   console.useXkbConfig = true;
 
-  # Necessário mesmo em Wayland: o IBus segue o layout XKB de sistema.
-  # Sem isso, localectl reporta X11 Layout: us e o IBus cai para inglês no relogin.
+  # Needed even on Wayland: IBus follows the system's XKB layout.
+  # Without this, localectl reports X11 Layout: us and IBus falls back to
+  # English on relogin.
   services.xserver.xkb = {
     layout = "br";
     variant = "abnt2";
     model = "abnt2";
   };
 
-  # Remapeamento do CapsLock via kanata (nível evdev, funciona em TTY e Wayland):
-  #   toque simples       → Esc
-  #   manter pressionado  → Ctrl
-  #   Shift + toque       → CapsLock
+  # CapsLock remapping via kanata (evdev level, works in TTY and Wayland):
+  #   single tap    → Esc
+  #   hold          → Ctrl
+  #   Shift + tap   → CapsLock
   services.kanata = {
     enable = true;
     keyboards.default = {

@@ -1,6 +1,6 @@
--- Treesitter: adiciona a gramática Gregorio ao conjunto de parsers mantidos.
--- O parser gregorio.so já está no rtp via programs.neovim.plugins do Nix;
--- aqui apenas garantimos que o nvim-treesitter o reconhece.
+-- Treesitter: adds the Gregorio grammar to the set of maintained parsers.
+-- The gregorio.so parser is already on the rtp via Nix's
+-- programs.neovim.plugins; here we just make sure nvim-treesitter recognizes it.
 return {
   {
     "nvim-treesitter/nvim-treesitter",
