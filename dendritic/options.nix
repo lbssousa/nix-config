@@ -14,7 +14,7 @@
             extraNixosModules = lib.mkOption {
               type = lib.types.listOf lib.types.deferredModule;
               default = [ ];
-              description = "Modulos extras por host (ex.: lanzaboote).";
+              description = "Modulos extras por host.";
             };
           };
         }

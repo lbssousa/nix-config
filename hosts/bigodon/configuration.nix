@@ -6,9 +6,7 @@
   # Nome do host
   networking.hostName = "bigodon";
 
-  # --- Bootloader: Limine (piloto para futura migração do Secure Boot em barbudus) ---
-  # bigodon não usa Secure Boot, o que o torna o host de menor risco para validar
-  # o módulo boot.loader.limine antes de aplicá-lo em barbudus (lanzaboote + NVIDIA + TPM2).
+  # --- Bootloader: Limine (sem Secure Boot) ---
   boot.loader.systemd-boot.enable = lib.mkForce false;
   boot.loader.limine = {
     enable = true;

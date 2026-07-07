@@ -6,7 +6,7 @@
     # Kernel Linux mais recente (não-LTS)
     kernelPackages = lib.mkDefault pkgs.linuxPackages_latest;
     # systemd-boot como gerenciador de boot padrão
-    # Nota: No host barbudus, o lanzaboote substitui o systemd-boot para Secure Boot
+    # Nota: barbudus e bigodon substituem por boot.loader.limine (ver hosts/<host>/configuration.nix)
     loader = {
       systemd-boot = {
         enable = lib.mkDefault true;

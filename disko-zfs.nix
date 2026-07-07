@@ -20,7 +20,7 @@ in
       content = {
         type = "gpt";
         partitions = {
-          # Partição EFI para systemd-boot / lanzaboote
+          # Partição EFI para systemd-boot / Limine
           esp = {
             name = "ESP";
             size = "512M";

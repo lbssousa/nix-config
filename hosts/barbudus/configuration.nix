@@ -74,10 +74,9 @@
     thermald.enable = true; # Gerenciamento térmico Intel
   };
 
-  # --- Bootloader: Limine (migração do lanzaboote — ver roteiro) ---
-  # Fase 3: Secure Boot via Limine, reaproveitando as chaves sbctl já
-  # existentes em /persist/etc/secureboot (mesmo PK/KEK/db do lanzaboote),
-  # sem precisar recriar ou reenrollar nada no firmware.
+  # --- Bootloader: Limine com Secure Boot ---
+  # Chaves PKI geridas via sbctl, armazenadas em /persist/etc/secureboot.
+  # NOTA: Requer configuração inicial de chaves (ver INSTALLATION.md)
   boot.loader.systemd-boot.enable = lib.mkForce false; # Substituído pelo Limine
   boot.loader.limine = {
     enable = true;
@@ -86,8 +85,8 @@
   };
 
   environment.systemPackages = [
-    # sbctl é necessário para gerenciar chaves Secure Boot (Fase 3) e para
-    # inspeção manual (sbctl status/verify) mesmo antes de ligar secureBoot.enable.
+    # sbctl é necessário para gerenciar chaves Secure Boot e para inspeção
+    # manual (sbctl status/verify).
     pkgs.sbctl
 
     # Script helper para executar aplicações com nvidia-offload
@@ -107,9 +106,9 @@
 
   # Criar symlink /var/lib/sbctl → /persist/etc/secureboot a cada boot.
   # Necessário porque a raiz (/) é tmpfs e é apagada a cada reinicialização.
-  # Nem o lanzaboote nem o módulo boot.loader.limine criam este symlink
-  # automaticamente; é responsabilidade da configuração do host criá-lo via
-  # systemd-tmpfiles. Sem ele, o sbctl não localiza o banco de chaves PKI.
+  # O módulo boot.loader.limine não cria este symlink automaticamente; é
+  # responsabilidade da configuração do host criá-lo via systemd-tmpfiles.
+  # Sem ele, o sbctl não localiza o banco de chaves PKI.
   systemd.tmpfiles.rules = [
     "L+ /var/lib/sbctl - - - - /persist/etc/secureboot"
   ];
