@@ -1,4 +1,4 @@
-# Módulo de shells: Bash, Fish e Zsh (Zsh como padrão)
+# Módulo de shells: Bash, Fish e Zsh (Fish como padrão)
 { pkgs, ... }:
 
 {
@@ -43,8 +43,8 @@
     };
   };
 
-  # Definir Zsh como shell padrão para novos usuários
-  users.defaultUserShell = pkgs.zsh;
+  # Definir Fish como shell padrão para novos usuários
+  users.defaultUserShell = pkgs.fish;
 
   # Adicionar shells ao /etc/shells
   environment.shells = with pkgs; [

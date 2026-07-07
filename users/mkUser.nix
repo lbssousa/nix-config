@@ -39,7 +39,7 @@
     ++ lib.optionals hasSudo [
       "wheel" # sudo
     ];
-    shell = pkgs.zsh; # Shell padrão (Zsh)
+    shell = pkgs.fish; # Shell padrão (Fish)
     # Senha inicial: o usuário será solicitado a trocá-la no primeiro login.
     # Se uma senha personalizada for definida durante a instalação (ver INSTALLATION.md),
     # a troca não será exigida.

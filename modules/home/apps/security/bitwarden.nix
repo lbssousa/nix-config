@@ -67,6 +67,10 @@ in
     [[ -S "${sock}" ]] && export SSH_AUTH_SOCK="${sock}"
   '';
 
+  programs.fish.interactiveShellInit = lib.mkAfter ''
+    test -S "${sock}"; and set -gx SSH_AUTH_SOCK "${sock}"
+  '';
+
   home.activation.enableBitwardenUnits = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
     systemctlUser=${lib.escapeShellArg "${pkgs.systemd}/bin/systemctl --user"}
     systemdUserWantsDir=${lib.escapeShellArg "${config.xdg.configHome}/systemd/user/default.target.wants"}

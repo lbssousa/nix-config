@@ -21,7 +21,10 @@
   home = {
     stateVersion = "26.05";
 
-    packages = [ pkgs.run0-sudo ];
+    packages = [
+      pkgs.run0-sudo
+      pkgs.grc # Coloriza a saída de comandos comuns (usado pelo plugin grc do Fish)
+    ];
 
     # Variáveis de ambiente do usuário
     sessionVariables = {
@@ -155,23 +158,80 @@
       '';
     };
 
-    # Configuração do Fish shell
+    # Configuração do Fish shell (shell padrão do sistema)
     fish = {
       enable = true;
       interactiveShellInit = ''
-        # Zoxide
+        function _nix_cfg
+          set -l entries (ls -A /etc/nixos 2>/dev/null)
+          if test (count $entries) -gt 0
+            printf '%s' /etc/nixos
+          else
+            printf '%s' (xdg-user-dir PROJECTS)/lbssousa/nix-config
+          end
+        end
+
+        function just
+          command just --justfile (_nix_cfg)/justfile $argv
+        end
+
+        # Zoxide (cd inteligente)
         zoxide init fish | source
 
         # Starship prompt
         starship init fish | source
       '';
       shellAliases = {
+        # Substitutos modernos
         ls = "eza";
         ll = "eza -la";
+        lt = "eza --tree";
         cat = "bat";
         grep = "rg";
         find = "fd";
+        cd = "z"; # zoxide
+        # Git shortcuts
+        g = "git";
+        gs = "git status";
+        ga = "git add";
+        gc = "git commit";
+        gp = "git push";
+        gl = "git pull";
+        # NixOS shortcuts (run0: eleva via polkit/YubiKey sem setuid;
+        # --setenv=SSH_AUTH_SOCK repassa o socket do agente SSH para que
+        # nixos-rebuild acesse entradas de flake SSH, ex.: nix-secrets)
+        # Home Manager é módulo NixOS — nrs/nrb aplicam HM automaticamente.
+        nrs = "run0 --setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK nixos-rebuild switch --flake (_nix_cfg)";
+        nru = "run0 --setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK sh -c \"nix flake update (_nix_cfg) && nixos-rebuild switch --flake (_nix_cfg)\"";
+        nrb = "run0 --setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK nixos-rebuild boot --flake (_nix_cfg)";
+        hmn = "home-manager news";
+        # Podman/Docker aliases
+        dk = "podman";
+        dkc = "podman-compose";
       };
+
+      plugins = [
+        {
+          name = "ai";
+          src = pkgs.fishPlugins.ai.src;
+        }
+        {
+          name = "async-prompt";
+          src = pkgs.fishPlugins.async-prompt.src;
+        }
+        {
+          name = "autopair";
+          src = pkgs.fishPlugins.autopair.src;
+        }
+        {
+          name = "forgit";
+          src = pkgs.fishPlugins.forgit.src;
+        }
+        {
+          name = "grc";
+          src = pkgs.fishPlugins.grc.src;
+        }
+      ];
     };
 
     # Starship — preset oficial "Catppuccin Powerline", paleta Mocha (a mais escura)

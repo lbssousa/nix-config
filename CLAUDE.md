@@ -42,7 +42,7 @@ The pre-commit hook automatically runs `nixfmt --check`, `statix`, and `deadnix`
 
 `just update` auto-commits and pushes `flake.lock` when the file changes. Suppress with `just auto_commit=false update`.
 
-### Shell aliases (bash/zsh — defined in `home/common.nix`)
+### Shell aliases (bash/zsh/fish — defined in `home/common.nix`)
 
 These are available in every user's interactive shell. All NixOS aliases use `run0` for privilege escalation (polkit/YubiKey, no password prompt) and pass `SSH_AUTH_SOCK` so `nixos-rebuild` can fetch SSH-gated flake inputs (e.g. `nix-secrets`). Because Home Manager is a NixOS module, every `nixos-rebuild` also deploys all HM changes.
 
