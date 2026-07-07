@@ -1309,416 +1309,424 @@
       };
     };
 
-    # ── Treesitter ───────────────────────────────────────────────────────────
-    plugins.treesitter = {
-      enable = true;
-      settings.highlight.enable = true;
-      grammarPackages =
-        with pkgs.vimPlugins.nvim-treesitter.builtGrammars;
-        [
-          bash
-          css
-          html
-          json
-          lua
-          markdown
-          markdown_inline
-          nix
-          rust
-          toml
-          typescript
-          yaml
-        ]
-        ++ [ pkgs.tree-sitter-gregorio-nvim ];
-    };
-
-    plugins.treesitter-context.enable = true;
-
-    # ── Ícones ───────────────────────────────────────────────────────────────
-    plugins.web-devicons.enable = true;
-
-    # ── Statusline ───────────────────────────────────────────────────────────
-    plugins.lualine = {
-      enable = true;
-      settings.options = {
-        theme = "tokyonight";
-        globalstatus = true;
-        disabled_filetypes.statusline = [
-          "dashboard"
-          "alpha"
-          "snacks_dashboard"
-        ];
+    plugins = {
+      # ── Treesitter ─────────────────────────────────────────────────────────
+      treesitter = {
+        enable = true;
+        settings.highlight.enable = true;
+        grammarPackages =
+          with pkgs.vimPlugins.nvim-treesitter.builtGrammars;
+          [
+            bash
+            css
+            html
+            json
+            lua
+            markdown
+            markdown_inline
+            nix
+            rust
+            toml
+            typescript
+            yaml
+          ]
+          ++ [ pkgs.tree-sitter-gregorio-nvim ];
       };
-    };
 
-    # ── Bufferline ───────────────────────────────────────────────────────────
-    plugins.bufferline = {
-      enable = true;
-      settings.options = {
-        diagnostics = "nvim_lsp";
-        always_show_bufferline = false;
-        offsets = [
-          {
-            filetype = "neo-tree";
-            text = "Neo-tree";
-            highlight = "Directory";
-            text_align = "left";
-          }
-        ];
-      };
-    };
+      treesitter-context.enable = true;
 
-    # ── Neo-tree ─────────────────────────────────────────────────────────────
-    plugins.neo-tree = {
-      enable = true;
-      settings = {
-        close_if_last_window = true;
-        popup_border_style = "rounded";
-        window = {
-          position = "left";
-          width = 30;
-        };
-        default_component_configs.indent.with_expanders = true;
-      };
-    };
+      # ── Ícones ─────────────────────────────────────────────────────────────
+      web-devicons.enable = true;
 
-    # ── Which-key ────────────────────────────────────────────────────────────
-    plugins.which-key = {
-      enable = true;
-      settings = {
-        preset = "helix";
-        spec = [
-          {
-            __unkeyed-1 = "<leader>f";
-            group = "arquivo";
-          }
-          {
-            __unkeyed-1 = "<leader>g";
-            group = "git";
-          }
-          {
-            __unkeyed-1 = "<leader>gh";
-            group = "hunks git";
-          }
-          {
-            __unkeyed-1 = "<leader>c";
-            group = "código";
-          }
-          {
-            __unkeyed-1 = "<leader>b";
-            group = "buffer";
-          }
-          {
-            __unkeyed-1 = "<leader>q";
-            group = "sair/sessão";
-          }
-          {
-            __unkeyed-1 = "<leader>s";
-            group = "buscar";
-          }
-          {
-            __unkeyed-1 = "<leader>u";
-            group = "ui";
-          }
-          {
-            __unkeyed-1 = "<leader>w";
-            group = "janelas";
-          }
-          {
-            __unkeyed-1 = "<leader>x";
-            group = "diagnósticos";
-          }
-          {
-            __unkeyed-1 = "<leader><tab>";
-            group = "abas";
-          }
-        ];
-      };
-    };
-
-    # ── Noice ────────────────────────────────────────────────────────────────
-    plugins.noice = {
-      enable = true;
-      settings = {
-        lsp.override = {
-          "vim.lsp.util.convert_input_to_markdown_lines" = true;
-          "vim.lsp.util.stylize_markdown" = true;
-          "cmp.entry.get_documentation" = true;
-        };
-        presets = {
-          bottom_search = true;
-          command_palette = true;
-          long_message_to_split = true;
-          inc_rename = false;
-          lsp_doc_border = true;
+      # ── Statusline ─────────────────────────────────────────────────────────
+      lualine = {
+        enable = true;
+        settings.options = {
+          theme = "tokyonight";
+          globalstatus = true;
+          disabled_filetypes.statusline = [
+            "dashboard"
+            "alpha"
+            "snacks_dashboard"
+          ];
         };
       };
-    };
 
-    # ── Telescope ────────────────────────────────────────────────────────────
-    plugins.telescope.enable = true;
-
-    # ── Flash ────────────────────────────────────────────────────────────────
-    plugins.flash = {
-      enable = true;
-      settings.modes.char.highlight.backdrop = false;
-    };
-
-    # ── Grug-far ─────────────────────────────────────────────────────────────
-    plugins.grug-far.enable = true;
-
-    # ── Snacks ───────────────────────────────────────────────────────────────
-    plugins.snacks = {
-      enable = true;
-      settings = {
-        bigfile.enabled = true;
-        quickfile.enabled = true;
-        statuscolumn.enabled = false;
-
-        notifier = {
-          enabled = true;
-          timeout = 3000;
-          style = "fancy";
-        };
-
-        dashboard = {
-          sections = [
-            { section = "header"; }
+      # ── Bufferline ─────────────────────────────────────────────────────────
+      bufferline = {
+        enable = true;
+        settings.options = {
+          diagnostics = "nvim_lsp";
+          always_show_bufferline = false;
+          offsets = [
             {
-              section = "keys";
-              gap = 1;
-              padding = 1;
+              filetype = "neo-tree";
+              text = "Neo-tree";
+              highlight = "Directory";
+              text_align = "left";
             }
           ];
-          preset = {
-            header = ''
-              ███╗   ██╗███████╗ ██████╗ ██╗   ██╗██╗███╗   ███╗
-              ████╗  ██║██╔════╝██╔═══██╗██║   ██║██║████╗ ████║
-              ██╔██╗ ██║█████╗  ██║   ██║██║   ██║██║██╔████╔██║
-              ██║╚██╗██║██╔══╝  ██║   ██║╚██╗ ██╔╝██║██║╚██╔╝██║
-              ██║ ╚████║███████╗╚██████╔╝ ╚████╔╝ ██║██║ ╚═╝ ██║
-              ╚═╝  ╚═══╝╚══════╝ ╚═════╝   ╚═══╝  ╚═╝╚═╝     ╚═╝
-            '';
-            keys = [
+        };
+      };
+
+      # ── Neo-tree ───────────────────────────────────────────────────────────
+      neo-tree = {
+        enable = true;
+        settings = {
+          close_if_last_window = true;
+          popup_border_style = "rounded";
+          window = {
+            position = "left";
+            width = 30;
+          };
+          default_component_configs.indent.with_expanders = true;
+        };
+      };
+
+      # ── Which-key ──────────────────────────────────────────────────────────
+      which-key = {
+        enable = true;
+        settings = {
+          preset = "helix";
+          spec = [
+            {
+              __unkeyed-1 = "<leader>f";
+              group = "arquivo";
+            }
+            {
+              __unkeyed-1 = "<leader>g";
+              group = "git";
+            }
+            {
+              __unkeyed-1 = "<leader>gh";
+              group = "hunks git";
+            }
+            {
+              __unkeyed-1 = "<leader>c";
+              group = "código";
+            }
+            {
+              __unkeyed-1 = "<leader>b";
+              group = "buffer";
+            }
+            {
+              __unkeyed-1 = "<leader>q";
+              group = "sair/sessão";
+            }
+            {
+              __unkeyed-1 = "<leader>s";
+              group = "buscar";
+            }
+            {
+              __unkeyed-1 = "<leader>u";
+              group = "ui";
+            }
+            {
+              __unkeyed-1 = "<leader>w";
+              group = "janelas";
+            }
+            {
+              __unkeyed-1 = "<leader>x";
+              group = "diagnósticos";
+            }
+            {
+              __unkeyed-1 = "<leader><tab>";
+              group = "abas";
+            }
+          ];
+        };
+      };
+
+      # ── Noice ──────────────────────────────────────────────────────────────
+      noice = {
+        enable = true;
+        settings = {
+          lsp.override = {
+            "vim.lsp.util.convert_input_to_markdown_lines" = true;
+            "vim.lsp.util.stylize_markdown" = true;
+            "cmp.entry.get_documentation" = true;
+          };
+          presets = {
+            bottom_search = true;
+            command_palette = true;
+            long_message_to_split = true;
+            inc_rename = false;
+            lsp_doc_border = true;
+          };
+        };
+      };
+
+      # ── Telescope ──────────────────────────────────────────────────────────
+      telescope.enable = true;
+
+      # ── Flash ──────────────────────────────────────────────────────────────
+      flash = {
+        enable = true;
+        settings.modes.char.highlight.backdrop = false;
+      };
+
+      # ── Grug-far ───────────────────────────────────────────────────────────
+      grug-far.enable = true;
+
+      # ── Snacks ─────────────────────────────────────────────────────────────
+      snacks = {
+        enable = true;
+        settings = {
+          bigfile.enabled = true;
+          quickfile.enabled = true;
+          statuscolumn.enabled = false;
+
+          notifier = {
+            enabled = true;
+            timeout = 3000;
+            style = "fancy";
+          };
+
+          dashboard = {
+            sections = [
+              { section = "header"; }
               {
-                icon = " ";
-                key = "f";
-                desc = "Buscar Arquivo";
-                action = ":Telescope find_files";
-              }
-              {
-                icon = " ";
-                key = "n";
-                desc = "Novo Arquivo";
-                action = ":ene | startinsert";
-              }
-              {
-                icon = " ";
-                key = "g";
-                desc = "Buscar Texto";
-                action = ":Telescope live_grep";
-              }
-              {
-                icon = " ";
-                key = "r";
-                desc = "Arquivos Recentes";
-                action = ":Telescope oldfiles";
-              }
-              {
-                icon = " ";
-                key = "s";
-                desc = "Restaurar Sessão";
-                section = "session";
-              }
-              {
-                icon = " ";
-                key = "q";
-                desc = "Sair";
-                action = ":qa";
+                section = "keys";
+                gap = 1;
+                padding = 1;
               }
             ];
+            preset = {
+              header = ''
+                ███╗   ██╗███████╗ ██████╗ ██╗   ██╗██╗███╗   ███╗
+                ████╗  ██║██╔════╝██╔═══██╗██║   ██║██║████╗ ████║
+                ██╔██╗ ██║█████╗  ██║   ██║██║   ██║██║██╔████╔██║
+                ██║╚██╗██║██╔══╝  ██║   ██║╚██╗ ██╔╝██║██║╚██╔╝██║
+                ██║ ╚████║███████╗╚██████╔╝ ╚████╔╝ ██║██║ ╚═╝ ██║
+                ╚═╝  ╚═══╝╚══════╝ ╚═════╝   ╚═══╝  ╚═╝╚═╝     ╚═╝
+              '';
+              keys = [
+                {
+                  icon = " ";
+                  key = "f";
+                  desc = "Buscar Arquivo";
+                  action = ":Telescope find_files";
+                }
+                {
+                  icon = " ";
+                  key = "n";
+                  desc = "Novo Arquivo";
+                  action = ":ene | startinsert";
+                }
+                {
+                  icon = " ";
+                  key = "g";
+                  desc = "Buscar Texto";
+                  action = ":Telescope live_grep";
+                }
+                {
+                  icon = " ";
+                  key = "r";
+                  desc = "Arquivos Recentes";
+                  action = ":Telescope oldfiles";
+                }
+                {
+                  icon = " ";
+                  key = "s";
+                  desc = "Restaurar Sessão";
+                  section = "session";
+                }
+                {
+                  icon = " ";
+                  key = "q";
+                  desc = "Sair";
+                  action = ":qa";
+                }
+              ];
+            };
           };
-        };
 
-        indent = {
-          enabled = true;
-          indent.char = "│";
-          scope = {
+          indent = {
             enabled = true;
-            char = "│";
+            indent.char = "│";
+            scope = {
+              enabled = true;
+              char = "│";
+            };
+          };
+
+          scope.enabled = true;
+          scroll.enabled = true;
+          input.enabled = true;
+
+          words = {
+            enabled = true;
+            debounce = 200;
+          };
+
+          terminal.enabled = true;
+          lazygit.enabled = true;
+          gitbrowse.enabled = true;
+          zen.enabled = true;
+          scratch.enabled = true;
+        };
+      };
+
+      # ── Gitsigns ───────────────────────────────────────────────────────────
+      gitsigns = {
+        enable = true;
+        settings = {
+          current_line_blame = false;
+          signs = {
+            add.text = "▎";
+            change.text = "▎";
+            delete.text = "";
+            topdelete.text = "";
+            changedelete.text = "▎";
+            untracked.text = "▎";
+          };
+          signs_staged_enable = true;
+          signs_staged = {
+            add.text = "▎";
+            change.text = "▎";
+            delete.text = "";
+            topdelete.text = "";
+            changedelete.text = "▎";
           };
         };
-
-        scope.enabled = true;
-        scroll.enabled = true;
-        input.enabled = true;
-
-        words = {
-          enabled = true;
-          debounce = 200;
-        };
-
-        terminal.enabled = true;
-        lazygit.enabled = true;
-        gitbrowse.enabled = true;
-        zen.enabled = true;
-        scratch.enabled = true;
       };
-    };
 
-    # ── Gitsigns ─────────────────────────────────────────────────────────────
-    plugins.gitsigns = {
-      enable = true;
-      settings = {
-        current_line_blame = false;
-        signs = {
-          add.text = "▎";
-          change.text = "▎";
-          delete.text = "";
-          topdelete.text = "";
-          changedelete.text = "▎";
-          untracked.text = "▎";
-        };
-        signs_staged_enable = true;
-        signs_staged = {
-          add.text = "▎";
-          change.text = "▎";
-          delete.text = "";
-          topdelete.text = "";
-          changedelete.text = "▎";
-        };
+      # ── Todo-comments ──────────────────────────────────────────────────────
+      todo-comments = {
+        enable = true;
+        settings.signs = true;
       };
-    };
 
-    # ── Todo-comments ─────────────────────────────────────────────────────────
-    plugins.todo-comments = {
-      enable = true;
-      settings.signs = true;
-    };
-
-    # ── Autopairs ────────────────────────────────────────────────────────────
-    plugins.nvim-autopairs = {
-      enable = true;
-      settings.check_ts = true;
-    };
-
-    # ── Completion ───────────────────────────────────────────────────────────
-    plugins.cmp = {
-      enable = true;
-      settings = {
-        completion.completeopt = "menu,menuone,noinsert";
-        window = {
-          completion.border = "rounded";
-          documentation.border = "rounded";
-        };
-        mapping = {
-          "<C-n>" = "cmp.mapping.select_next_item()";
-          "<C-p>" = "cmp.mapping.select_prev_item()";
-          "<C-b>" = "cmp.mapping.scroll_docs(-4)";
-          "<C-f>" = "cmp.mapping.scroll_docs(4)";
-          "<C-Space>" = "cmp.mapping.complete()";
-          "<C-e>" = "cmp.mapping.abort()";
-          "<CR>" = "cmp.mapping.confirm({ select = true })";
-        };
-        sources = [
-          { name = "nvim_lsp"; }
-          { name = "luasnip"; }
-          { name = "path"; }
-          { name = "buffer"; }
-        ];
+      # ── Autopairs ──────────────────────────────────────────────────────────
+      nvim-autopairs = {
+        enable = true;
+        settings.check_ts = true;
       };
-    };
 
-    plugins.cmp-nvim-lsp.enable = true;
-    plugins.cmp-buffer.enable = true;
-    plugins.cmp-path.enable = true;
-    plugins.cmp_luasnip.enable = true;
-
-    # ── Snippets ─────────────────────────────────────────────────────────────
-    plugins.luasnip = {
-      enable = true;
-      fromVscode = [ { } ];
-    };
-
-    plugins.friendly-snippets.enable = true;
-
-    # ── Conform (formatação) ──────────────────────────────────────────────────
-    plugins.conform-nvim = {
-      enable = true;
-      settings = {
-        formatters_by_ft = {
-          lua = [ "stylua" ];
-          nix = [ "nixfmt" ];
-          javascript = [ "prettier" ];
-          typescript = [ "prettier" ];
-          json = [ "prettier" ];
-          yaml = [ "prettier" ];
-          markdown = [ "prettier" ];
-          html = [ "prettier" ];
-          css = [ "prettier" ];
-          sh = [ "shfmt" ];
-        };
-        formatters = {
-          stylua.command = "${pkgs.stylua}/bin/stylua";
-          nixfmt.command = "${pkgs.nixfmt}/bin/nixfmt";
-          prettier.command = "${pkgs.prettier}/bin/prettier";
-          shfmt.command = "${pkgs.shfmt}/bin/shfmt";
+      # ── Completion ─────────────────────────────────────────────────────────
+      cmp = {
+        enable = true;
+        settings = {
+          completion.completeopt = "menu,menuone,noinsert";
+          window = {
+            completion.border = "rounded";
+            documentation.border = "rounded";
+          };
+          mapping = {
+            "<C-n>" = "cmp.mapping.select_next_item()";
+            "<C-p>" = "cmp.mapping.select_prev_item()";
+            "<C-b>" = "cmp.mapping.scroll_docs(-4)";
+            "<C-f>" = "cmp.mapping.scroll_docs(4)";
+            "<C-Space>" = "cmp.mapping.complete()";
+            "<C-e>" = "cmp.mapping.abort()";
+            "<CR>" = "cmp.mapping.confirm({ select = true })";
+          };
+          sources = [
+            { name = "nvim_lsp"; }
+            { name = "luasnip"; }
+            { name = "path"; }
+            { name = "buffer"; }
+          ];
         };
       };
-    };
 
-    # ── LSP ──────────────────────────────────────────────────────────────────
-    plugins.lsp = {
-      enable = true;
-      servers = {
-        nixd = {
-          enable = true;
-          settings.nixd = {
-            nixpkgs.expr = ''import (builtins.getFlake "/etc/nixos").inputs.nixpkgs { }'';
-            formatting.command = [
+      cmp-nvim-lsp.enable = true;
+      cmp-buffer.enable = true;
+      cmp-path.enable = true;
+      cmp_luasnip.enable = true;
+
+      # ── Snippets ───────────────────────────────────────────────────────────
+      luasnip = {
+        enable = true;
+        fromVscode = [ { } ];
+      };
+
+      friendly-snippets.enable = true;
+
+      # ── Conform (formatação) ────────────────────────────────────────────────
+      conform-nvim = {
+        enable = true;
+        settings = {
+          formatters_by_ft = {
+            lua = [ "stylua" ];
+            nix = [ "nixfmt" ];
+            javascript = [ "prettier" ];
+            typescript = [ "prettier" ];
+            json = [ "prettier" ];
+            yaml = [ "prettier" ];
+            markdown = [ "prettier" ];
+            html = [ "prettier" ];
+            css = [ "prettier" ];
+            sh = [ "shfmt" ];
+          };
+          formatters = {
+            stylua.command = "${pkgs.stylua}/bin/stylua";
+            nixfmt.command = "${pkgs.nixfmt}/bin/nixfmt";
+            prettier.command = "${pkgs.prettier}/bin/prettier";
+            shfmt.command = "${pkgs.shfmt}/bin/shfmt";
+          };
+        };
+      };
+
+      # ── LSP ────────────────────────────────────────────────────────────────
+      lsp = {
+        enable = true;
+        servers = {
+          nixd = {
+            enable = true;
+            settings.nixd = {
+              nixpkgs.expr = ''import (builtins.getFlake "/etc/nixos").inputs.nixpkgs { }'';
+              formatting.command = [
+                "nixfmt"
+                "--stdin"
+              ];
+              options = {
+                nixos.expr = ''(builtins.getFlake "/etc/nixos").nixosConfigurations.barbudus.options'';
+                home_manager.expr = ''(builtins.getFlake "/etc/nixos").nixosConfigurations.barbudus.options.home-manager.users.abutre'';
+              };
+            };
+          };
+
+          nil_ls = {
+            enable = true;
+            settings.nil.formatting.command = [
               "nixfmt"
               "--stdin"
             ];
-            options = {
-              nixos.expr = ''(builtins.getFlake "/etc/nixos").nixosConfigurations.barbudus.options'';
-              home_manager.expr = ''(builtins.getFlake "/etc/nixos").nixosConfigurations.barbudus.options.home-manager.users.abutre'';
-            };
           };
-        };
 
-        nil_ls = {
-          enable = true;
-          settings.nil.formatting.command = [
-            "nixfmt"
-            "--stdin"
-          ];
-        };
-
-        texlab = {
-          enable = true;
-          settings.texlab = {
-            build = {
-              executable = "latexmk";
-              args = [
-                "-pdf"
-                "-interaction=nonstopmode"
-                "-synctex=1"
-                "%f"
-              ];
-              onSave = true;
+          texlab = {
+            enable = true;
+            settings.texlab = {
+              build = {
+                executable = "latexmk";
+                args = [
+                  "-pdf"
+                  "-interaction=nonstopmode"
+                  "-synctex=1"
+                  "%f"
+                ];
+                onSave = true;
+              };
+              forwardSearch = {
+                executable = "zathura";
+                args = [
+                  "--synctex-forward"
+                  "%l:1:%f"
+                  "%p"
+                ];
+              };
+              chktex.onOpenAndSave = true;
             };
-            forwardSearch = {
-              executable = "zathura";
-              args = [
-                "--synctex-forward"
-                "%l:1:%f"
-                "%p"
-              ];
-            };
-            chktex.onOpenAndSave = true;
           };
         };
       };
+
+      # ── Trouble ────────────────────────────────────────────────────────────
+      trouble.enable = true;
+
+      # ── LazyDev (Lua LSP) ──────────────────────────────────────────────────
+      lazydev.enable = true;
     };
 
     # gregorio-lsp: servidor custom não suportado pelo nixvim, configurado via extraConfigLua
@@ -1794,12 +1802,6 @@
 
       require("gregorio").setup()
     '';
-
-    # ── Trouble ──────────────────────────────────────────────────────────────
-    plugins.trouble.enable = true;
-
-    # ── LazyDev (Lua LSP) ────────────────────────────────────────────────────
-    plugins.lazydev.enable = true;
 
     # ── Plugins extras (sem módulo nixvim nativo) ─────────────────────────────
     extraPlugins = [

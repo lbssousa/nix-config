@@ -4,15 +4,14 @@ let
   users = config.dendritic.users;
 
   # Módulo HM por usuário: common.nix + home.nix específico (se existir)
-  mkUserHome =
-    username:
-    {
-      imports =
-        [ ../../home/common.nix ]
-        ++ lib.optional
-          (lib.pathExists (../../home/users + "/${username}/home.nix"))
-          (../../home/users + "/${username}/home.nix");
-    };
+  mkUserHome = username: {
+    imports = [
+      ../../home/common.nix
+    ]
+    ++ lib.optional (lib.pathExists (../../home/users + "/${username}/home.nix")) (
+      ../../home/users + "/${username}/home.nix"
+    );
+  };
 in
 {
   dendritic.nixos.sharedModules = [
@@ -28,7 +27,7 @@ in
         extraSpecialArgs = {
           inherit inputs;
           # flake: saídas do flake (ex.: packages.helix usado em modules/home/apps/editors/helix/)
-          flake = config.flake;
+          inherit (config) flake;
         };
         sharedModules = [
           inputs.nixvim.homeModules.nixvim

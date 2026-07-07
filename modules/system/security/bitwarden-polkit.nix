@@ -1,4 +1,4 @@
-{ ... }:
+_:
 
 {
   # Arquivo de ação Polkit necessário para o desbloqueio biométrico do Bitwarden.

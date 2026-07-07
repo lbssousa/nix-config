@@ -21,19 +21,31 @@ _:
   preservation.preserveAt."/persist" = {
     directories = [
       # Symlinks: aplicações lêem via stat() normal e seguem symlinks sem restrições
-      { directory = "/etc/nixos"; how = "symlink"; } # Configuração do NixOS
-      { directory = "/etc/NetworkManager/system-connections"; how = "symlink"; } # Conexões de rede salvas
-      { directory = "/var/lib/nixos"; how = "symlink"; } # Estado interno do NixOS
+      {
+        directory = "/etc/nixos";
+        how = "symlink";
+      } # Configuração do NixOS
+      {
+        directory = "/etc/NetworkManager/system-connections";
+        how = "symlink";
+      } # Conexões de rede salvas
+      {
+        directory = "/var/lib/nixos";
+        how = "symlink";
+      } # Estado interno do NixOS
       # Bind-mounts: aplicações usam lstat() ou têm restrições de segurança
       "/var/lib/bluetooth" # Bind-mount obrigatório: StateDirectory= do bluetoothd falha com symlink no systemd 256+
-      "/var/lib/fprint"    # Idem: fprintd usa StateDirectory=fprint com namespace isolation
+      "/var/lib/fprint" # Idem: fprintd usa StateDirectory=fprint com namespace isolation
       "/var/lib/systemd" # Estado do systemd — sensível ao próprio diretório
       "/var/db/sudo" # Timestamps do sudo — sudo usa lstat() por segurança
     ];
 
     files = [
       # inInitrd: machine-id é lido pelo systemd-journald antes de qualquer mount regular
-      { file = "/etc/machine-id"; inInitrd = true; } # ID único da máquina
+      {
+        file = "/etc/machine-id";
+        inInitrd = true;
+      } # ID único da máquina
       # NOTA: /etc/shadow NÃO é gerenciado aqui.
       # O módulo de usuários (users.nix) define um activation script 'restoreShadow'
       # com deps = ["users"] que, após o script de ativação 'users' do NixOS
@@ -52,7 +64,10 @@ _:
   systemd.services."systemd-machine-id-commit" = {
     overrideStrategy = "asDropin";
     unitConfig = {
-      ConditionPathIsMountPoint = [ "" "!/etc/machine-id" ];
+      ConditionPathIsMountPoint = [
+        ""
+        "!/etc/machine-id"
+      ];
     };
   };
 }
