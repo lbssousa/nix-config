@@ -2,10 +2,10 @@
 # setup-secureboot.sh — Configurar Secure Boot e assinar módulos do kernel (NVIDIA)
 #
 # Este script realiza as etapas pós-instalação necessárias para o Secure Boot
-# funcionar com o lanzaboote:
+# funcionar com o Limine:
 #
 #   1. Verificar o estado atual do Secure Boot e do sbctl
-#   2. Verificar banco de chaves PKI (sbctl/lanzaboote)
+#   2. Verificar banco de chaves PKI (sbctl)
 #   3. Assinar todos os binários EFI ANTES do registro no firmware
 #   4. Verificar que todos os binários estão assinados (pré-condição para enrollment)
 #   5. Registrar as chaves PKI no firmware UEFI (sbctl enroll-keys)
@@ -74,13 +74,19 @@ verify_signed_efi_binaries() {
 extract_unsigned_efi_paths() {
   local _verify_output="$1"
 
-  # Exclui TODOS os artefatos em /boot/EFI/nixos/ do conjunto "precisa ser assinado".
-  # O Lanzaboote gerencia esses arquivos internamente:
-  #   • kernel-*.efi: o hash do kernel *sem assinatura* é embutido no UKI (/boot/EFI/Linux/);
-  #     assinar o kernel com sbctl altera o binário e quebra a verificação do Lanzaboote
-  #     com erro "Kernel hash does not match!" no boot.
-  #   • initrd-*.efi: não são imagens PE/COFF, não podem ser assinadas pelo sbctl.
-  # Apenas os UKIs (/boot/EFI/Linux/*.efi) e os bootloaders precisam de assinatura manual.
+  # Exclui do conjunto "precisa ser assinado" os artefatos que o Limine NÃO
+  # verifica via assinatura PE/Authenticode:
+  #   • /boot/EFI/nixos/kernel-*.efi e initrd-*.efi: artefatos genéricos do
+  #     bootspec do NixOS, não usados pelo Limine para bootar (o firmware
+  #     nunca os carrega diretamente).
+  #   • /boot/limine/kernels/*: o kernel/initrd que o Limine de fato usa. A
+  #     integridade deles é garantida por checksum BLAKE2B embutido no
+  #     limine.conf (boot.loader.limine.validateChecksums), cujo hash por sua
+  #     vez está embutido no binário assinado do Limine (enroll-config) — não
+  #     por assinatura individual de cada arquivo.
+  # O único binário que PRECISA estar assinado para o boot funcionar é o
+  # próprio bootloader (/boot/EFI/limine/BOOTX64.EFI), e o instalador do
+  # Limine já o assina automaticamente a cada nixos-rebuild switch/boot.
   echo "$_verify_output" \
     | grep -E 'not signed' \
     | grep -Eo '/[^[:space:]]+\.efi' \
@@ -98,12 +104,13 @@ sign_explicit_efi_path() {
   fi
 
   # Nenhum arquivo em /boot/EFI/nixos/ deve ser assinado pelo sbctl:
-  #   • kernel-*.efi: assinar modifica o binário e quebra o hash embutido nos UKIs
-  #     pelo Lanzaboote → erro "Kernel hash does not match!" no boot.
+  #   • kernel-*.efi: artefato genérico do bootspec do NixOS, não carregado
+  #     diretamente pelo firmware sob o Limine.
   #   • initrd-*.efi: não são imagens PE/COFF, o sbctl não consegue assiná-las.
-  # Os UKIs completos ficam em /boot/EFI/Linux/ e já são assinados pelo Lanzaboote.
+  # O bootloader (/boot/EFI/limine/BOOTX64.EFI) já é assinado automaticamente
+  # pelo instalador do Limine a cada nixos-rebuild switch/boot.
   if [[ "$_path" =~ ^/boot/EFI/nixos/ ]]; then
-    warn "Ignorando artefato lanzaboote interno (não deve ser assinado por sbctl): $_path"
+    warn "Ignorando artefato de bootspec não usado pelo Limine (não deve ser assinado por sbctl): $_path"
     return 3
   fi
 
@@ -171,15 +178,15 @@ try_fix_unsigned_efi_binaries() {
 }
 
 # NOTA: A função sign_nixos_efi_binaries_explicitly foi removida.
-# /boot/EFI/nixos/ contém artefatos internos do Lanzaboote que NÃO devem ser
+# /boot/EFI/nixos/ contém artefatos genéricos do bootspec do NixOS que o
+# Limine NÃO usa para bootar (kernel/initrd reais ficam em /boot/limine/kernels/,
+# verificados por checksum, não por assinatura) e que portanto NÃO devem ser
 # assinados manualmente pelo sbctl:
-#   • kernel-*.efi: o Lanzaboote embute o hash do kernel original (sem assinatura)
-#     nos UKIs. Assinar o kernel com sbctl altera o binário, fazendo o hash não
-#     bater no boot → "Kernel hash does not match!".
+#   • kernel-*.efi: não carregado pelo firmware sob o Limine.
 #   • initrd-*.efi: não são PE/COFF, impossível assinar com sbctl.
-# Os UKIs prontos ficam em /boot/EFI/Linux/ e já vêm assinados pelo Lanzaboote
-# durante o nixos-rebuild. Somente bootloaders extras podem precisar de assinatura
-# manual via 'sbctl sign-all'.
+# O bootloader (/boot/EFI/limine/BOOTX64.EFI) já vem assinado automaticamente
+# pelo instalador do Limine durante o nixos-rebuild. Somente bootloaders
+# extras (ex: fwupd-efi) podem precisar de assinatura manual via 'sbctl sign-all'.
 
 unlock_efivarfs_immutables() {
   local _efivarfs=/sys/firmware/efi/efivars
@@ -274,22 +281,27 @@ Passos para configurar o Secure Boot:
   4. Verifique se tudo está correto:
        run0 bash scripts/setup-secureboot.sh --verify-only
 
-NOTA IMPORTANTE — Lanzaboote vs. MOK/shim:
-  Esta configuração usa lanzaboote, que NÃO utiliza shim nem MOK.
+NOTA IMPORTANTE — Limine vs. MOK/shim:
+  Esta configuração usa Limine, que NÃO utiliza shim nem MOK.
   • Não haverá tela azul do MOKmanager durante o boot
   • Não será solicitada nenhuma senha de MOK
-  • A ausência do MOK é ESPERADA e CORRETA com lanzaboote
-  • O lanzaboote assina os binários EFI (kernel + initrd) diretamente com
-    chaves PKI próprias (PK/KEK/db) registradas no firmware UEFI
-  • As chaves ficam em /persist/etc/secureboot (configurado via pkiBundle)
-  • A cada nixos-rebuild switch, o lanzaboote reassina os binários
+  • A ausência do MOK é ESPERADA e CORRETA com Limine
+  • O firmware verifica apenas a assinatura PE do binário do Limine
+    (chaves PKI PK/KEK/db registradas no firmware UEFI via sbctl)
+  • A integridade do kernel/initrd é garantida por checksum BLAKE2B
+    embutido no limine.conf, cujo hash está embutido no binário assinado
+    (enroll-config) — não por assinatura individual de cada arquivo
+  • A cada nixos-rebuild switch/boot, o instalador do Limine reassina o
+    binário e reenrola o checksum do config atualizado
 
 Notas:
   • As chaves PKI são criadas automaticamente durante a instalação (install.sh)
-    e ficam em /persist/etc/secureboot (configurado via pkiBundle no lanzaboote)
-  • O lanzaboote assina automaticamente o kernel e o initrd a cada nixos-rebuild
-  • Os módulos NVIDIA ficam no initrd e são assinados junto com ele
+    e ficam em /persist/etc/secureboot (symlink de /var/lib/sbctl, ver
+    systemd.tmpfiles.rules no host)
+  • O Limine assina automaticamente o próprio binário a cada nixos-rebuild
   • Use sbctl verify para verificar quais binários não estão assinados
+    (kernel/initrd em /boot/limine/kernels/ aparecem como "not signed" por
+    design — são verificados por checksum, não por assinatura)
 EOF
       exit 0 ;;
     *) die "Opção desconhecida: $1. Use --help para ver as opções disponíveis." ;;
@@ -307,7 +319,7 @@ fi
 
 echo
 echo -e "${BOLD}╔══════════════════════════════════════════════════════════════╗${RESET}"
-echo -e "${BOLD}║          Configuração do Secure Boot (Lanzaboote)            ║${RESET}"
+echo -e "${BOLD}║             Configuração do Secure Boot (Limine)             ║${RESET}"
 echo -e "${BOLD}╚══════════════════════════════════════════════════════════════╝${RESET}"
 echo
 
@@ -316,8 +328,8 @@ echo
 # ---------------------------------------------------------------------------
 
 if ! command -v sbctl >/dev/null 2>&1; then
-  die "sbctl não encontrado. Certifique-se de que o lanzaboote está configurado
-  e que o sistema foi reconstruído com 'nixos-rebuild switch'."
+  die "sbctl não encontrado. Certifique-se de que boot.loader.limine.secureBoot.enable
+  está ativo e que o sistema foi reconstruído com 'nixos-rebuild switch'."
 fi
 
 # ---------------------------------------------------------------------------
@@ -333,7 +345,7 @@ echo
 # ---------------------------------------------------------------------------
 
 # Verificar se o banco de chaves sbctl está acessível.
-# A configuração do host cria um symlink /var/lib/sbctl → pkiBundle (ex: /persist/etc/secureboot)
+# A configuração do host cria um symlink /var/lib/sbctl → /persist/etc/secureboot
 # via systemd-tmpfiles (regra "L+ /var/lib/sbctl"). Se as chaves não forem encontradas,
 # o sbctl não consegue assinar binários nem registrar chaves no firmware.
 # Usa verificação via sistema de arquivos para robustez (independente de locale/encoding).
@@ -384,7 +396,7 @@ if [[ "$OPT_ENROLL_ONLY" != "true" && "$OPT_VERIFY_ONLY" != "true" ]]; then
         error "Há binários EFI sem assinatura válida após tentativa de correção automática."
         warn "O Secure Boot falhará se o firmware for configurado agora."
         warn "Execute os seguintes comandos para corrigir e tente novamente:"
-        warn "  1. run0 nixos-rebuild switch   (regenera e assina os stubs lanzaboote)"
+        warn "  1. run0 nixos-rebuild switch   (regenera e assina o binário do Limine)"
         warn "  2. run0 sbctl sign-all         (assina binários adicionais)"
         warn "  3. run0 bash scripts/setup-secureboot.sh   (execute este script novamente)"
         die "Assinaturas incompletas. Corrija antes de registrar as chaves no firmware."
@@ -393,7 +405,7 @@ if [[ "$OPT_ENROLL_ONLY" != "true" && "$OPT_VERIFY_ONLY" != "true" ]]; then
       error "Há binários EFI sem assinatura válida."
       warn "O Secure Boot falhará se o firmware for configurado agora."
       warn "Execute os seguintes comandos para corrigir e tente novamente:"
-      warn "  1. run0 nixos-rebuild switch   (regenera e assina os stubs lanzaboote)"
+      warn "  1. run0 nixos-rebuild switch   (regenera e assina o binário do Limine)"
       warn "  2. run0 sbctl sign-all         (assina binários adicionais)"
       warn "  3. run0 bash scripts/setup-secureboot.sh   (execute este script novamente)"
       die "Assinaturas incompletas. Corrija antes de registrar as chaves no firmware."
@@ -412,8 +424,8 @@ if [[ "$OPT_SIGN_ONLY" != "true" && "$OPT_VERIFY_ONLY" != "true" ]]; then
   echo
 
   # Verificar se o firmware está em Setup Mode (pré-requisito para enroll-keys)
-  # Com lanzaboote, NÃO existe senha de MOK nem tela do MOKmanager.
-  # O lanzaboote usa suas próprias chaves PKI (PK/KEK/db) — não usa shim/MOK.
+  # Com Limine, NÃO existe senha de MOK nem tela do MOKmanager.
+  # O Limine usa suas próprias chaves PKI (PK/KEK/db) — não usa shim/MOK.
   # Usa verificação via EFI efivars para robustez (independente de locale/encoding do sbctl).
   _in_setup_mode=false
   # GUID da variável EFI global (EFI_GLOBAL_VARIABLE) — padrão UEFI Spec Apêndice B
@@ -445,9 +457,9 @@ if [[ "$OPT_SIGN_ONLY" != "true" && "$OPT_VERIFY_ONLY" != "true" ]]; then
     warn "  4. Salve as configurações e reinicie o sistema"
     warn "  5. Execute este script novamente"
     echo
-    warn "NOTA IMPORTANTE: Esta configuração usa lanzaboote — NÃO usa shim/MOK."
+    warn "NOTA IMPORTANTE: Esta configuração usa Limine — NÃO usa shim/MOK."
     warn "Não haverá tela do MOKmanager nem solicitação de senha de MOK."
-    warn "O lanzaboote assina os binários EFI diretamente com chaves PKI próprias."
+    warn "O Limine assina o próprio binário diretamente com chaves PKI próprias."
     echo
     die "Firmware não está em Setup Mode. Corrija e execute o script novamente."
   fi

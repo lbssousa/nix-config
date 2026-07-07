@@ -18,7 +18,7 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 - ✅ **Ghostty**: Terminal moderno via Nix, com perfil sem decorações para PaperWM/quake-terminal
 - ✅ **Multi-host**: Configurações específicas para cada máquina
 - ✅ **Modular**: Módulos compartilhados para fácil manutenção
-- ✅ **Secure Boot**: Suporte via lanzaboote (barbudus)
+- ✅ **Secure Boot**: Suporte via Limine (barbudus)
 - ✅ **YubiKey U2F**: sudo, run0 e pkexec autenticados por chave de hardware; senha como fallback quando a YubiKey estiver ausente
 - ✅ **git-crypt**: Criptografia seletiva de arquivos sensíveis no repositório
 
@@ -95,7 +95,7 @@ Configuração pessoal do NixOS baseada em Flakes, com Btrfs, particionamento de
 │       ├── audio/
 │       │   └── audio.nix     # PipeWire
 │       ├── boot/
-│       │   └── boot.nix      # systemd-boot/lanzaboote + Plymouth (flicker-free)
+│       │   └── boot.nix      # systemd-boot/Limine + Plymouth (flicker-free)
 │       ├── containers/
 │       │   └── containers.nix # Podman rootless + Distrobox
 │       ├── core/
@@ -505,7 +505,7 @@ sudo bash scripts/enroll-tpm2.sh
 - [Preservation](https://github.com/nix-community/preservation)
 - [Home Manager](https://github.com/nix-community/home-manager)
 - [NixOS Hardware](https://github.com/NixOS/nixos-hardware)
-- [Lanzaboote (Secure Boot)](https://github.com/nix-community/lanzaboote)
+- [Limine Bootloader](https://github.com/limine-bootloader/limine)
 - [nix-flatpak](https://github.com/gmodena/nix-flatpak)
 - [Ghostty](https://ghostty.org/)
 - [Erase Your Darlings (sistema efêmero)](https://grahamc.com/blog/erase-your-darlings/)

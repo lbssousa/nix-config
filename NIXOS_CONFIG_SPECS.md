@@ -109,7 +109,7 @@ A convenção `@` é compatível com ferramentas como Timeshift e amplamente ado
 - **Storage**: NVMe SSD
 - **Características especiais**:
   - Drivers NVIDIA proprietários (580.x) com PRIME offload
-  - Secure Boot via lanzaboote (assina módulos NVIDIA)
+  - Secure Boot via Limine (`boot.loader.limine.secureBoot`)
   - Sensor de impressão digital Goodix (libfprint fork do infinytum)
   - Scripts goodix-fp-dump para diagnóstico
   - Gestão de energia: power-profiles-daemon + thermald
@@ -139,7 +139,7 @@ A convenção `@` é compatível com ferramentas como Timeshift e amplamente ado
 
 ### Boot
 
-- Gerenciador de boot: **systemd-boot** (padrão) / **lanzaboote** (barbudus, Secure Boot)
+- Gerenciador de boot: **Limine** (ambos os hosts; barbudus com Secure Boot)
 - Splash screen: Plymouth
 - Configuração flicker-free: `quiet splash` + KMS no initrd
 - Limite de configurações no boot menu: 10
@@ -280,9 +280,10 @@ flatpak install flathub org.kde.konsole    # KDE: terminal
 
 ### Secure Boot (barbudus)
 
-- Implementado via lanzaboote
-- Chaves PKI armazenadas em `/persist/etc/secureboot`
-- Módulos NVIDIA assinados para compatibilidade
+- Implementado via Limine (`boot.loader.limine.secureBoot`), sem shim/MOK
+- Chaves PKI armazenadas em `/persist/etc/secureboot` (symlink de `/var/lib/sbctl`)
+- Firmware verifica a assinatura do binário do Limine; kernel/initrd são
+  verificados por checksum BLAKE2B embutido no `limine.conf` enrolled
 
 ### SSH
 
@@ -299,5 +300,5 @@ flatpak install flathub org.kde.konsole    # KDE: terminal
 - [Disko](https://github.com/nix-community/disko)
 - [Btrfs on NixOS](https://nixos.wiki/wiki/Btrfs)
 - [Arch Wiki — Btrfs](https://wiki.archlinux.org/title/Btrfs)
-- [Lanzaboote](https://github.com/nix-community/lanzaboote)
+- [Limine Bootloader](https://github.com/limine-bootloader/limine)
 - [Repositório antigo](https://github.com/lbssousa/nixos-config-old)

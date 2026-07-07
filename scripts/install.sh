@@ -9,7 +9,7 @@
 #   4.  Cria arquivos de usuário a partir do skeleton
 #   5.  Adiciona os arquivos de usuário ao índice do git (git add)
 #   6.  Atualiza configuration.nix com os imports dos usuários
-#   6a. Cria chaves Secure Boot (apenas hosts com Lanzaboote)
+#   6a. Cria chaves Secure Boot (apenas hosts com secureBoot.enable no Limine)
 #   6b. Copia a chave age de sistema do sops-nix para /persist
 #   7.  Instala o NixOS
 #   8.  Pergunta por cada usuário se deve definir senha agora ou no primeiro login
@@ -112,9 +112,9 @@ fi
 # ---------------------------------------------------------------------------
 # Constantes de cache binário
 # ---------------------------------------------------------------------------
-# O cache da nix-community disponibiliza artefatos pré-compilados do lanzaboote
-# (e outros pacotes), evitando que o nixos-install precise compilar dependências
-# Rust do zero e fazer downloads do crates.io (que podem falhar com erro 500).
+# O cache da nix-community disponibiliza artefatos pré-compilados para diversos
+# pacotes, evitando que o nixos-install precise compilar do zero e fazer
+# downloads de dependências que podem falhar com erro 500.
 NIX_COMMUNITY_SUBSTITUTER="https://nix-community.cachix.org"
 NIX_COMMUNITY_KEY="nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCUSeBs="
 
@@ -241,7 +241,7 @@ Este script automatiza os passos descritos em INSTALLATION.md:
   4.  Cria arquivos de usuário a partir do skeleton
   5.  Adiciona os arquivos de usuário ao índice do git (git add)
   6.  Atualiza configuration.nix com os imports dos usuários
-  6a. Cria chaves Secure Boot (apenas hosts com Lanzaboote)
+  6a. Cria chaves Secure Boot (apenas hosts com secureBoot.enable no Limine)
   6b. Copia chave age de sistema do sops-nix para /persist
   7.  Instala o NixOS
   8.  Define senhas via passwd --root
@@ -844,25 +844,28 @@ git add "$CFG_FILE" "$DISKO_FILE" "$HW_FILE"
 success "Arquivos de configuração registrados no índice do git."
 
 # ---------------------------------------------------------------------------
-# 6a. Criar chaves Secure Boot (apenas para hosts com Lanzaboote)
+# 6a. Criar chaves Secure Boot (apenas para hosts com Secure Boot via Limine)
 # ---------------------------------------------------------------------------
 
 echo
-info "==> Passo 6a: Verificar suporte a Secure Boot (Lanzaboote)"
+info "==> Passo 6a: Verificar suporte a Secure Boot (Limine)"
 
-if grep -q 'boot\.lanzaboote' "$CFG_FILE" 2>/dev/null; then
-  # Extrair o caminho do pkiBundle da configuração (ou usar padrão)
-  _PKI_BUNDLE=$(sed -n 's/.*pkiBundle = "\([^"]*\)".*/\1/p' "$CFG_FILE" | head -1)
-  _PKI_BUNDLE="${_PKI_BUNDLE:-/persist/etc/secureboot}"
-  _SECUREBOOT_DIR="/mnt${_PKI_BUNDLE}"
+if grep -q 'secureBoot\.enable = true' "$CFG_FILE" 2>/dev/null; then
+  # O módulo boot.loader.limine não tem uma opção de pkiBundle: o sbctl sempre
+  # procura chaves em /var/lib/sbctl. Cada host com Secure Boot cria um symlink
+  # /var/lib/sbctl -> /persist/etc/secureboot via systemd.tmpfiles.rules (ver
+  # hosts/<host>/configuration.nix) para sobreviver à raiz tmpfs. Esse caminho
+  # precisa existir ANTES do primeiro boot para o instalador do Limine assinar
+  # o bootloader durante o nixos-install.
+  _SECUREBOOT_DIR="/mnt/persist/etc/secureboot"
 
-  info "Host '$HOST' usa Lanzaboote (Secure Boot). pkiBundle: $_PKI_BUNDLE"
+  info "Host '$HOST' usa Secure Boot via Limine. Chaves em: /persist/etc/secureboot"
 
   if [ -f "${_SECUREBOOT_DIR}/GUID" ]; then
     info "Chaves Secure Boot já existem em ${_SECUREBOOT_DIR}."
   else
     info "Criando chaves PKI para Secure Boot em ${_SECUREBOOT_DIR}..."
-    info "(Necessário para que o Lanzaboote instale o bootloader durante nixos-install)"
+    info "(Necessário para que o Limine assine o bootloader durante nixos-install)"
     # Por que --disable-landlock é necessário:
     #   O sbctl ativa o sandbox Landlock (LSM do Linux) antes de processar as
     #   flags --export e --database-path. O Landlock é configurado com base no
@@ -874,7 +877,8 @@ if grep -q 'boot\.lanzaboote' "$CFG_FILE" 2>/dev/null; then
     # Por que --export e --database-path separados:
     #   --database-path define apenas o caminho do ARQUIVO GUID (não o diretório).
     #   --export define o diretório de chaves (keydir).
-    #   Juntos criam a estrutura esperada pelo Lanzaboote em pkiBundle:
+    #   Juntos criam a estrutura que o sbctl espera em /var/lib/sbctl (via o
+    #   symlink criado pelo systemd.tmpfiles.rules do host):
     #     ${_SECUREBOOT_DIR}/GUID
     #     ${_SECUREBOOT_DIR}/keys/PK/{PK.key,PK.pem}
     #     ${_SECUREBOOT_DIR}/keys/KEK/{KEK.key,KEK.pem}
@@ -891,7 +895,7 @@ if grep -q 'boot\.lanzaboote' "$CFG_FILE" 2>/dev/null; then
     warn "Consulte INSTALLATION.md → 'Configuração do Secure Boot' para os próximos passos."
   fi
 else
-  info "Host '$HOST' não usa Lanzaboote. Pulando criação de chaves Secure Boot."
+  info "Host '$HOST' não usa Secure Boot. Pulando criação de chaves."
 fi
 
 # ---------------------------------------------------------------------------
@@ -993,8 +997,8 @@ if [[ "$OPT_NON_INTERACTIVE" == "true" ]] || confirm "Copiar configuração para
 
   info "Executando nixos-install..."
   # Passa os caches binários explicitamente para que o nixos-install os use mesmo
-  # que o nix.conf do live CD não os contenha. Isso evita compilações do zero
-  # (ex: dependências Rust do lanzaboote) e downloads frágeis do crates.io.
+  # que o nix.conf do live CD não os contenha. Isso evita compilações do zero e
+  # downloads frágeis de dependências.
   # --no-root-password: a senha do root é definida exclusivamente no passo 8,
   # onde a cópia para /persist/etc/shadow é garantida. Sem essa flag o
   # nixos-install também pede uma senha de root, mas essa senha nunca chega ao
@@ -1293,7 +1297,7 @@ echo
 echo -e "  Após o primeiro boot:"
 echo -e "    • Os Flatpaks são instalados automaticamente pelo serviço ${CYAN}install-system-flatpaks${RESET}"
 echo -e "      (requer conexão com a internet no primeiro boot)"
-echo -e "    • Configurar Secure Boot com lanzaboote (apenas barbudus)"
+echo -e "    • Configurar Secure Boot com Limine (apenas barbudus)"
 echo -e "      (consulte ${BOLD}INSTALLATION.md${RESET} → 'Configuração do Secure Boot')"
 echo -e "    • Configurar desbloqueio automático LUKS via TPM2"
 echo -e "    • Clonar e desbloquear o nix-keys para cada usuário que usa sops no Home Manager:"

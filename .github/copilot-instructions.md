@@ -29,8 +29,8 @@ Useful local wrappers from `just`:
 - Shared NixOS behavior belongs in `modules/system/**` and is assembled centrally via `dendritic/features/nixos-modules.nix`. `hosts/<host>/configuration.nix` should stay focused on host-specific hardware or overrides.
 - The system is impermanent: `/` is tmpfs and durable state lives under `/persist`. If a change needs to survive reboot, check `modules/system/core/impermanence.nix` and `modules/system/users/users.nix` instead of assuming normal filesystem persistence.
 - Secrets are wired through `sops-nix`. Wi-Fi profiles are generated in `modules/system/network/wifi.nix` from `secrets/*.yaml`, and the age key is expected at `/persist/etc/sops/age/keys.txt`.
-- Secure Boot is host-specific. `barbudus` enables `boot.lanzaboote` with `pkiBundle = "/persist/etc/secureboot"`, and the host config also recreates `/var/lib/sbctl` as a symlink to that persistent location on boot.
-- The install/post-install flow is split: `scripts/install.sh` creates the PKI bundle before `nixos-install` for lanzaboote hosts, while `scripts/setup-secureboot.sh` is the post-boot script that signs remaining EFI binaries, verifies them, and enrolls the keys into firmware.
+- Secure Boot is host-specific. `barbudus` enables `boot.loader.limine.secureBoot`, and the host config recreates `/var/lib/sbctl` as a symlink to `/persist/etc/secureboot` on boot (the Limine module has no `pkiBundle`-style option — sbctl always expects keys at the fixed `/var/lib/sbctl` path).
+- The install/post-install flow is split: `scripts/install.sh` creates the PKI bundle before `nixos-install` for Secure Boot hosts, while `scripts/setup-secureboot.sh` is the post-boot script that signs remaining EFI binaries, verifies them, and enrolls the keys into firmware.
 
 ## Key conventions
 
@@ -43,7 +43,7 @@ Useful local wrappers from `just`:
 - Keep Home Manager customizations separate from system users. System accounts live in `private/users/`; per-user HM overrides live in `private/home/users/<user>/home.nix`.
 - Do not assume `nixos-rebuild` updates Home Manager. System changes and HM changes are applied independently.
 - Flake evaluation only sees files tracked by Git. This is especially important for new `private/users/*` files and host files during installation or first-time setup.
-- `barbudus` is the Secure Boot host. Its setup relies on lanzaboote plus a persistent PKI bundle at `/persist/etc/secureboot`.
+- `barbudus` is the Secure Boot host. Its setup relies on `boot.loader.limine.secureBoot` plus a persistent PKI bundle at `/persist/etc/secureboot`.
 - Keep secrets out of plain Nix values. Follow the pattern in `modules/system/network/wifi.nix`: declare a `sops.secrets.*` entry, then inject `config.sops.placeholder.<name>` into generated config files.
 - Do not change Secure Boot paths casually. The repo assumes `/persist/etc/secureboot` in the host config, install script, and post-install verification flow.
 - Use `run0` instead of `sudo` for all privileged commands (e.g. `run0 nixos-rebuild switch`, `run0 nix build`, `run0 just system ...`). This machine uses systemd's `run0` as the privilege escalation tool.

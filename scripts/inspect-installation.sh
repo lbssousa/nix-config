@@ -229,9 +229,9 @@ else
   warn "/boot/efi não montado (bootloader não inspecionado)"
 fi
 
-# Lanzaboote / systemd-boot
-if [[ -d "$ROOT/boot/efi/EFI/Linux" ]]; then
-  ok "Lanzaboote: imagens de kernel assinadas presentes em /boot/efi/EFI/Linux"
+# Limine / systemd-boot
+if [[ -f "$ROOT/boot/efi/EFI/limine/BOOTX64.EFI" || -f "$ROOT/boot/efi/EFI/BOOT/BOOTX64.EFI" ]]; then
+  ok "Limine: binário do bootloader presente na ESP"
 fi
 
 # Chaves Secure Boot

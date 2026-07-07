@@ -9,7 +9,7 @@ Cada subpasta agrupa módulos por categoria funcional.
 | Pasta | Descrição |
 |-------|-----------|
 | [audio/](audio/) | Servidor de áudio PipeWire com compatibilidade PulseAudio/JACK |
-| [boot/](boot/) | Gerenciador de boot (systemd-boot/lanzaboote) e Plymouth |
+| [boot/](boot/) | Gerenciador de boot (systemd-boot/Limine) e Plymouth |
 | [containers/](containers/) | Podman rootless e Distrobox |
 | [core/](core/) | Configurações base do sistema e impermanência |
 | [desktop/](desktop/) | Ambiente GNOME + Flatpak (experiência tipo Silverblue/Bluefin) |

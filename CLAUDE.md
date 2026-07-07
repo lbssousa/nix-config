@@ -75,7 +75,7 @@ The two central inventories drive all flake outputs:
 2. All modules in `dendritic/nixos.sharedModules` (defined in `dendritic/features/nixos-modules.nix`)
 3. All user account modules from `users/<name>.nix`
 4. Host-specific: `hosts/<host>/hardware-configuration.nix` + `hosts/<host>/configuration.nix`
-5. `hostSpec.extraNixosModules` (e.g., lanzaboote for barbudus)
+5. `hostSpec.extraNixosModules` (per-host extra modules; currently empty for both hosts)
 
 `hosts/<host>/configuration.nix` should only contain host-specific overrides — shared behavior belongs in `modules/system/`.
 
@@ -122,12 +122,12 @@ Managed via `sops-nix`. The age key lives at `/persist/etc/sops/age/keys.txt`. T
 - **Adding a user**: (1) copy `users/skeleton.nix` → `users/<name>.nix`, (2) add to `dendritic/data/users.nix`, (3) `git add` both files, (4) rebuild. The initial password is `"nixos"` and users are forced to change it on first login. User descriptions (full names) come from `nix-secrets`, not from the user files.
 - **Adding a host**: (1) create `hosts/<host>/{configuration,hardware-configuration,disko}.nix`, (2) register in `dendritic/data/hosts.nix`, (3) `git add` all new files.
 - **User accounts use `mkUser.nix`**: `import ./mkUser.nix { inherit pkgs lib; } { username = "..."; uid = NNN; hasSudo = false; }` — always set a fixed `uid` to avoid ownership issues.
-- **Secure Boot**: `barbudus` only. PKI bundle lives at `/persist/etc/secureboot`. Do not change these paths — they are assumed in the host config, install script, and post-install flow.
+- **Secure Boot**: `barbudus` only, via `boot.loader.limine.secureBoot` (no shim/MOK — Limine signs its own EFI binary with sbctl and verifies kernel/initrd via a BLAKE2B checksum embedded in the signed, enrolled `limine.conf`). Keys live at `/persist/etc/secureboot`, symlinked to `/var/lib/sbctl` (the fixed path sbctl expects — the Limine module has no `pkiBundle`-style option). Do not change this path — it's assumed in the host config, install script, and post-install flow.
 - **Shadow persistence**: `/etc/shadow` is NOT managed by preservation directly. `modules/system/users/users.nix` uses an activation script (`restoreShadow`) plus a `persistShadow` systemd path unit to keep passwords durable across reboots despite the tmpfs root.
 
 ## Hosts
 
 | Host | Hardware | Notes |
 |------|----------|-------|
-| `barbudus` | Dell Inspiron 14 5490 — Intel i5-10210U, NVIDIA GeForce MX230 | Secure Boot (lanzaboote), NVIDIA PRIME offload, Goodix fingerprint sensor |
+| `barbudus` | Dell Inspiron 14 5490 — Intel i5-10210U, NVIDIA GeForce MX230 | Secure Boot (Limine), NVIDIA PRIME offload, Goodix fingerprint sensor |
 | `bigodon` | Morefine M6 Mini-PC — Intel N200, Intel UHD Graphics | No discrete GPU, no Secure Boot |

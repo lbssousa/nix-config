@@ -124,7 +124,7 @@ sudo bash scripts/install.sh --host bigodon --disk /dev/sda
 7. Cria arquivos de usuário a partir do skeleton
 8. Adiciona os arquivos de usuário ao índice do git (`git add`)
 9. Atualiza `configuration.nix` com os imports dos usuários
-10. Cria chaves Secure Boot em `/persist/etc/secureboot` (apenas hosts com Lanzaboote)
+10. Cria chaves Secure Boot em `/persist/etc/secureboot` (apenas hosts com Secure Boot via Limine)
 11. Copia a chave age de sistema do `nix-keys` para `/persist/etc/sops/age/keys.txt`
     — permite que o sops-nix descriptografe secrets (Wi-Fi etc.) no primeiro boot
 12. Copia a configuração para `/mnt/etc/nixos` e executa `nixos-install`
@@ -148,8 +148,7 @@ sudo systemctl start sshd
 passwd  # Definir senha temporária para o live environment
 
 # Habilitar Flakes e o cache nix-community temporariamente.
-# O cache evita compilar dependências do zero (ex: Rust do lanzaboote)
-# e falhas de download do crates.io.
+# O cache evita compilar dependências do zero e falhas de download.
 mkdir -p ~/.config/nix
 cat >> ~/.config/nix/nix.conf <<EOF
 experimental-features = nix-command flakes
@@ -329,7 +328,7 @@ config.dendritic.users = [
 
 ### 8. Instalar o NixOS
 
-> **Apenas para `barbudus` (usa Lanzaboote):** crie as chaves Secure Boot _antes_ do `nixos-install`. Sem isso, o instalador falha com `Failed to install bootloader`.
+> **Apenas para `barbudus` (Secure Boot via Limine):** crie as chaves Secure Boot _antes_ do `nixos-install`. Sem isso, o instalador falha com `Failed to install bootloader`.
 >
 > ```bash
 > sudo mkdir -p /mnt/persist/etc/secureboot
@@ -347,8 +346,10 @@ config.dendritic.users = [
 > > para root. Isso causa o erro `sbctl requires root to run: open ... permission denied`.
 > >
 > > **Por quê dois flags de caminho?** `--database-path` define apenas o arquivo GUID;
-> > `--export` define o diretório de chaves. Juntos criam a estrutura completa esperada
-> > pelo Lanzaboote em `pkiBundle = "/persist/etc/secureboot"`:
+> > `--export` define o diretório de chaves. Juntos criam a estrutura completa que o
+> > sbctl espera em `/var/lib/sbctl` (symlink para `/persist/etc/secureboot`, criado
+> > via `systemd.tmpfiles.rules` no host — o módulo `boot.loader.limine` não tem uma
+> > opção de `pkiBundle`, o caminho é sempre fixo):
 > > `GUID`, `keys/PK/`, `keys/KEK/`, `keys/db/`.
 
 ```bash
@@ -357,7 +358,7 @@ sudo cp -r /tmp/nixos-config /mnt/etc/nixos
 
 # Instalar o sistema
 # Os flags --option passam o cache nix-community explicitamente, tornando a
-# instalação resiliente a falhas de download do crates.io (ex: lanzaboote/Rust).
+# instalação resiliente a falhas de download de dependências.
 # --option accept-flake-config true aplica a nixConfig do flake (substituter + chave)
 # simultaneamente, evitando avisos de substitutos sem chave confiável.
 DESKTOP=plasma  # ou gnome
@@ -499,17 +500,22 @@ mais rápido e sem flickering.
 
 ## 🔒 Configuração do Secure Boot (apenas barbudus)
 
-As chaves PKI do Lanzaboote são criadas automaticamente durante a instalação (passo 9 do script ou manualmente antes do `nixos-install`). O que resta fazer após o primeiro boot é **registrar as chaves no firmware UEFI**.
+As chaves PKI são criadas automaticamente durante a instalação (passo 9 do script ou manualmente antes do `nixos-install`). O que resta fazer após o primeiro boot é **registrar as chaves no firmware UEFI**.
 
-### ⚠️ Lanzaboote vs. MOK/shim — diferença importante
+### ⚠️ Limine vs. MOK/shim — diferença importante
 
-Esta configuração usa **lanzaboote**, que **NÃO** utiliza shim nem MOK.
+Esta configuração usa **Limine** (`boot.loader.limine.secureBoot`), que **NÃO** utiliza shim nem MOK.
 
 - **Não haverá** tela azul do MOKmanager durante o boot
 - **Não será solicitada** nenhuma senha de MOK
-- O lanzaboote assina os binários EFI (kernel + initrd) diretamente com chaves PKI
-  próprias (PK/KEK/db) que são registradas no firmware UEFI
-- As chaves ficam em `/persist/etc/secureboot` (configurado via `pkiBundle` no lanzaboote)
+- O firmware verifica apenas a assinatura PE do binário do Limine, feita com chaves
+  PKI próprias (PK/KEK/db) registradas no firmware UEFI
+- A integridade do kernel/initrd é garantida por checksum BLAKE2B embutido no
+  `limine.conf` (cujo hash, por sua vez, está embutido no binário assinado do
+  Limine via `enroll-config`) — não por assinatura individual de cada arquivo
+- As chaves ficam em `/persist/etc/secureboot`, symlinkado para `/var/lib/sbctl`
+  (caminho fixo esperado pelo sbctl; o módulo `boot.loader.limine` não tem uma
+  opção equivalente ao `pkiBundle` do lanzaboote)
 
 A ausência de uma tela de MOK é **esperada e correta** nesta configuração.
 
@@ -805,8 +811,8 @@ pamu2fcfg -u outro-usuario >> /persist/etc/u2f-mappings  # se houver mais de um
 
 Reinicie normalmente após criar o arquivo.
 
-> **barbudus (Secure Boot/lanzaboote)**: editar a linha `options` no menu de boot é
-> bloqueado pela assinatura EFI. Use a Opção B.
+> **barbudus (Secure Boot/Limine)**: o editor do menu de boot é desabilitado
+> quando o Secure Boot está ativo. Use a Opção B.
 
 **Opção B — Live ISO**
 
@@ -834,7 +840,7 @@ run0 id                        # deve exibir uid=0(root)
 - [Disko](https://github.com/nix-community/disko)
 - [Preservation](https://github.com/nix-community/preservation)
 - [Home Manager](https://github.com/nix-community/home-manager)
-- [Lanzaboote (Secure Boot)](https://github.com/nix-community/lanzaboote)
+- [Limine Bootloader](https://github.com/limine-bootloader/limine)
 - [Btrfs on NixOS](https://nixos.wiki/wiki/Btrfs)
 - [Arch Wiki — Btrfs](https://wiki.archlinux.org/title/Btrfs)
 - [Erase Your Darlings (sistema efêmero)](https://grahamc.com/blog/erase-your-darlings/)
