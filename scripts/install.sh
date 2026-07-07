@@ -287,8 +287,8 @@ echo
 # Detect the configuration's root directory (where this script lives)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-PRIVATE_DIR="$CONFIG_DIR/private"
-PRIVATE_USERS_DIR="$PRIVATE_DIR/users"
+USERS_DIR="$CONFIG_DIR/users"
+DENDRITIC_USERS_FILE="$CONFIG_DIR/dendritic/data/users.nix"
 PRIVATE_AGE_KEY_REPO="$(dirname "$CONFIG_DIR")/nix-keys/sops/age/keys.txt"
 
 NIX_KEYS_DIR=""                                          # set/validated in step 0b
@@ -633,9 +633,22 @@ USERS_LOGIN=()
 USERS_FULLNAME=()
 USERS_SUDO=()
 
+# Finds the next free numeric uid by scanning the existing users/*.nix
+# files for "uid = N;" and returning max+1 (or 1000 if none is set yet).
+# Matches the convention used by users/{abutre,surubi,...}.nix.
+_next_free_uid() {
+  local _max
+  _max=$(grep -hoP 'uid\s*=\s*\K[0-9]+' "$USERS_DIR/"*.nix 2>/dev/null | sort -n | tail -1)
+  if [[ -z "$_max" ]]; then
+    echo 1000
+  else
+    echo $((_max + 1))
+  fi
+}
+
 _create_user_file() {
-  local user="$1" full_name="$2" sudo_flag="$3"
-  local user_file="$PRIVATE_USERS_DIR/$user.nix"
+  local user="$1" sudo_flag="$2"
+  local user_file="$USERS_DIR/$user.nix"
 
   if [[ -f "$user_file" ]]; then
     warn "File $user_file already exists."
@@ -645,28 +658,30 @@ _create_user_file() {
     fi
   fi
 
-  cp "$PRIVATE_USERS_DIR/skeleton.nix" "$user_file"
+  local uid
+  uid="$(_next_free_uid)"
+
+  cp "$USERS_DIR/skeleton.nix" "$user_file"
   sed -i \
-    -e "s|users\.users\.skeleton|users.users.$user|g" \
-    -e "s|users\.skeleton\b|users.$user|g" \
-    -e "s|home-manager\.users\.skeleton|home-manager.users.$user|g" \
-    -e "s|Nome Completo do Usuário|$full_name|g" \
+    -e "s|username = \"skeleton\";|username = \"$user\";\n  uid = $uid;|" \
     "$user_file"
 
-  # Remove the wheel (sudo) group if not requested
-  if [[ "$sudo_flag" == "false" ]]; then
-    sed -i '/# Remova "wheel" abaixo se o usuário NÃO deve ter permissão de sudo:/d' "$user_file"
-    sed -i '/"wheel" # sudo/d' "$user_file"
+  # Uncomment hasSudo = true; when sudo access was requested (skeleton.nix
+  # ships it commented out, i.e. non-sudo by default).
+  if [[ "$sudo_flag" == "true" ]]; then
+    sed -i 's|# hasSudo = true;|hasSudo = true;|' "$user_file"
   fi
 
-  success "User file $user_file created (sudo: $sudo_flag)."
+  success "User file $user_file created (uid: $uid, sudo: $sudo_flag)."
 }
 
-# Detect already-existing user files (excluding skeleton.nix)
+# Detect already-existing user files (excluding skeleton.nix and the
+# mkUser.nix helper, which lives in the same directory but isn't a user).
 _EXISTING_USERS=()
-for _f in "$PRIVATE_USERS_DIR/"*.nix; do
+for _f in "$USERS_DIR/"*.nix; do
   _bname="$(basename "$_f" .nix)"
   [[ "$_bname" == "skeleton" ]] && continue
+  [[ "$_bname" == "mkUser" ]] && continue
   [[ "$_bname" == *"-home" ]] && continue
   _EXISTING_USERS+=("$_bname")
 done
@@ -789,8 +804,19 @@ else
 fi
 
 for _i in "${!USERS_LOGIN[@]}"; do
-  _create_user_file "${USERS_LOGIN[$_i]}" "${USERS_FULLNAME[$_i]:-${USERS_LOGIN[$_i]}}" "${USERS_SUDO[$_i]:-true}"
+  _create_user_file "${USERS_LOGIN[$_i]}" "${USERS_SUDO[$_i]:-true}"
 done
+
+# Full names are NOT stored in users/<user>.nix — they're read from the
+# private nix-secrets flake (inputs.nix-secrets.${username}.fullName, see
+# modules/system/users/descriptions.nix) and out of reach of this script.
+if [[ ${#USERS_LOGIN[@]} -gt 0 ]]; then
+  echo
+  info "Remember to add the full name for each new user to nix-secrets:"
+  for _i in "${!USERS_LOGIN[@]}"; do
+    info "  ${USERS_LOGIN[$_i]} → ${USERS_FULLNAME[$_i]:-${USERS_LOGIN[$_i]}}"
+  done
+fi
 
 # ---------------------------------------------------------------------------
 # 5. Add user files to the git index (ESSENTIAL)
@@ -804,44 +830,38 @@ info "==> Step 5: Register user files in the git index"
 # causing "module not found" errors in nixos-install.
 # git add ensures the file is in the index and visible to Nix.
 for _i in "${!USERS_LOGIN[@]}"; do
-  _ufile="$PRIVATE_USERS_DIR/${USERS_LOGIN[$_i]}.nix"
+  _ufile="$USERS_DIR/${USERS_LOGIN[$_i]}.nix"
   git add "$_ufile"
   success "File $_ufile added to the git index."
 done
 
 # ---------------------------------------------------------------------------
-# 6. Update configuration.nix with the user imports
+# 6. Register the new users in the dendritic inventory
 # ---------------------------------------------------------------------------
+# Users are NOT imported per-host in configuration.nix. dendritic/data/users.nix
+# holds the single inventory (config.dendritic.users); every host's shared
+# modules import users/<name>.nix for each entry via
+# dendritic/features/nixos-modules.nix's userModules (map mkUserModule ...).
 
 echo
-info "==> Step 6: Configure user imports in $CFG_FILE"
+info "==> Step 6: Register user logins in $DENDRITIC_USERS_FILE"
 
 for _i in "${!USERS_LOGIN[@]}"; do
   _user="${USERS_LOGIN[$_i]}"
-  USER_IMPORT="./../../private/users/$_user.nix"
 
-  if grep -qF "$USER_IMPORT" "$CFG_FILE"; then
-    info "Import for $_user.nix is already present in $CFG_FILE."
+  if grep -qF "\"$_user\"" "$DENDRITIC_USERS_FILE"; then
+    info "'$_user' is already present in $DENDRITIC_USERS_FILE."
   else
-    # Replace the commented placeholder, if present (only for the first user)
-    if grep -q 'seu-usuario\.nix\|<seu-usuario>' "$CFG_FILE"; then
-      sed -i "s|# .*seu-usuario\.nix.*|$USER_IMPORT|g" "$CFG_FILE"
-      success "Placeholder replaced with the import for $_user.nix."
-    elif grep -q "# Carregar configurações de usuário" "$CFG_FILE"; then
-      # Insert after the user comment
-      sed -i "/# Carregar configurações de usuário/a\\    $USER_IMPORT" "$CFG_FILE"
-      success "Import for $_user.nix added after the user comment."
-    else
-      # Insert at the end of the imports
-      sed -i "/^  \];$/i\\    $USER_IMPORT" "$CFG_FILE"
-      success "Import for $_user.nix added to the imports."
-    fi
+    # Insert right before the closing "];" of config.dendritic.users.
+    sed -i "/^  \];$/i\\    \"$_user\"" "$DENDRITIC_USERS_FILE"
+    success "'$_user' added to $DENDRITIC_USERS_FILE."
   fi
 done
 
-# Make sure configuration.nix, disko.nix and hardware-configuration.nix are also in the index
-# (they may have been edited in step 2b to change the partitioning profile)
-git add "$CFG_FILE" "$DISKO_FILE" "$HW_FILE"
+# Make sure the dendritic inventory, disko.nix and hardware-configuration.nix
+# are also in the index (configuration.nix/disko.nix may have been edited in
+# step 2b to change the partitioning profile).
+git add "$DENDRITIC_USERS_FILE" "$CFG_FILE" "$DISKO_FILE" "$HW_FILE"
 success "Configuration files registered in the git index."
 
 # ---------------------------------------------------------------------------
@@ -981,7 +1001,7 @@ if [[ "$OPT_NON_INTERACTIVE" == "true" ]] || confirm "Copy the configuration to 
   #   Nix's flake evaluator (which uses the git index to determine which
   #   files to include in the flake source).
   for _i in "${!USERS_LOGIN[@]}"; do
-    _ufile_rel="private/users/${USERS_LOGIN[$_i]}.nix"
+    _ufile_rel="users/${USERS_LOGIN[$_i]}.nix"
     if [[ -f "/mnt/etc/nixos/$_ufile_rel" ]]; then
       git -C /mnt/etc/nixos add "$_ufile_rel" 2>/dev/null || true
       success "File $_ufile_rel re-indexed at /mnt/etc/nixos."
@@ -990,9 +1010,10 @@ if [[ "$OPT_NON_INTERACTIVE" == "true" ]] || confirm "Copy the configuration to 
     fi
   done
 
-  # Re-index the host's configuration.nix, disko.nix and hardware-configuration.nix
-  # (modified in steps 2b and 6)
+  # Re-index the dendritic user inventory plus the host's configuration.nix,
+  # disko.nix and hardware-configuration.nix (modified in steps 2b and 6)
   git -C /mnt/etc/nixos add \
+    "dendritic/data/users.nix" \
     "hosts/$HOST/configuration.nix" \
     "hosts/$HOST/disko.nix" \
     "hosts/$HOST/hardware-configuration.nix" 2>/dev/null || true

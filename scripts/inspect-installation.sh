@@ -399,7 +399,7 @@ if [[ -d "$ROOT/etc/nixos" ]]; then
       || info "    (could not get status)"
     # List staged files (in the index)
     info "Files in the git index (staged):"
-    git -C "$ROOT/etc/nixos" ls-files 2>/dev/null | grep -E '^(private/users/|hosts/)' \
+    git -C "$ROOT/etc/nixos" ls-files 2>/dev/null | grep -E '^(users/|dendritic/data/users\.nix|hosts/)' \
       | sed 's/^/    /' \
       || info "    (could not list)"
   else
@@ -431,11 +431,12 @@ else
   info "Available hosts: ${_hosts[*]}"
 fi
 
-# Check user files in /etc/nixos/private/users/
+# Check user files in /etc/nixos/users/
 echo
-info "==> User files in /etc/nixos/private/users/"
-_user_files=$(ls -1 "$ROOT/etc/nixos/private/users/"*.nix 2>/dev/null \
-  | grep -v "skeleton.nix" || true)
+info "==> User files in /etc/nixos/users/"
+_user_files=$(ls -1 "$ROOT/etc/nixos/users/"*.nix 2>/dev/null \
+  | grep -vE '/(skeleton|mkUser)\.nix$' || true)
+_dendritic_users_file="$ROOT/etc/nixos/dendritic/data/users.nix"
 if [[ -n "$_user_files" ]]; then
   ok "User files found:"
   echo "$_user_files" | while read -r _f; do
@@ -443,55 +444,55 @@ if [[ -n "$_user_files" ]]; then
     _username="${_fname%.nix}"
     # Check whether it's in the git index
     if [[ -d "$ROOT/etc/nixos/.git" ]]; then
-      if git -C "$ROOT/etc/nixos" ls-files --error-unmatch "private/users/$_fname" &>/dev/null; then
-        info "  ✔ private/users/$_fname (indexed in git — visible to Nix)"
+      if git -C "$ROOT/etc/nixos" ls-files --error-unmatch "users/$_fname" &>/dev/null; then
+        info "  ✔ users/$_fname (indexed in git — visible to Nix)"
       else
-        fail "  ✖ private/users/$_fname (NOT indexed in git — invisible to Nix!)"
-        warn "    Run: git -C $ROOT/etc/nixos add --force private/users/$_fname"
+        fail "  ✖ users/$_fname (NOT indexed in git — invisible to Nix!)"
+        warn "    Run: git -C $ROOT/etc/nixos add --force users/$_fname"
         ((_issues++)) || true
       fi
     else
-      info "  → private/users/$_fname"
+      info "  → users/$_fname"
+    fi
+    # Check whether the user is registered in the dendritic inventory
+    # (dendritic/data/users.nix — hosts don't import users/*.nix directly,
+    # dendritic/features/nixos-modules.nix does it for every entry in this list)
+    if grep -qF "\"$_username\"" "$_dendritic_users_file" 2>/dev/null; then
+      info "    └─ registered in dendritic/data/users.nix ✔"
+    else
+      fail "    └─ NOT registered in dendritic/data/users.nix — invisible to every host"
+      warn "       Add \"$_username\" to config.dendritic.users."
+      ((_issues++)) || true
     fi
     # Check whether the user is in /etc/passwd
     if grep -q "^${_username}:" "$ROOT/etc/passwd" 2>/dev/null; then
       info "    └─ user '$_username' present in /etc/passwd ✔"
     else
       warn "    └─ user '$_username' NOT found in /etc/passwd"
-      warn "       The import may be missing from configuration.nix, or nixos-install failed."
+      warn "       Check dendritic/data/users.nix, or nixos-install may have failed."
     fi
   done
 else
-  warn "No user file found in /etc/nixos/private/users/"
-  info "(Only private/users/skeleton.nix found, or the directory is empty)"
+  warn "No user file found in /etc/nixos/users/"
+  info "(Only users/skeleton.nix found, or the directory is empty)"
 fi
 
-# Check imports in each host's configuration.nix
+# Check the dendritic user inventory itself
 echo
-for _host in "${_hosts[@]}"; do
-  _cfgfile="$ROOT/etc/nixos/hosts/$_host/configuration.nix"
-  if [[ ! -f "$_cfgfile" ]]; then
-    continue
-  fi
-  info "==> User imports in hosts/$_host/configuration.nix:"
-  _user_imports=$(grep -E '^\s+\.\/\.\.\/(\.\.\/)?private/users/[^.]+\.nix' "$_cfgfile" 2>/dev/null || true)
-  _placeholder=$(grep -E '#.*seu-usuario\.nix|#.*<seu-usuario>' "$_cfgfile" 2>/dev/null || true)
-  if [[ -n "$_user_imports" ]]; then
-    ok "User imports found:"
-    echo "$_user_imports" | while read -r _line; do
-      info "  $_line"
+if [[ -f "$_dendritic_users_file" ]]; then
+  info "==> Users registered in dendritic/data/users.nix:"
+  _registered_users=$(grep -oP '"\K[a-z_][a-z0-9_-]*(?=")' "$_dendritic_users_file" 2>/dev/null || true)
+  if [[ -n "$_registered_users" ]]; then
+    echo "$_registered_users" | while read -r _u; do
+      info "  • $_u"
     done
-  elif [[ -n "$_placeholder" ]]; then
-    fail "Only a commented-out placeholder found (no user imported):"
-    echo "$_placeholder" | while read -r _line; do
-      warn "  $_line"
-    done
-    warn "install.sh should have replaced the placeholder with the real import."
-    ((_issues++)) || true
   else
-    warn "No user import found in hosts/$_host/configuration.nix"
+    warn "config.dendritic.users appears to be empty."
   fi
-done
+else
+  fail "dendritic/data/users.nix not found — no user will be provisioned on any host"
+  ((_issues++)) || true
+fi
 
 # ---------------------------------------------------------------------------
 # 7. Active bind mounts on /etc/shadow
@@ -537,7 +538,7 @@ echo "      passwd --root /mnt <user>"
 echo "      passwd --root /mnt root"
 echo "      install -m 640 /mnt/etc/shadow /mnt/persist/etc/shadow"
 echo "  • If user files aren't indexed:"
-echo "      git -C /mnt/etc/nixos add private/users/<user>.nix"
+echo "      git -C /mnt/etc/nixos add users/<user>.nix dendritic/data/users.nix"
 echo "      nixos-install --flake /mnt/etc/nixos#<host>"
 echo "  • If the system hasn't been installed yet:"
 echo "      bash scripts/install.sh"

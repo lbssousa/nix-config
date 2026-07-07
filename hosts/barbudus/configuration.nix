@@ -33,6 +33,19 @@
   # automatically, which would limit the supported formats)
   environment.sessionVariables.LIBVA_DRIVER_NAME = "iHD";
 
+  # "nvidia" must be listed here even in PRIME offload mode: nixpkgs'
+  # hardware/video/nvidia.nix module gates the whole proprietary driver
+  # build (boot.extraModulePackages, kernel module, offload udev rules)
+  # behind `elem "nvidia" videoDrivers`. Without it, hardware.nvidia.*
+  # below is silently a no-op — the kernel module never gets built, even
+  # though boot.kernelModules in hardware-configuration.nix still lists
+  # nvidia/nvidia_drm/nvidia_modeset/nvidia_uvm as modules to load.
+  # "modesetting" stays first so the Intel iGPU remains the primary X driver.
+  services.xserver.videoDrivers = [
+    "modesetting"
+    "nvidia"
+  ];
+
   # NVIDIA proprietary driver
   hardware.nvidia = {
     # Force version 580.x (stable = 595.x is incompatible with GeForce MX230)

@@ -3,13 +3,15 @@
 Reusable Nix modules organized into two categories:
 
 - **[system/](system/)** — System-wide modules, used by `nixos-rebuild` (NixOS modules).
-- **[user/](user/)** — User-wide modules, used by `home-manager` (Home Manager modules).
+- **[home/](home/)** — User-wide modules, used by `home-manager` (Home Manager modules).
 
 ## How to use
 
 ### System modules
 
-Import them in the host's configuration file (`hosts/<host>/configuration.nix`):
+Import them in the host's configuration file (`hosts/<host>/configuration.nix`)
+or, if shared by every host, in `dendritic/features/nixos-modules.nix`'s
+`sharedModules` list:
 
 ```nix
 imports = [
@@ -19,12 +21,13 @@ imports = [
 ];
 ```
 
-### User modules
+### Home Manager modules
 
-Import them in the user's file (`users/<user>.nix`) or directly in the home-manager configuration:
+Import them from a user's file (`home/users/<user>/home.nix`) or from the
+shared `home/common.nix`:
 
 ```nix
-home-manager.users.myuser = { imports = [ ../../modules/user/apps/brave.nix ]; ... };
+imports = [ ../../modules/home/apps/terminals/ghostty.nix ];
 ```
 
 ## Structure
@@ -35,16 +38,19 @@ modules/
 │   ├── audio/       # PipeWire / audio
 │   ├── boot/        # Boot loader, Plymouth
 │   ├── containers/  # Rootless Podman, Distrobox
-│   ├── core/        # Base settings + impermanence + users
-│   ├── desktop/     # GNOME + Flatpak
+│   ├── core/        # Base settings + impermanence
+│   ├── desktop/     # GNOME base config (nix-ld, portals, fonts, Bluetooth)
 │   ├── hardware/    # Printing and hardware-specific config
-│   ├── network/     # SSH and networking
-│   ├── security/    # TPM2, Secure Boot
+│   ├── network/     # SSH and Wi-Fi
+│   ├── security/    # TPM2, Secure Boot, YubiKey, SELinux
 │   ├── shell/       # Shells (Bash, Fish, Zsh)
 │   ├── tools/       # System packages
-│   └── users/       # User definitions, sudo
-└── user/            # Home Manager modules (user-wide)
-    ├── apps/        # User applications (Brave, etc.)
-    ├── dev/         # Development tools
-    └── shell/       # User shell configuration
+│   └── users/       # User account definitions, sudo policy
+└── home/            # Home Manager modules (user-wide)
+    ├── apps/
+    │   ├── browsers/   # Brave, Firefox, Chrome, Edge
+    │   ├── editors/    # Helix, LazyVim, nixvim, Zed
+    │   ├── security/   # Bitwarden, KeePassXC, YubiKey
+    │   └── terminals/  # Ghostty, tmux
+    └── desktop/        # ibus-compose.nix (deprecated, see file header)
 ```
