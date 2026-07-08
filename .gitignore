@@ -17,6 +17,9 @@ secrets/*
 # Optional: uncomment to ignore generated hardware files
 # hosts/*/hardware-configuration.nix
 
+# --- Claude Code local settings ---
+.claude/
+
 # --- Temporary files ---
 *.swp
 *.swo

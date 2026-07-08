@@ -15,6 +15,11 @@
         description = "EPSON L4160 Series";
         deviceUri = "socket://EPSONE0321F.local:9100";
         model = "epson-inkjet-printer-escpr/Epson-L4160_Series-epson-escpr-en.ppd";
+        # Default CUPS error-policy is "stop-printer": any filter failure
+        # (e.g. pdftopdf/QPDF rejecting a malformed PDF) disables the whole
+        # queue, requiring a manual `cupsenable`. abort-job just drops the
+        # offending job and keeps the queue accepting new ones.
+        ppdOptions."printer-error-policy" = "abort-job";
       }
     ];
     ensureDefaultPrinter = "L4160_IP";
