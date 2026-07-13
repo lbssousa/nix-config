@@ -95,6 +95,17 @@
     enable = true;
     maxGenerations = 10; # equivalent to systemd-boot's configurationLimit in boot.nix
     secureBoot.enable = true;
+    # boot.loader.timeout = 0 (set in modules/system/boot/boot.nix) already makes
+    # Limine skip the menu and boot the default entry immediately. Limine still
+    # renders one frame before honoring that timeout though, and by default
+    # (upstream mkDefault) that frame shows the NixOS dark-gray bootloader
+    # artwork. Disable that wallpaper and use a plain black backdrop instead,
+    # matching Plymouth's bgrt background, so the frame is imperceptible.
+    style = {
+      wallpapers = [ ];
+      backdrop = "000000";
+      interface.helpHidden = true;
+    };
   };
 
   environment.systemPackages = [
