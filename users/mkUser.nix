@@ -155,6 +155,10 @@
         how = "symlink";
         mode = "0700";
       } # GitHub CLI auth token (hosts.yml) and config
+      {
+        directory = ".zoom";
+        mode = "0700";
+      } # Login session (zoomus.enc.db) and meeting data
 
       # ── Shell tools ───────────────────────────────────────────────────────
       {
@@ -205,6 +209,10 @@
         how = "symlink";
         mode = "0600";
       }
+      {
+        file = ".config/zoomus.conf";
+        how = "symlink";
+      } # Zoom app preferences
       # Monitor configuration (scale factor, resolution, etc.), managed by
       # GNOME. Needs to be persisted to survive reboots (/ and /home are tmpfs).
       {
