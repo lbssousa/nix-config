@@ -150,6 +150,11 @@
         directory = ".config/keepassxc";
         how = "symlink";
       } # Preferences and database path
+      {
+        directory = ".config/gh";
+        how = "symlink";
+        mode = "0700";
+      } # GitHub CLI auth token (hosts.yml) and config
 
       # ── Shell tools ───────────────────────────────────────────────────────
       {
