@@ -2,13 +2,14 @@
 # Imported by dendritic/features/local-overlay.nix and propagated to all
 # nixosConfigurations via config.dendritic.localOverlay. Home Manager
 # inherits the overlay automatically via home-manager.useGlobalPkgs = true.
+{ inputs }:
 final: _prev: {
   run0-sudo = final.callPackage ../pkgs/run0-sudo/package.nix { };
   epson-printer-utility = final.callPackage ../pkgs/epson-printer-utility/package.nix { };
-  gregorio-lsp = final.callPackage ../pkgs/gregorio-lsp/package.nix { };
+  # LSP, formatter and linter for Gregorio GABC/NABC notation — built by
+  # its own upstream flake rather than a local package.nix.
+  inherit (inputs.gregorio-lsp.packages.${final.system}) gregorio-lsp grefmt grelint;
   gregorio-nvim = final.callPackage ../pkgs/gregorio-nvim/package.nix { };
-  grefmt = final.gregorio-lsp;
-  grelint = final.gregorio-lsp;
   tree-sitter-gregorio = final.callPackage ../pkgs/tree-sitter-gregorio/package.nix { };
   tree-sitter-gregorio-nvim = final.callPackage ../pkgs/tree-sitter-gregorio-nvim/package.nix { };
   # libfprint with Goodix TLS drivers and SIGFM matcher (lbssousa fork, goodix-538d-sigfm-gtls branch)

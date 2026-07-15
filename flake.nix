@@ -50,6 +50,12 @@
     # nix-wrapper-modules — packages programs with config baked into the store
     wrapper-modules.url = "github:BirdeeHub/nix-wrapper-modules";
 
+    # gregorio-lsp, grefmt, grelint — Gregorio GABC/NABC LSP, formatter and linter
+    gregorio-lsp = {
+      url = "github:AISCGre-BR/gregorio-lsp";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
   };
 
   outputs =

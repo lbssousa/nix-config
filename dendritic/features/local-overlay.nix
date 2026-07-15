@@ -1,3 +1,4 @@
-_: {
-  config.dendritic.localOverlay = import ../../overlays;
+{ inputs, ... }:
+{
+  config.dendritic.localOverlay = import ../../overlays { inherit inputs; };
 }
