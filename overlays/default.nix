@@ -8,7 +8,11 @@ final: _prev: {
   epson-printer-utility = final.callPackage ../pkgs/epson-printer-utility/package.nix { };
   # LSP, formatter and linter for Gregorio GABC/NABC notation — built by
   # its own upstream flake rather than a local package.nix.
-  inherit (inputs.gregorio-lsp.packages.${final.system}) gregorio-lsp grefmt grelint;
+  inherit (inputs.gregorio-lsp.packages.${final.stdenv.hostPlatform.system})
+    gregorio-lsp
+    grefmt
+    grelint
+    ;
   gregorio-nvim = final.callPackage ../pkgs/gregorio-nvim/package.nix { };
   tree-sitter-gregorio = final.callPackage ../pkgs/tree-sitter-gregorio/package.nix { };
   tree-sitter-gregorio-nvim = final.callPackage ../pkgs/tree-sitter-gregorio-nvim/package.nix { };
