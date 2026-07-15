@@ -6,16 +6,23 @@
 
 rustPlatform.buildRustPackage rec {
   pname = "gregorio-lsp";
-  version = "0.9.4";
+  version = "0.11.0";
 
   src = fetchFromGitHub {
     owner = "AISCGre-BR";
     repo = "gregorio-lsp";
-    rev = "ae14397c9996b54c3e9f8b3d6a6e9a95d836f032";
-    hash = "sha256-g40LDutXN3dHqhhCM9c0xplrtOfYHHTw22rDCb6VUsw=";
+    rev = "e3a934b375701e2d125dcd035abeca065431a8a5";
+    hash = "sha256-tRM3LoucNzig1TICZYigTaV9tK36YuuWMO0DzLWE79s=";
   };
 
-  cargoHash = "sha256-Ah/XLvdbDMht3LAPfE2mOuI/EJ6IwjZ1z50l53yiBmc=";
+  cargoHash = "sha256-/X9KUBhXSLDhND6gMdNlIAQbPHNFJmjWFPLfGSqXxaM=";
+
+  postPatch = ''
+    # Remove gregorio-wasm from workspace to avoid wasm-bindgen dependency
+    sed -i '/gregorio-wasm/d' Cargo.toml
+  '';
+
+  cargoBuildFlags = [ "-p" "gregorio-server" ];
 
   meta = with lib; {
     description = "Language Server Protocol for Gregorio GABC/NABC notation";
