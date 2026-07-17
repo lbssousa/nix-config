@@ -108,6 +108,8 @@ Both paths share the same building blocks from `home/mkUserHome.nix`: `userModul
 
 Important consequence of the ephemeral root: the NixOS-coupled path gets HM re-activated automatically on every boot, as a side effect of NixOS re-running its activation scripts at boot (not just on `nixos-rebuild switch`). The standalone `homeConfigurations` path has no such hook — after a reboot, `just home switch` must be run again to restore anything not covered by `preservation.preserveAt` (see `users/mkUser.nix`). Use it for fast iteration on dotfiles/packages; run a real `just switch` (or wait for the next one) to make changes durable across reboots.
 
+`users/mkUser.nix` preserves the standalone generation's bookkeeping (`.local/state/nix/profiles`, `.local/state/home-manager`) so a post-reboot `just home switch` is a fast no-rebuild activation instead of re-realizing the whole profile, and `home-manager generations`/rollback history isn't lost. `~/.nix-profile` itself is deliberately excluded — home-manager replaces it with a fresh symlink into the store on every switch, so it can't be preserved as a stable symlink the usual way. Packages/dotfiles still only reappear after actually rerunning `just home switch`.
+
 ### Local packages and overlay
 
 `overlays/default.nix` defines a nixpkgs overlay with packages that are not (yet) in upstream nixpkgs:

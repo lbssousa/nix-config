@@ -2,8 +2,11 @@
 # Usage: import ./mkUser.nix { inherit pkgs lib; } { username = ...; ... }
 #
 # NOTE: Home Manager configuration is managed as a NixOS module
-# (home-manager.users.<name> in dendritic/flake/home-nixos-module.nix). See
-# home/users/<user>/home.nix for per-user customizations.
+# (home-manager.users.<name> in dendritic/flake/home-nixos-module.nix), plus
+# a standalone `home-manager switch --flake .#<user>@<host>` path
+# (dendritic/flake/home-configurations.nix, see the "Home Manager standalone"
+# preservation entries below). See home/users/<user>/home.nix for per-user
+# customizations — both paths share the same module.
 #
 # NOTE: The full name (description) is set via the nix-secrets flake outputs
 # (inputs.nix-secrets.${username}.fullName). It must not be set here.
@@ -173,6 +176,27 @@
       # ── Rootless containers (Podman without root) ────────────────────────
       # Bind-mount: bubblewrap/Podman checks that the path is a real directory
       ".local/share/containers" # User's Podman images and volumes
+
+      # ── Home Manager standalone (just home switch) ──────────────────────
+      # Protects the standalone `home-manager switch --flake .#<user>@<host>`
+      # path (dendritic/flake/home-configurations.nix) from losing its
+      # generation state on reboot: without this, every reboot would force a
+      # full rebuild on the next `just home switch` and generation history
+      # (`home-manager generations`, rollback) would be lost.
+      # This does NOT make packages/dotfiles available again without rerunning
+      # `just home switch` — nothing re-applies this path automatically at
+      # boot (see CLAUDE.md). ~/.nix-profile itself is intentionally not
+      # preserved here: home-manager replaces it with a fresh symlink
+      # straight into the store on every switch, which would just clobber a
+      # preservation-managed symlink at that same path.
+      {
+        directory = ".local/state/nix/profiles";
+        how = "symlink";
+      } # home-manager generation chain (nix-env --profile)
+      {
+        directory = ".local/state/home-manager";
+        how = "symlink";
+      } # GC roots (gcroots/current-home) protecting the active generation
 
       # ── Claude CLI ──────────────────────────────────────────────────────
       # Credentials (.credentials.json), settings and project memories.
