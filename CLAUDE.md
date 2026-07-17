@@ -18,6 +18,10 @@ just nixos boot [host]             # stage for next boot only
 just nixos diff [host]             # preview changes vs current system (uses nvd)
 just build [host]                  # build without activating
 
+# Home Manager standalone (does not require nixos-rebuild)
+just home switch [user@host]       # apply only the HM config (default: current user@host)
+just home build [user@host]        # build without activating
+
 # Update flake inputs
 just update                        # update all inputs, auto-commits flake.lock
 just auto_commit=false update      # update without committing
@@ -95,6 +99,14 @@ Key HM module settings:
 - `useGlobalPkgs = true` — HM uses the NixOS system pkgs (overlay + allowUnfree inherited)
 - `useUserPackages = true` — packages install to `/etc/profiles/per-user/<user>` (in PATH automatically)
 - `backupFileExtension = "bkp"` — conflicting files are backed up rather than failing
+
+### Standalone Home Manager (`homeConfigurations`)
+
+`dendritic/flake/home-configurations.nix` also exposes each user/host pair as a standalone flake output, `homeConfigurations."<user>@<host>"` (e.g. `abutre@barbudus`), deployable with `home-manager switch --flake .#<user>@<host>` (or `just home switch [user@host]`) without touching the NixOS system generation.
+
+Both paths share the same building blocks from `home/mkUserHome.nix`: `userModule` (the per-user `home/common.nix` + `home/users/<user>/home.nix` composition) and `sharedModules` (nixvim, sops-nix). This guarantees the NixOS-coupled and standalone configs never drift apart — there is exactly one definition of what a user's HM config is.
+
+Important consequence of the ephemeral root: the NixOS-coupled path gets HM re-activated automatically on every boot, as a side effect of NixOS re-running its activation scripts at boot (not just on `nixos-rebuild switch`). The standalone `homeConfigurations` path has no such hook — after a reboot, `just home switch` must be run again to restore anything not covered by `preservation.preserveAt` (see `users/mkUser.nix`). Use it for fast iteration on dotfiles/packages; run a real `just switch` (or wait for the next one) to make changes durable across reboots.
 
 ### Local packages and overlay
 

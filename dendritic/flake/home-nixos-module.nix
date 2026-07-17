@@ -1,17 +1,8 @@
 { config, inputs, ... }:
 let
   inherit (inputs.nixpkgs) lib;
-  users = config.dendritic.users;
-
-  # Per-user HM module: common.nix + user-specific home.nix (if it exists)
-  mkUserHome = username: {
-    imports = [
-      ../../home/common.nix
-    ]
-    ++ lib.optional (lib.pathExists (../../home/users + "/${username}/home.nix")) (
-      ../../home/users + "/${username}/home.nix"
-    );
-  };
+  inherit (config.dendritic) users;
+  inherit (import ../../home/mkUserHome.nix { inherit inputs; }) userModule sharedModules;
 in
 {
   dendritic.nixos.sharedModules = [
@@ -29,11 +20,8 @@ in
           # flake: flake outputs (e.g. packages.helix used in modules/home/apps/editors/helix/)
           inherit (config) flake;
         };
-        sharedModules = [
-          inputs.nixvim.homeModules.nixvim
-          inputs.sops-nix.homeManagerModules.sops
-        ];
-        users = lib.genAttrs users mkUserHome;
+        inherit sharedModules;
+        users = lib.genAttrs users userModule;
       };
     }
   ];

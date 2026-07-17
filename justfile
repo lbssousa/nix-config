@@ -71,6 +71,8 @@ help:
   @echo "Current FLAKE_DIR: {{flake_root}}"
   @echo 'switch, boot and test elevate with run0 (polkit/YubiKey) when needed.'
   @echo 'Home Manager is a NixOS module: just switch applies NixOS + HM together.'
+  @echo 'just home switches only the HM part (faster iteration, but does not'
+  @echo 'persist across reboots on its own — see CLAUDE.md for details).'
   @echo 'just upgrade updates the inputs and then applies switch.'
   @echo ''
   @echo 'Examples:'
@@ -82,6 +84,8 @@ help:
   @echo '  just nixos switch barbudus'
   @echo '  just nixos diff'
   @echo '  just nixos test'
+  @echo '  just home switch'
+  @echo '  just home switch abutre@barbudus'
   @echo ''
   @nix run nixpkgs#just -- --justfile "{{justfile_file}}" --list --unsorted
 
@@ -104,6 +108,33 @@ whoami:
 
 nixos action='' host='' *args:
   nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_nixos "{{action}}" "{{host}}" {{args}}
+
+[private]
+_run_home action target='' *args:
+  #!/usr/bin/env bash
+  set -euo pipefail
+
+  action="{{action}}"
+  target="{{target}}"
+  set -- {{args}}
+
+  target="${target:-$(id -un)@$(hostname)}"
+
+  case "$action" in
+    switch|build)
+      home-manager "$action" --flake "{{flake_root}}#${target}" "$@"
+      ;;
+    *)
+      echo "Invalid action for home: '$action'" >&2
+      exit 1
+      ;;
+  esac
+
+# Deploys only the Home Manager environment, independent of nixos-rebuild.
+# target defaults to "<current user>@<current host>" (e.g. abutre@barbudus).
+# Unlike `just switch`, this does NOT re-apply automatically on reboot.
+home action='' target='' *args:
+  nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_home "{{action}}" "{{target}}" {{args}}
 
 switch host='' *args:
   nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_nixos switch "{{host}}" {{args}}
