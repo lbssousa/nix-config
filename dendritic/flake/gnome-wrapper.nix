@@ -37,6 +37,7 @@ _: {
                 "io.github.kolunmi.Bazaar" # GNOME app store
                 "org.mozilla.firefox" # Default browser
                 "com.brave.Browser" # Alternate browser / PWAs
+                "us.zoom.Zoom" # Video conferencing
               ];
               update.onActivation = true;
               update.auto = {
@@ -78,7 +79,6 @@ _: {
               gnome-extension-manager
               impression
               smile
-              zoom-us
 
               # GTK3 theme for compatibility with legacy apps
               adw-gtk3

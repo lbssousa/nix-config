@@ -106,6 +106,15 @@
       backdrop = "000000";
       interface.helpHidden = true;
     };
+    # Limine's Linux protocol prints "linux: Loading kernel `...`" and
+    # "linux: Loading module `...`" (for the initrd) to the screen while
+    # handing off to the kernel — visible as two lines of text between the
+    # black backdrop above and Plymouth's splash. `quiet: yes` is Limine's
+    # own config option (not exposed as a NixOS module option, so it's
+    # passed via extraConfig) that suppresses all non-panic screen output,
+    # eliminating those two lines. Errors/panics still force it off (see
+    # Limine's common/lib/panic.s2.c), so real boot failures stay visible.
+    extraConfig = "quiet: yes\n";
   };
 
   environment.systemPackages = [

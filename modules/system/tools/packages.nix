@@ -121,9 +121,8 @@ in
     # GStreamer and multimedia packages (useful for browsers and GNOME apps)
     gst_all_1.gst-libav
     gst_all_1.gst-plugins-good
-    gst_all_1.gst-plugins-bad
+    gst_all_1.gst-plugins-bad # includes the "va" plugin (VA-API), replacing gst-vaapi removed in GStreamer 1.28
     gst_all_1.gst-plugins-ugly
-    gst_all_1.gst-vaapi
     ffmpeg
     libva # VA-API library + vainfo diagnostic utility
   ];
