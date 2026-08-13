@@ -143,10 +143,16 @@
         directory = ".local/share/keyrings";
         how = "symlink";
       } # GNOME keyring: Wi-Fi and app passwords
+      # Bind-mounts (not symlinks): Brave's Flatpak PWA installer (flextop)
+      # does an lstat-based device check to detect "real" host directories
+      # and refuses to write icons/.desktop files if it sees a symlink here
+      # instead of an actual mount, reporting a false "no host access".
       {
         directory = ".local/share/applications";
-        how = "symlink";
       } # User and Flatpak .desktop files
+      {
+        directory = ".local/share/icons";
+      } # Icons for user/Flatpak .desktop files (e.g. Brave PWA shortcuts)
 
       # ── App config (not managed by HM) ───────────────────────────────────
       {
