@@ -73,6 +73,9 @@ help:
   @echo 'Home Manager is a NixOS module: just switch applies NixOS + HM together.'
   @echo 'just home switches only the HM part (faster iteration, but does not'
   @echo 'persist across reboots on its own — see CLAUDE.md for details).'
+  @echo 'just home also covers other home-manager subcommands: build, repl,'
+  @echo 'news, generations, remove-generations, expire-generations, packages,'
+  @echo 'uninstall, help.'
   @echo 'just upgrade updates the inputs and then applies switch.'
   @echo ''
   @echo 'Examples:'
@@ -118,21 +121,34 @@ _run_home action target='' *args:
   target="{{target}}"
   set -- {{args}}
 
-  target="${target:-$(id -un)@$(hostname)}"
-
   case "$action" in
-    switch|build)
+    # These need a flake target to build/evaluate against.
+    switch|build|repl|news)
+      target="${target:-$(id -un)@$(hostname)}"
       home-manager "$action" --flake "{{flake_root}}#${target}" "$@"
+      ;;
+    # These operate on the local profile/generations and take their own
+    # positional args instead of a flake target (e.g. generation IDs for
+    # remove-generations, a date spec for expire-generations).
+    generations|remove-generations|expire-generations|packages|uninstall|help)
+      if [[ -n "$target" ]]; then
+        set -- "$target" "$@"
+      fi
+      home-manager "$action" "$@"
       ;;
     *)
       echo "Invalid action for home: '$action'" >&2
+      echo "Unsupported in this flake-based setup: edit, option, instantiate, init" >&2
       exit 1
       ;;
   esac
 
-# Deploys only the Home Manager environment, independent of nixos-rebuild.
-# target defaults to "<current user>@<current host>" (e.g. abutre@barbudus).
-# Unlike `just switch`, this does NOT re-apply automatically on reboot.
+# Runs any supported `home-manager <action>` subcommand against this flake.
+# target (used only by switch/build/repl/news) defaults to
+# "<current user>@<current host>" (e.g. abutre@barbudus).
+# Unlike `just switch`, `switch`/`build` here do NOT re-apply automatically
+# on reboot. `edit`, `option` and `instantiate` are not supported: this setup
+# has no single home.nix to edit/instantiate outside a flake evaluation.
 home action='' target='' *args:
   nix run nixpkgs#just -- --justfile "{{justfile_file}}" _run_home "{{action}}" "{{target}}" {{args}}
 
