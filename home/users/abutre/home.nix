@@ -21,6 +21,7 @@ in
     ../../../modules/home/apps/editors/nixvim
     ../../../modules/home/apps/terminals/ghostty.nix
     ../../../modules/home/apps/terminals/tmux.nix
+    ../../../modules/home/apps/terminals/herdr.nix
 
     ./gnome.nix
     # ./rclone.nix  # disabled until Google Drive OAuth reauthentication
