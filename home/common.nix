@@ -5,6 +5,7 @@
 
 {
   imports = [
+    ../modules/home/apps/browsers/brave.nix
     ../modules/home/apps/security/bitwarden.nix
   ];
 

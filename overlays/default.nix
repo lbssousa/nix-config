@@ -6,6 +6,9 @@
 final: _prev: {
   run0-sudo = final.callPackage ../pkgs/run0-sudo/package.nix { };
   epson-printer-utility = final.callPackage ../pkgs/epson-printer-utility/package.nix { };
+  # Fixes .desktop files for PWAs installed by Brave Flatpak (bad Exec=
+  # quoting, missing StartupNotify, wrong StartupWMClass for Wayland).
+  fix-brave-pwa-desktop = final.callPackage ../pkgs/fix-brave-pwa-desktop/package.nix { };
   # LSP, formatter and linter for Gregorio GABC/NABC notation — built by
   # its own upstream flake rather than a local package.nix.
   inherit (inputs.gregorio-lsp.packages.${final.stdenv.hostPlatform.system})
