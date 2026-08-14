@@ -27,7 +27,7 @@ _: {
 
       keys.command = [
         {
-          key = "g";
+          key = "prefix+g";
           type = "pane";
           command = "lazygit";
           description = "lazygit";
