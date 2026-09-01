@@ -110,6 +110,32 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 # ---------------------------------------------------------------------------
+# SSH for root (YubiKey resident keys)
+# ---------------------------------------------------------------------------
+# The script re-executed itself as root, so any SSH operation (the nix-secrets
+# clone below AND nixos-install, which resolves the git+ssh:// nix-secrets flake
+# input) runs with HOME=/root. Root doesn't read the ~/.ssh/config the user
+# generated with import-ssh-yubikey.sh (IdentityFile + IdentityAgent none for
+# the resident ED25519-SK keys); it falls back to whatever agent is on
+# SSH_AUTH_SOCK, which replies "agent refused operation" for SK keys.
+#
+# Fix: export GIT_SSH_COMMAND pointing ssh (via -F) at that user's config, so
+# both git clone and the flake evaluation use the FIDO2 path directly.
+# Root can read the config and private keys regardless of the 700/600 perms.
+NIX_SECRETS_SSH_CONFIG=""
+for _u in "${SUDO_USER:-}" $(find /home -maxdepth 2 -name config -path '*/.ssh/config' 2>/dev/null | sed 's|^/home/\([^/]*\)/\.ssh/config|\1|'); do
+  _c="/home/$_u/.ssh/config"
+  if [[ -n "$_u" && "$_u" != "root" && -f "$_c" ]] && grep -q 'IdentityAgent' "$_c" 2>/dev/null; then
+    NIX_SECRETS_SSH_CONFIG="$_c"
+    break
+  fi
+done
+if [[ -n "$NIX_SECRETS_SSH_CONFIG" ]]; then
+  info "Root runs with HOME=/root; using user SSH config ($NIX_SECRETS_SSH_CONFIG) for SSH-backed flake inputs."
+  export GIT_SSH_COMMAND="ssh -F \"$NIX_SECRETS_SSH_CONFIG\""
+fi
+
+# ---------------------------------------------------------------------------
 # Binary cache constants
 # ---------------------------------------------------------------------------
 # The nix-community cache provides pre-built artifacts for various packages,
@@ -389,6 +415,9 @@ else
   read -r _nix_keys_url
   if [[ -n "$_nix_keys_url" ]]; then
     info "Cloning nix-keys into $NIX_KEYS_DIR_DEFAULT..."
+    # GIT_SSH_COMMAND (with the user's ~/.ssh/config via -F) is already
+    # exported globally early in the script, so this root-run clone also uses
+    # the resident YubiKey keys instead of falling back to the (refusing) agent.
     if git clone "$_nix_keys_url" "$NIX_KEYS_DIR_DEFAULT"; then
       NIX_KEYS_DIR="$NIX_KEYS_DIR_DEFAULT"
       success "nix-keys cloned into $NIX_KEYS_DIR."
