@@ -33,13 +33,13 @@
 
 stdenv.mkDerivation {
   pname = "libfprint-goodix";
-  version = "1.94.10-unstable-2026-07-03";
+  version = "1.94.10-unstable-2026-08-27";
 
   src = fetchFromGitHub {
     owner = "lbssousa";
     repo = "libfprint";
-    rev = "02a5326fab3814730c1e8aab644c6972a72252fc";
-    hash = "sha256-WLp5T5ERQM22Fv9DUDURNWlHHTVU4o9fWgfdWKguJjY=";
+    rev = "4d9acb0013dd84903a9d1a16241a8fe2d4b2bf9c";
+    hash = "sha256-/+aAb2PfO+LCN3rmCi/LULgBcQnhocfr6TYpasmYY0A=";
   };
 
   postPatch = ''
