@@ -22,8 +22,8 @@ _:
       font-size = 14
 
       # ── Appearance ─────────────────────────────────────────────────────────
-      # Default profile: decorations on for normal use
-      window-decoration = true
+      # No window decorations (Umbriel/Noctalia draws no client-side titlebar)
+      window-decoration = false
 
       # Tabs at the bottom: more visible when the window drops from the top
       gtk-tabs-location = bottom
