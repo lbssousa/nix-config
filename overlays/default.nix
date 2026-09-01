@@ -23,6 +23,9 @@ final: _prev: {
   libfprint-goodix = final.callPackage ../pkgs/libfprint-goodix/package.nix { };
   # fprintd 1.94.5 built against libfprint-goodix (1.94.10)
   fprintd-goodix = final.callPackage ../pkgs/fprintd-goodix/package.nix { };
+  # Imports and trusts a YubiKey's OpenPGP public key (git signing is
+  # already declarative — see programs.git.signing.key)
+  yubikey-gpg-import = final.callPackage ../pkgs/yubikey-gpg-import/package.nix { };
 
   # Brave Origin — simplified Brave variant without rewards/wallet/AI.
   # Local package based on https://github.com/NixOS/nixpkgs/pull/513143 (not yet merged).
