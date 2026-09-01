@@ -130,7 +130,10 @@ Personal NixOS configuration based on Flakes, with Btrfs, declarative partitioni
 │   ├── install.sh            # Automated installation script
 │   ├── update.sh             # Update flake inputs + nixos-rebuild switch
 │   ├── enroll-tpm2.sh        # Set up LUKS unlock via TPM2
-│   └── setup-secureboot.sh   # Set up Secure Boot + sign modules (barbudus)
+│   ├── setup-secureboot.sh   # Set up Secure Boot + sign modules (barbudus)
+│   ├── import-gpg-yubikey.sh # Import+trust a YubiKey's GPG key (live-ISO or installed system;
+│   │                         #   also packaged as the `yubikey-gpg-import` command)
+│   └── import-ssh-yubikey.sh # Live-ISO: download resident FIDO2 SSH keys (pre-install)
 ├── users/                    # NixOS user account definitions
 │   ├── skeleton.nix          # Template for creating a new user
 │   ├── abutre.nix            # abutre's system account

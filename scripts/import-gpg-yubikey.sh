@@ -1,9 +1,19 @@
 #!/usr/bin/env bash
-# import-gpg-yubikey.sh — Import the GPG key from the YubiKey in the live CD environment
+# import-gpg-yubikey.sh — Import and trust the GPG key from a YubiKey
 #
 # Prepares the GPG environment to work with the private key stored on the
-# YubiKey, needed to unlock the nix-keys repository via git-crypt during
-# NixOS installation.
+# YubiKey. Every step is idempotent (checks before acting), so this runs
+# equally well in two contexts:
+#   - The live NixOS ISO, before installation — needed to unlock the
+#     nix-keys repository via git-crypt (this flake's packages aren't
+#     buildable yet at that point, so it has to be a plain script, not a
+#     Nix package). Invoke directly: bash scripts/import-gpg-yubikey.sh
+#   - An already-installed, already-configured system — pcscd/scdaemon are
+#     already set up there (modules/system/security/yubikey.nix,
+#     modules/home/apps/security/yubikey.nix), so most steps just confirm
+#     that and move on. This is also packaged as the `yubikey-gpg-import`
+#     command (pkgs/yubikey-gpg-import/package.nix reads this exact file —
+#     single source of truth, no duplicated logic).
 #
 # Steps performed:
 #   1. Check prerequisites (gpg, YubiKey detected via USB)
@@ -16,6 +26,7 @@
 #
 # Usage:
 #   bash scripts/import-gpg-yubikey.sh [options]
+#   yubikey-gpg-import [options]                 (already-installed system)
 #
 # Options:
 #   --fingerprint <fp>  GPG key fingerprint (default: BAC0B1B569777A733E37447FB10712C404063D38)
@@ -24,9 +35,6 @@
 #   --keyserver <url>   GPG keyserver (default: keyserver.ubuntu.com)
 #   --no-trust          Don't set ultimate trust for the imported key
 #   --help, -h          Show help and exit
-#
-# After a successful run:
-#   bash scripts/install.sh   (runs git-crypt unlock via GPG automatically)
 
 set -euo pipefail
 
@@ -76,7 +84,8 @@ while [[ $# -gt 0 ]]; do
     --help|-h)
       cat <<'EOF'
 Usage:
-  bash scripts/import-gpg-yubikey.sh [options]
+  bash scripts/import-gpg-yubikey.sh [options]   (live ISO, before installation)
+  yubikey-gpg-import [options]                   (already-installed system)
 
 Options:
   --fingerprint <fp>  Full GPG key fingerprint
@@ -95,17 +104,19 @@ Public key sources (in priority order):
 
 Examples:
   # Default usage (imports from GitHub user lbssousa):
-  bash scripts/import-gpg-yubikey.sh
+  yubikey-gpg-import
 
   # With a local public key file:
-  bash scripts/import-gpg-yubikey.sh --pubkey /mnt/usb/pubkey.asc
+  yubikey-gpg-import --pubkey /mnt/usb/pubkey.asc
 
   # Keyserver only, no GitHub:
-  bash scripts/import-gpg-yubikey.sh --github "" --keyserver keys.openpgp.org
+  yubikey-gpg-import --github "" --keyserver keys.openpgp.org
 
-After a successful run:
-  bash scripts/install.sh
-  (the script will run git-crypt unlock automatically via GPG/YubiKey)
+After a successful run, the key is ready to use — e.g.:
+  cd /path/to/nix-keys && git-crypt unlock
+
+On the live ISO, before installation, bash scripts/install.sh also runs
+git-crypt unlock automatically via GPG once this step is done.
 EOF
       exit 0 ;;
     *) die "Unknown option: $1. Use --help to see the available options." ;;
@@ -177,8 +188,11 @@ elif command -v pcscd >/dev/null 2>&1; then
       fi
       sleep 1
     done
-    [[ "$_pcscd_running" == "true" ]] && success "pcscd started." \
-      || warn "pcscd started but didn't become active within 5s."
+    if [[ "$_pcscd_running" == "true" ]]; then
+      success "pcscd started."
+    else
+      warn "pcscd started but didn't become active within 5s."
+    fi
   else
     warn "Could not start pcscd automatically."
     warn "Try manually: run0 systemctl start pcscd"
@@ -341,10 +355,9 @@ fi
 echo
 echo -e "${GREEN}${BOLD}GPG environment ready to use with the YubiKey!${RESET}"
 echo
-info "Next steps:"
-echo "  bash scripts/install.sh"
-echo "  (the script will run git-crypt unlock automatically via GPG)"
-echo
-echo "  Or, to unlock nix-keys manually:"
+info "The key is ready to use — for example:"
 echo "  cd /path/to/nix-keys && git-crypt unlock"
+echo
+echo "  On the live ISO, before installation, bash scripts/install.sh also"
+echo "  runs git-crypt unlock automatically via GPG once this step is done."
 echo
