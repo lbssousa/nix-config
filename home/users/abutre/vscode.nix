@@ -4,6 +4,11 @@
 {
   programs.vscode = {
     enable = true;
+    # The `code` binary comes from the Homebrew "visual-studio-code-linux"
+    # cask (modules/home/apps/homebrew.nix), not from Nix — this only
+    # manages extensions/settings.json, which apply regardless of which
+    # `code` binary launches.
+    package = null;
     profiles.default.extensions =
       (with pkgs.vscode-extensions; [
         davidanson.vscode-markdownlint

@@ -4,9 +4,10 @@
 # via home/mkUserHome.nix, so both stay in sync by construction.
 #
 # NOTE: unlike the NixOS-coupled path, nothing re-applies this automatically
-# on boot (/home is tmpfs, see modules/system/core/preservation.nix).
-# `home-manager switch` must be run again after every reboot to restore
-# packages/dotfiles that aren't otherwise covered by preservation.
+# on boot — `home-manager switch` must be run again after every reboot to
+# pick up changes made since the last run. This doesn't lose state though:
+# /home has its own persistent Btrfs subvolume (see disko.nix), so whatever
+# a previous run already installed survives reboots on its own.
 { config, inputs, ... }:
 let
   inherit (inputs.nixpkgs) lib;

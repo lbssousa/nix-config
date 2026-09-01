@@ -36,15 +36,17 @@ lib.mkMerge [
 
     # Packages specific to the abutre user, installed via NixOS.
     # Development tools and apps exclusive to this user.
+    # Note: claude-code, github-copilot-cli and opencode moved to Homebrew
+    # ("claude-code"/"copilot-cli" casks, "opencode" formula — see
+    # modules/home/apps/homebrew.nix): all three update very frequently
+    # upstream, better tracked by Homebrew's rolling formulae than nixpkgs'
+    # release cadence.
     users.users.abutre.packages = with pkgs; [
       # Development
-      claude-code
-      github-copilot-cli
       gcc
       grelint # Linter for GABC/Gregorio (local overlay)
       python3
       rustup
-      opencode
       pandoc
 
       # Proprietary browser (in addition to Firefox, Brave and Chrome in systemPackages)

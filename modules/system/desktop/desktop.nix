@@ -61,8 +61,10 @@
 
   # Graphical editors with an FHS environment: lets extensions and helper
   # tools that depend on standard FHS paths work correctly on NixOS.
+  # Note: VS Code itself is no longer installed here — it comes from the
+  # Homebrew "visual-studio-code-linux" cask (modules/home/apps/homebrew.nix),
+  # which is genuinely FHS-compliant and needs no wrapper.
   environment.systemPackages = with pkgs; [
-    vscode-fhs
     zed-editor-fhs
   ];
 
