@@ -1,6 +1,6 @@
-# nixos-config
+# nix-config
 
-Personal NixOS configuration based on Flakes, with Btrfs, declarative partitioning (disko), an ephemeral system (preservation), hybrid swap and a GNOME desktop.
+Personal NixOS configuration based on Flakes, with Btrfs, declarative partitioning (disko), an ephemeral system (preservation), hybrid swap and the Noctalia v5 desktop suite.
 
 ## 🎯 Features
 
@@ -10,16 +10,16 @@ Personal NixOS configuration based on Flakes, with Btrfs, declarative partitioni
 - ✅ **Btrfs**: Modern filesystem with zstd compression, subvolumes and snapshots
 - ✅ **Preservation**: Ephemeral system with tmpfs on the root — clean on every boot
 - ✅ **Hybrid swap**: zram + disk swap for maximum performance
-- ✅ **GNOME Desktop**: GNOME with apps and fonts configured declaratively via Nix
-- ✅ **Flatpak**: Only apps with no nixpkgs equivalent (DistroShelf, Ignition, Warehouse, Bazaar, Flatseal), installed declaratively via nix-flatpak
+- ✅ **Noctalia v5 Desktop**: Umbriel compositor + Noctalia Shell + Noctalia Greeter, apps and fonts configured declaratively via Nix
+- ✅ **Homebrew**: Available system-wide, similar to Flatpak — a few fast-moving apps (VS Code, AI CLIs) track upstream releases better there than via nixpkgs
+- ✅ **Flatpak**: Browsers and apps with no nixpkgs equivalent (DistroShelf, Ignition, Warehouse, Flatseal), installed declaratively via nix-flatpak
 - ✅ **Podman + Distrobox**: Rootless containers (Silverblue-like experience)
-- ✅ **Home Manager**: User configuration management
-- ✅ **Brave**: Default browser, installed via Nix
-- ✅ **Ghostty**: Modern terminal via Nix, with an undecorated profile for PaperWM/quake-terminal
+- ✅ **Home Manager**: User configuration management (as a NixOS module, and standalone)
+- ✅ **Ghostty**: Modern terminal via Nix, with an undecorated profile for a quake-style drop-down
 - ✅ **Multi-host**: Machine-specific configurations
 - ✅ **Modular**: Shared modules for easy maintenance
 - ✅ **Secure Boot**: Support via Limine (barbudus)
-- ✅ **YubiKey U2F**: sudo, run0 and pkexec authenticated by hardware key; password as a fallback when the YubiKey is absent
+- ✅ **YubiKey FIDO2/U2F**: opt-in (off by default) hardware-key authentication for sudo, run0 and pkexec; password as a fallback when the YubiKey is absent
 - ✅ **git-crypt**: Selective encryption of sensitive files in the repository
 
 ## 🖥️ Supported Hosts
@@ -51,7 +51,7 @@ Personal NixOS configuration based on Flakes, with Btrfs, declarative partitioni
 │   ├── imports.nix           # Automatic import of all dendritic modules
 │   ├── options.nix           # Options for the `dendritic.*` namespace
 │   ├── data/
-│   │   ├── hosts.nix         # Host inventory (system, default desktop, extra modules)
+│   │   ├── hosts.nix         # Host inventory (system, extra modules)
 │   │   └── users.nix         # System/home user inventory
 │   ├── features/
 │   │   ├── local-overlay.nix # Local overlay (imports overlays/default.nix)
@@ -60,11 +60,15 @@ Personal NixOS configuration based on Flakes, with Btrfs, declarative partitioni
 │       ├── nixos-configurations.nix # Generates the nixosConfigurations outputs
 │       └── disko-configurations.nix # Generates the diskoConfigurations outputs
 ├── disko.nix                 # Btrfs partitioning template (LUKS+LVM+Btrfs)
-├── home/                     # Home Manager configurations (NixOS module, applied on rebuild)
+├── home/                     # Home Manager configurations (shared between the NixOS-module
+│   │                         # and standalone deployment paths — see mkUserHome.nix)
 │   ├── common.nix            # Base HM config — applied to all users
+│   ├── mkUserHome.nix        # Shared building blocks (userModule, sharedModules)
 │   └── users/                # Per-user customizations
 │       └── abutre/
-│           └── home.nix      # abutre-specific config (p10k, git, Bitwarden)
+│           ├── home.nix      # abutre-specific config (git signing, sops age key, ...)
+│           ├── noctalia.nix  # Umbriel/Noctalia keybinds, theme, dock
+│           └── vscode.nix    # VS Code extensions/settings (binary comes from Homebrew)
 ├── hosts/                    # Host-specific configurations (NixOS)
 │   ├── barbudus/
 │   │   ├── configuration.nix        # Host-specific config (NVIDIA, fprintd, etc.)
@@ -79,18 +83,18 @@ Personal NixOS configuration based on Flakes, with Btrfs, declarative partitioni
 │   │   ├── apps/
 │   │   │   ├── nix-validation.nix
 │   │   │   ├── browsers/
-│   │   │   │   ├── brave.nix
-│   │   │   │   ├── firefox.nix
-│   │   │   │   └── google-chrome.nix
+│   │   │   │   └── brave.nix
+│   │   │   ├── homebrew.nix       # Per-user Homebrew bootstrap + declarative Brewfile
 │   │   │   ├── security/
-│   │   │   │   ├── bitwarden.nix  # SSH agent + Zsh integration
+│   │   │   │   ├── bitwarden.nix  # SSH agent wiring
 │   │   │   │   ├── keepassxc.nix
 │   │   │   │   └── yubikey.nix
 │   │   │   └── terminals/
 │   │   │       ├── ghostty.nix    # Default terminal, decorated/undecorated profiles
 │   │   │       └── tmux.nix
 │   │   └── desktop/
-│   │       └── ibus-compose.nix
+│   │       └── ibus-compose.nix   # Deprecated — superseded by the tmpfiles rule
+│   │                               # in modules/system/desktop/desktop.nix
 │   └── system/               # System modules (nixos-rebuild)
 │       ├── audio/
 │       │   └── audio.nix     # PipeWire
@@ -103,17 +107,19 @@ Personal NixOS configuration based on Flakes, with Btrfs, declarative partitioni
 │       │   ├── preservation.nix    # tmpfs root + persistent directories (/persist)
 │       │   └── preservation-zfs.nix # ZFS variant with rollback in the initrd
 │       ├── desktop/
-│       │   └── desktop.nix   # GNOME, Flatpak, fonts, automatic app installation
+│       │   └── desktop.nix   # nix-ld, XDG portals, Bluetooth, fonts (desktop-agnostic base)
 │       ├── hardware/
 │       │   └── printing.nix  # Epson ESC-P/R printer + ecbd.service
 │       ├── network/
 │       │   ├── ssh.nix       # SSH server
 │       │   └── wifi.nix      # Declarative Wi-Fi networks (NetworkManager)
 │       ├── security/
-│       │   └── tpm2.nix      # TPM2 for automatic LUKS unlock
+│       │   ├── tpm2.nix      # TPM2 for automatic LUKS unlock
+│       │   └── yubikey.nix   # FIDO2/U2F (opt-in), fingerprint, PC/SC, keyring
 │       ├── shell/
 │       │   └── shells.nix    # Shells available on the system (Bash, Fish, Zsh)
 │       ├── tools/
+│       │   ├── homebrew.nix  # Shared Homebrew prefix + nix-ld libraries
 │       │   └── packages.nix  # Essential packages (Neovim, Helix, home-manager, just, etc.)
 │       └── users/
 │           └── users.nix     # User accounts, groups and sudo policy
@@ -121,16 +127,19 @@ Personal NixOS configuration based on Flakes, with Btrfs, declarative partitioni
 │   └── default.nix           # Local overlay: custom packages added to nixpkgs
 ├── pkgs/                     # Custom packages (outside official nixpkgs)
 │   ├── epson-printer-utility/
-│   ├── gregorio-lsp/
-│   ├── gregolint/
+│   ├── fprintd-goodix/
+│   ├── libfprint-goodix/     # lbssousa/libfprint fork (Goodix 538d sensor)
 │   ├── tree-sitter-gregorio/
-│   └── zed-gregorio/
+│   ├── yubikey-gpg-import/
+│   └── ...                   # See overlays/default.nix for the full, current list
 ├── justfile                  # Just recipes for switch, HM and maintenance
 ├── scripts/
 │   ├── install.sh            # Automated installation script
 │   ├── update.sh             # Update flake inputs + nixos-rebuild switch
 │   ├── enroll-tpm2.sh        # Set up LUKS unlock via TPM2
-│   └── setup-secureboot.sh   # Set up Secure Boot + sign modules (barbudus)
+│   ├── setup-secureboot.sh   # Set up Secure Boot + sign modules (barbudus)
+│   ├── import-gpg-yubikey.sh # Live-ISO: import+trust a YubiKey's GPG key (pre-install)
+│   └── import-ssh-yubikey.sh # Live-ISO: download resident FIDO2 SSH keys (pre-install)
 ├── users/                    # NixOS user account definitions
 │   ├── skeleton.nix          # Template for creating a new user
 │   ├── abutre.nix            # abutre's system account
@@ -174,7 +183,7 @@ See the [Full Installation Guide](INSTALLATION.md) for detailed instructions.
 
 # 2. Clone this repository
 nix-shell -p git
-git clone https://github.com/lbssousa/nixos-config.git /tmp/nixos-config
+git clone https://github.com/lbssousa/nix-config.git /tmp/nixos-config
 cd /tmp/nixos-config
 
 # 3. Run the installation script as root (interactive step-by-step guide)
@@ -205,7 +214,7 @@ echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
 
 # 3. Clone this repository
 nix-shell -p git
-git clone https://github.com/lbssousa/nixos-config.git /tmp/nixos-config
+git clone https://github.com/lbssousa/nix-config.git /tmp/nixos-config
 cd /tmp/nixos-config
 
 # 4. Adjust the device in the host's disko.nix
@@ -429,19 +438,43 @@ git commit -m "Add encrypted secret file"
 # The file is automatically encrypted on push and on clone for anyone without the key.
 ```
 
+## 🍺 Homebrew
+
+Available system-wide, similar to Flatpak: a shared prefix at
+`/home/linuxbrew/.linuxbrew`, group-writable by every normal user. Set up in
+two parts:
+
+- `modules/system/tools/homebrew.nix` — creates the shared prefix (owned by
+  the `linuxbrew` group) and extends `nix-ld` with the libraries
+  Electron/GTK casks need.
+- `modules/home/apps/homebrew.nix` — per-user bootstrap (installs Homebrew
+  itself on first run) and a declarative Brewfile, applied via a
+  `systemd --user` service (Homebrew's installer refuses to run as root, so
+  this can't be a system-level service the way Flatpak's is).
+
+Includes the [`ublue-os/homebrew-tap`](https://github.com/ublue-os/homebrew-tap)
+tap and the [`bbrew`](https://github.com/Valkyrie00/bold-brew) TUI. A few apps
+that update very frequently upstream (VS Code, `claude-code`, `copilot-cli`,
+`opencode`) are installed via Homebrew instead of nixpkgs — see the Brewfile
+in `modules/home/apps/homebrew.nix` for the current list.
+
 ## 📱 Flatpaks
 
-Most GNOME desktop applications are installed directly via Nix
-(`environment.systemPackages`). Flatpak is kept only for the five apps
-with no adequate nixpkgs equivalent:
+Most desktop applications are installed directly via Nix
+(`environment.systemPackages`) or Homebrew (see above). Flatpak covers
+browsers and a handful of apps with no adequate nixpkgs equivalent — see
+`dendritic/flake/noctalia-wrapper.nix` for the authoritative, current list:
 
 | Flatpak App | Description |
 |-------------|-----------|
+| `com.bitwarden.desktop` | Password manager |
 | `com.github.tchx84.Flatseal` | Flatpak permissions manager |
 | `com.ranfdev.DistroShelf` | Container distro manager |
 | `io.github.flattool.Ignition` | Flatpak autostart manager |
 | `io.github.flattool.Warehouse` | Flatpak app manager |
-| `io.github.kolunmi.Bazaar` | GNOME app store |
+| `org.mozilla.firefox` | Default browser |
+| `com.brave.Browser` | Alternate browser / PWAs |
+| `us.zoom.Zoom` | Video conferencing |
 
 These Flatpaks are **installed automatically** on the first boot with
 internet available (via nix-flatpak's `flatpak-managed-install` service).
@@ -460,19 +493,25 @@ flatpak install flathub org.gimp.GIMP
 
 ## 🔒 Post-Installation Configuration
 
-### YubiKey U2F Registration (pamu2fcfg)
+### YubiKey FIDO2/U2F (optional, off by default)
 
-> 💡 **Recommended for users in the `wheel` group**: when `/persist/etc/u2f-mappings` exists
-> and contains the user's entry, `sudo`, `run0` and `pkexec` require a YubiKey touch. If the file
-> doesn't exist or the user has no entry in it, PAM automatically falls back to
+FIDO2/U2F-based PAM/PolKit authentication is **opt-in**: set
+`security.fido2Auth.enable = true;` (see `modules/system/security/yubikey.nix`)
+on a host to require a YubiKey touch for `sudo`, `run0`, the graphical greeter
+and `pkexec`. Fingerprint auth, PC/SC and the keyring stay on regardless of
+this flag.
+
+> 💡 Once enabled: when `/persist/etc/u2f-mappings` exists and contains the
+> user's entry, those tools require a YubiKey touch. If the file doesn't
+> exist or the user has no entry in it, PAM automatically falls back to
 > **password** authentication — no lockout.
 
-This step should be performed **during installation**, before the first reboot. See
-[step 10 of the installation guide](INSTALLATION.md) for complete instructions.
-
-If the step was skipped, the system will still work normally via password. To register the
-YubiKey after the first boot, see the
-[Register YubiKey after the first boot](INSTALLATION.md#-troubleshooting) section of the installation guide.
+Registering a key (`pamu2fcfg`) should be done **during installation**, before
+the first reboot — see [step 10 of the installation guide](INSTALLATION.md)
+for complete instructions. If it was skipped, the system still works normally
+via password; see
+[Register YubiKey after the first boot](INSTALLATION.md#-troubleshooting) in
+the installation guide.
 
 ### Secure Boot (barbudus only)
 
@@ -507,6 +546,8 @@ sudo bash scripts/enroll-tpm2.sh
 - [NixOS Hardware](https://github.com/NixOS/nixos-hardware)
 - [Limine Bootloader](https://github.com/limine-bootloader/limine)
 - [nix-flatpak](https://github.com/gmodena/nix-flatpak)
+- [Noctalia](https://docs.noctalia.dev/) / [Umbriel](https://github.com/noctalia-dev/umbriel) / [Noctalia Greeter](https://github.com/noctalia-dev/noctalia-greeter)
+- [Homebrew on Linux](https://docs.brew.sh/Homebrew-on-Linux) / [ublue-os/homebrew-tap](https://github.com/ublue-os/homebrew-tap)
 - [Ghostty](https://ghostty.org/)
 - [Erase Your Darlings (ephemeral system)](https://grahamc.com/blog/erase-your-darlings/)
 - [Btrfs on NixOS](https://nixos.wiki/wiki/Btrfs)

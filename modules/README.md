@@ -38,7 +38,7 @@ modules/
 │   ├── audio/       # PipeWire / audio
 │   ├── boot/        # Boot loader, Plymouth
 │   ├── containers/  # Rootless Podman, Distrobox
-│   ├── core/        # Base settings + impermanence
+│   ├── core/        # Base settings + preservation (ephemeral root)
 │   ├── desktop/     # Base graphical-environment config (nix-ld, portals, fonts, Bluetooth)
 │   ├── hardware/    # Printing and hardware-specific config
 │   ├── network/     # SSH and Wi-Fi

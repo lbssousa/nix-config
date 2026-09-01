@@ -16,11 +16,11 @@ HM is applied automatically together with `nixos-rebuild switch`.
 ### Apply the system configuration (includes Home Manager)
 
 ```bash
-# Via Just (auto-detects the active host and desktop):
+# Via Just (auto-detects the current host):
 just switch
 
-# Explicitly specifying the desktop:
-just switch plasma
+# A specific host:
+just switch barbudus
 
 # Or directly via nixos-rebuild:
 sudo nixos-rebuild switch --flake /etc/nixos
@@ -33,7 +33,10 @@ sudo nixos-rebuild switch --flake /etc/nixos
    ```bash
    git add home/users/<user>/home.nix
    ```
-3. The [`modules/system/users/home-manager.nix`](../modules/system/users/home-manager.nix) module
-   detects the file via `lib.pathExists` and imports it automatically.
+3. [`home/mkUserHome.nix`](mkUserHome.nix)'s `userModule` function detects the
+   file via `lib.pathExists` and imports it automatically — used by both the
+   NixOS-module path ([`dendritic/flake/home-nixos-module.nix`](../dendritic/flake/home-nixos-module.nix))
+   and the standalone `homeConfigurations` path
+   ([`dendritic/flake/home-configurations.nix`](../dendritic/flake/home-configurations.nix)).
 
 Users with no customization only inherit `home/common.nix`.
