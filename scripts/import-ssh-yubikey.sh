@@ -9,6 +9,9 @@
 #   1. Check prerequisites (ssh-keygen, YubiKey detected via USB)
 #   2. Download resident keys with ssh-keygen -K
 #   3. Move the keys to ~/.ssh/ and set permissions
+#   3.5 Generate ~/.ssh/config with a Host block per resident key
+#       (points IdentityFile at the resident key and bypasses the agent,
+#       which otherwise refuses to sign ED25519-SK keys)
 #   4. Load the keys into ssh-agent (if available)
 #   5. Show the imported public keys for verification
 #
@@ -76,6 +79,12 @@ Description:
   disk. So any private-key operation requires the YubiKey to be physically present.
 
   The script uses ssh-keygen -K, which prompts for the YubiKey PIN interactively.
+
+  A ~/.ssh/config is also generated with one Host block per resident key
+  (e.g. Host github.com). It points IdentityFile at the resident key and sets
+  IdentitiesOnly yes + IdentityAgent none, so ssh uses the FIDO authenticator
+  directly instead of the SSH agent — which typically refuses to sign ED25519-SK
+  keys (e.g. gnome-keyring returning 'agent refused operation').
 
 Examples:
   # Default usage (imports into ~/.ssh/):
@@ -198,6 +207,106 @@ done < <(find "$_tmpdir" -name "id_ed25519_sk_rk*" ! -name "*.pub" | sort)
 echo
 
 # ---------------------------------------------------------------------------
+# Step 3.5: Generate ~/.ssh/config with a Host block per resident key
+# ---------------------------------------------------------------------------
+# Resident ED25519-SK keys only work if ssh loads them explicitly:
+#
+#   - ssh only probes default filenames (id_ed25519_sk, id_rsa, ...), never
+#     the *_rk* residents, unless an IdentityFile points to them.
+#
+#   - Any SSH agent (gnome-keyring, Bitwarden, etc.) that has these keys
+#     loaded returns "agent refused operation" when asked to sign them
+#     (ED25519-SK must contact the FIDO device directly via the sshsk path).
+#     Bypassing the agent with IdentityAgent none + IdentitiesOnly yes makes
+#     ssh use the authenticator instead of the agent, prompting for the touch.
+#
+# The host each key belongs to is embedded in the public key's comment, e.g.
+# "ssh:github.com". All keys that resolve to the same host are aggregated into
+# a single Host block, so ssh tries each matching IdentityFile in order. This
+# yields entries like:
+#
+#   Host github.com
+#     IdentityFile ~/.ssh/id_ed25519_sk_rk_github.com
+#     IdentityFile ~/.ssh/id_ed25519_sk_rk_github.com_lbssousa
+#     IdentitiesOnly yes
+#     IdentityAgent none
+#     AddKeysToAgent no
+
+info "==> Step 3.5: Generate ${OPT_SSH_DIR}/config (per-key Host blocks)"
+
+_CONFIG_FILE="${OPT_SSH_DIR}/config"
+
+if [[ -f "$_CONFIG_FILE" ]]; then
+  if ! confirm "File $_CONFIG_FILE already exists. Overwrite it?"; then
+    warn "Keeping the existing $_CONFIG_FILE (skipping key blocks)."
+    info "Add an IdentityFile/IdentitiesOnly/IdentityAgent block manually to use the resident keys."
+  else
+    _OVERWRITE_CONFIG=true
+  fi
+else
+  _OVERWRITE_CONFIG=true
+fi
+
+if [[ "${_OVERWRITE_CONFIG:-false}" == "true" ]]; then
+  : > "$_CONFIG_FILE"
+
+  declare -A _host_keys=()
+
+  while IFS= read -r _privkey; do
+    _pubkey="${_privkey}.pub"
+    _basename=$(basename "$_privkey")
+
+    # The on-disk key name already contains the host (e.g.
+    # id_ed25519_sk_rk_github.com); fall back to the pubkey comment if
+    # the filename is ambiguous.
+    _host=""
+    if [[ -f "$_pubkey" ]]; then
+      # Format: <keytype> <base64blob> <comment>, comment is "ssh:<host>".
+      _comment=$(awk '{ $1=""; $2=""; gsub(/^[ \t]+|[ \t]+$/, ""); print }' "$_pubkey")
+      if [[ "$_comment" =~ ^ssh:([^ ]+)$ ]]; then
+        _host="${BASH_REMATCH[1]}"
+      fi
+      # Prefer the host encoded in the filename (more reliable/long-lived).
+      if [[ "$_basename" =~ _rk_(.+) ]]; then
+        _filename_host="${BASH_REMATCH[1]}"
+        # The filename may end with a random hex "key handle" appended by
+        # ssh-keygen for per-rp duplicates; strip a trailing _<64hex> so the
+        # host is clean.
+        _filename_host="${_filename_host%_*}"
+        [[ -n "$_filename_host" ]] && _host="$_filename_host"
+      fi
+    fi
+
+    if [[ -z "$_host" ]]; then
+      warn "Could not determine the host for $_basename — skipping its block."
+      continue
+    fi
+
+    _host_keys["$_host"]+="${_basename}|"
+  done < <(find "$_tmpdir" -name "id_ed25519_sk_rk*" ! -name "*.pub" | sort)
+
+  if [[ ${#_host_keys[@]} -eq 0 ]]; then
+    warn "No Host block could be generated for $_CONFIG_FILE."
+  else
+    for _host in "${!_host_keys[@]}"; do
+      printf '\nHost %s\n' "$_host" >> "$_CONFIG_FILE"
+      IFS='|' read -ra _keys <<< "${_host_keys[$_host]}"
+      for _kb in "${_keys[@]}"; do
+        [[ -z "$_kb" ]] && continue
+        printf '  IdentityFile %s/%s\n' "$OPT_SSH_DIR" "$_kb" >> "$_CONFIG_FILE"
+      done
+      printf '  IdentitiesOnly yes\n' >> "$_CONFIG_FILE"
+      printf '  IdentityAgent none\n' >> "$_CONFIG_FILE"
+      printf '  AddKeysToAgent no\n' >> "$_CONFIG_FILE"
+      success "Host block generated for '$_host' (${#_keys[@]} key(s))."
+    done
+    success "$_CONFIG_FILE generated with ${#_host_keys[@]} Host block(s)."
+  fi
+fi
+
+echo
+
+# ---------------------------------------------------------------------------
 # Step 4: Load the keys into ssh-agent
 # ---------------------------------------------------------------------------
 
@@ -246,7 +355,8 @@ done < <(find "$OPT_SSH_DIR" -name "id_ed25519_sk_rk*.pub" | sort)
 echo -e "${GREEN}${BOLD}Resident SSH keys imported successfully!${RESET}"
 echo
 info "The keys are in: $OPT_SSH_DIR"
-info "To check the connection to GitHub:"
+info "A ~/.ssh/config with per-key Host blocks was generated too."
+info "To check the connection to GitHub (touch the YubiKey when prompted):"
 echo "  ssh -T git@github.com"
 echo
 info "Next step — system installation:"
