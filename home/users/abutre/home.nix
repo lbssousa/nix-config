@@ -23,7 +23,7 @@ in
     ../../../modules/home/apps/terminals/tmux.nix
     ../../../modules/home/apps/terminals/herdr.nix
 
-    ./gnome.nix
+    ./noctalia.nix
     # ./rclone.nix  # disabled until Google Drive OAuth reauthentication
     ./vscode.nix
     ./fish.nix

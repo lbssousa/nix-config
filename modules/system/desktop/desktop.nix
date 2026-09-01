@@ -1,5 +1,5 @@
 # Base graphical environment module — shared by all desktops.
-# GNOME-specific configuration lives in dendritic/flake/gnome-wrapper.nix.
+# Noctalia-specific configuration lives in dendritic/flake/noctalia-wrapper.nix.
 { pkgs, ... }:
 {
   programs = {
@@ -16,12 +16,13 @@
     };
   };
 
-  # XDG Portal for GNOME integration (Nix and Flatpak apps)
+  # XDG Portal for Nix and Flatpak apps (file chooser fallback for GTK apps).
+  # Umbriel's NixOS module (programs.umbriel) contributes its own portal
+  # backend on top of this — see dendritic/flake/noctalia-wrapper.nix.
   xdg.portal = {
     enable = true;
     extraPortals = with pkgs; [
       xdg-desktop-portal-gtk
-      xdg-desktop-portal-gnome
     ];
   };
 
@@ -59,10 +60,12 @@
     };
   };
 
-  # Graphical editors with an FHS environment: lets extensions and helper
+  # Graphical editor with an FHS environment: lets extensions and helper
   # tools that depend on standard FHS paths work correctly on NixOS.
+  # Note: VS Code itself is no longer installed here — it comes from the
+  # Homebrew "visual-studio-code-linux" cask (modules/home/apps/homebrew.nix),
+  # which is genuinely FHS-compliant and needs no wrapper.
   environment.systemPackages = with pkgs; [
-    vscode-fhs
     zed-editor-fhs
   ];
 

@@ -1,12 +1,21 @@
-# GNOME desktop notification when PAM asks for a YubiKey touch.
+# Desktop notification when PAM asks for a YubiKey touch.
+#
+# Only meaningful when security.fido2Auth.enable is true (see yubikey.nix) —
+# pam_u2f is what actually waits for the touch this notifies about.
 #
 # Inserts a pam_exec.so before pam_u2f (order 10900) in the sudo and
 # polkit-1 stacks. The script figures out the user via PAM_RUSER (or
 # loginuid as a fallback), checks whether there's a graphical session at
 # /run/user/<uid>/bus, and sends an urgent notification via
-# org.freedesktop.Notifications (gnome-shell). The call runs in the
-# background so it doesn't block sudo while waiting for U2F authentication.
-{ pkgs, ... }:
+# org.freedesktop.Notifications (Noctalia Shell's notification daemon). The
+# call runs in the background so it doesn't block sudo while waiting for
+# U2F authentication.
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   notifyScript = pkgs.writeShellScript "yubikey-touch-notify" ''
@@ -46,27 +55,29 @@ let
   '';
 in
 {
-  security.pam.services.sudo.rules.auth.yubikeyNotify = {
-    control = "optional";
-    modulePath = "${pkgs.linux-pam}/lib/security/pam_exec.so";
-    # seteuid: runs the script with the effective UID (root) instead of the
-    # real UID (the invoking user). Needed so runuser can switch users —
-    # without seteuid, pam_exec runs the script as the real user and
-    # runuser refuses the call for lack of privilege.
-    args = [
-      "seteuid"
-      "${notifyScript}"
-    ];
-    order = 10850; # Immediately before pam_u2f (order 10900)
-  };
+  config = lib.mkIf config.security.fido2Auth.enable {
+    security.pam.services.sudo.rules.auth.yubikeyNotify = {
+      control = "optional";
+      modulePath = "${pkgs.linux-pam}/lib/security/pam_exec.so";
+      # seteuid: runs the script with the effective UID (root) instead of the
+      # real UID (the invoking user). Needed so runuser can switch users —
+      # without seteuid, pam_exec runs the script as the real user and
+      # runuser refuses the call for lack of privilege.
+      args = [
+        "seteuid"
+        "${notifyScript}"
+      ];
+      order = 10850; # Immediately before pam_u2f (order 10900)
+    };
 
-  security.pam.services."polkit-1".rules.auth.yubikeyNotify = {
-    control = "optional";
-    modulePath = "${pkgs.linux-pam}/lib/security/pam_exec.so";
-    args = [
-      "seteuid"
-      "${notifyScript}"
-    ];
-    order = 10850;
+    security.pam.services."polkit-1".rules.auth.yubikeyNotify = {
+      control = "optional";
+      modulePath = "${pkgs.linux-pam}/lib/security/pam_exec.so";
+      args = [
+        "seteuid"
+        "${notifyScript}"
+      ];
+      order = 10850;
+    };
   };
 }

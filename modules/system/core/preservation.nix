@@ -3,20 +3,17 @@
 # or snapshot needed. Important data is preserved in /persist via bind
 # mounts managed by the nix-community/preservation module.
 #
-# /home is also tmpfs (no dedicated Btrfs subvolume). Selected items for
-# each user are bind-mounted from /persist/home/<user>/. The rest of the
-# home directory — symlinks managed by Home Manager, cache files, etc. — is
-# ephemeral and recreated on every boot.
-#
-# The list of items preserved per user is defined in users/mkUser.nix.
+# /home has its own Btrfs subvolume (see disko.nix) and is not affected by
+# the ephemeral root — user data persists there normally, with no need for
+# per-item preservation bind mounts.
 _:
 
 {
-  # /persist must be available at boot (the preservation module needs it to
-  # set up the bind mounts before any service starts)
-  fileSystems."/persist".neededForBoot = true;
-
-  preservation.enable = true;
+  # Mark /persist and /home as needed at boot (preservation depends on this)
+  fileSystems = {
+    "/persist".neededForBoot = true;
+    "/home".neededForBoot = true;
+  };
 
   preservation.preserveAt."/persist" = {
     directories = [

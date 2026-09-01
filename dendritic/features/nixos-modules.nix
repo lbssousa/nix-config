@@ -21,6 +21,7 @@ in
       ../../modules/system/security/yubikey.nix
       ../../modules/system/security/yubikey-notify.nix
       ../../modules/system/shell/shells.nix
+      ../../modules/system/tools/homebrew.nix
       ../../modules/system/tools/packages.nix
       ../../modules/system/users/users.nix
       # Modules generated at flake-parts evaluation time: close over the

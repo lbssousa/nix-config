@@ -76,5 +76,4 @@
     ];
   };
 
-  # The list of items preserved per user is defined in users/mkUser.nix.
 }

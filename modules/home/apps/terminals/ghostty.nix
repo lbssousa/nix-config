@@ -1,14 +1,14 @@
 # Ghostty configuration — default desktop terminal
 #
-# To open without decorations (PaperWM, quake-terminal):
+# To open without decorations (quake-style drop-down):
 #   ghostty --window-decoration=false
 #
 # The 'com.mitchellh.ghostty.quake' desktop entry (hidden from the app menu)
-# is used by the quake-terminal extension via terminal-id. The --class flag
-# sets the GApplication ID (and therefore the Wayland app_id), which GNOME
-# Shell uses to assign windows to the right Shell.App — without it, the
-# Shell assigns the window to com.mitchellh.ghostty.desktop and the
-# windows-changed signal never fires for the app the extension is watching.
+# backs the F12 quake-style terminal, bound in home/users/abutre/noctalia.nix
+# via an Umbriel keybind + scratchpad (window-move-to-scratchpad /
+# scratchpad-toggle) instead of a GNOME Shell extension. The --class flag
+# sets the GApplication ID (and therefore the Wayland app_id), which Umbriel's
+# window_rule matches on to float the window instead of tiling it.
 #
 # Note: Ghostty 1.3.1 doesn't support [profile:name] in the config — flags
 # are used directly on the command line instead.
@@ -63,10 +63,10 @@ _:
       auto-update = off
     '';
 
-    # Desktop entry hidden from the app menu, used by the quake-terminal extension.
+    # Desktop entry hidden from the app menu, used by the quake-style F12 binding.
     # --class: sets the GApplication ID to com.mitchellh.ghostty.quake, which
-    #   makes GNOME Shell assign the window to this desktop entry (via the
-    #   Wayland app_id), so the windows-changed signal fires on the right Shell.App.
+    #   is what Umbriel's window_rule (home/users/abutre/noctalia.nix) matches
+    #   on to float this window instead of tiling it.
     # --gtk-single-instance=false: prevents this instance from registering as
     #   a singleton GApplication. Without it, it would grab the single-instance
     #   slot and normally-opened windows would get routed to this process.

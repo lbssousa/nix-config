@@ -7,10 +7,10 @@
   imports = [
     ../modules/home/apps/browsers/brave.nix
     ../modules/home/apps/security/bitwarden.nix
+    ../modules/home/apps/homebrew.nix
   ];
 
-  # Zathura as the default PDF viewer.
-  # Users with gnome.nix can override it with Papers (plain > mkDefault).
+  # Zathura as the default PDF viewer (mkDefault so a user's home.nix can override it).
   xdg.mimeApps.defaultApplications = {
     "application/pdf" = lib.mkDefault "org.pwmt.zathura.desktop";
     "application/x-bzpdf" = lib.mkDefault "org.pwmt.zathura.desktop";
