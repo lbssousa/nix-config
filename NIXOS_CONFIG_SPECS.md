@@ -294,6 +294,21 @@ flatpak install flathub org.kde.konsole    # KDE: terminal
 - Root login disabled
 - Server keys at `/persist/etc/ssh/`
 
+### FIDO2/U2F (YubiKey)
+
+- Module: `modules/system/security/yubikey.nix`
+- Opt-in via `security.fido2Auth.enable` (default **off** on every host) — when
+  enabled, adds `pam_u2f` to sudo, run0, TTY login, the graphical greeter and
+  polkit/pkexec, each falling back to password if there's no valid entry in
+  `/persist/etc/u2f-mappings`
+- PC/SC (smartcard access), fingerprint PAM wiring and the secret-service
+  keyring are independent of this flag and stay on regardless
+- `scripts/import-gpg-yubikey.sh`: import and trust a YubiKey's OpenPGP
+  public key; every step is idempotent, so the same script works both on
+  the live ISO before installation (needed before this flake's packages are
+  buildable) and on an already-installed system. `pkgs/yubikey-gpg-import`
+  packages this exact file as a plain `yubikey-gpg-import` command for the
+  latter case — single source of truth, no duplicated logic.
 ## References and Inspirations
 
 - [Fedora Silverblue](https://silverblue.fedoraproject.org/)
