@@ -13,7 +13,7 @@
       pam_u2f # pamu2fcfg tool to register U2F keys
       yubico-piv-tool # PIV operations (certificates/keys)
       gnupg # gpg/gpg-agent CLI
-      yubikey-gpg-import # imports/trusts the card's OpenPGP public key
+      yubikey-gpg-import # imports/trusts the card's OpenPGP public key (scripts/import-gpg-yubikey.sh)
     ];
 
     sessionVariables = {

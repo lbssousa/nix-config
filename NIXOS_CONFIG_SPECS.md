@@ -329,9 +329,12 @@ of `disko.nix`/`modules/system/core/preservation.nix` for context.)
   `/persist/etc/u2f-mappings`
 - PC/SC (smartcard access), fingerprint PAM wiring and the secret-service
   keyring are independent of this flag and stay on regardless
-- `pkgs/yubikey-gpg-import` / `scripts/import-gpg-yubikey.sh`: import and trust
-  a YubiKey's OpenPGP public key (the latter is the live-ISO/pre-install
-  variant, needed before the system — and this flake's packages — exist)
+- `scripts/import-gpg-yubikey.sh`: import and trust a YubiKey's OpenPGP
+  public key; every step is idempotent, so the same script works both on
+  the live ISO before installation (needed before this flake's packages are
+  buildable) and on an already-installed system. `pkgs/yubikey-gpg-import`
+  packages this exact file as a plain `yubikey-gpg-import` command for the
+  latter case — single source of truth, no duplicated logic.
 
 ## References and Inspirations
 
