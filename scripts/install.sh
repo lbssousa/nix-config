@@ -6,6 +6,7 @@
 #   1.  Selects the host and target disk
 #   2.  Selects the partitioning profile (btrfs or zfs)
 #   3.  Partitions and formats the disk with disko
+#   3b. Activates the disk swap in the live environment (prevents OOM during install)
 #   4.  Creates user files from the skeleton
 #   5.  Adds the user files to the git index (git add)
 #   6.  Updates configuration.nix with the user imports
@@ -14,7 +15,7 @@
 #   7.  Installs NixOS
 #   8.  Asks, for each user, whether to set a password now or on first login
 #   8b. Registers the YubiKey for U2F authentication (pamu2fcfg)
-#   9.  Runs home-manager switch for each user (except root)
+#   9.  Home Manager is already activated by nixos-install (NixOS module)
 #
 # Usage:
 #   bash scripts/install.sh [--host <hostname>] [--disk <device>]
@@ -264,6 +265,7 @@ This script automates the steps described in INSTALLATION.md:
   1.  Selects the host and target disk
   2.  Selects the partitioning profile (btrfs or zfs)
   3.  Partitions and formats the disk with disko
+  3b. Activates the disk swap in the live environment (prevents OOM during install)
   4.  Creates user files from the skeleton
   5.  Adds the user files to the git index (git add)
   6.  Updates configuration.nix with the user imports
@@ -272,7 +274,7 @@ This script automates the steps described in INSTALLATION.md:
   7.  Installs NixOS
   8.  Sets passwords via passwd --root
   8b. Registers the YubiKey for U2F authentication (pamu2fcfg)
-  9.  Runs home-manager switch for each user (except root)
+  9.  Home Manager is already activated by nixos-install (NixOS module)
 EOF
       exit 0 ;;
     *) die "Unknown option: $1. Use --help to see the available options." ;;
@@ -650,6 +652,43 @@ nix run github:nix-community/disko \
   --option extra-trusted-public-keys "$NIX_COMMUNITY_KEY" \
   -- --mode disko "$DISKO_FILE"
 success "Disk partitioned and formatted successfully."
+
+# ---------------------------------------------------------------------------
+# 3b. Activate disk swap in the live environment
+# ---------------------------------------------------------------------------
+# disko formats the swap partition/volume (mkswap) but does not activate it.
+# The live CD runs without any swap, so nixos-install has only physical RAM
+# for Nix expression evaluation and builds. Activating the newly formatted
+# swap here gives nixos-install up to 20 GB of virtual memory, preventing
+# OOM kills that would otherwise abort the installation.
+#
+# Device names are fixed by the disko templates:
+#   btrfs: LUKS → LVM (root_vg) → /dev/root_vg/swap
+#   ZFS:   LUKS → ZFS pool (zroot) → ZVOL → /dev/zvol/zroot/swap
+
+echo
+info "==> Step 3b: Activate disk swap"
+
+_swap_device=""
+case "$PARTITION_PROFILE" in
+  btrfs) _swap_device="/dev/root_vg/swap" ;;
+  zfs)   _swap_device="/dev/zvol/zroot/swap" ;;
+esac
+
+if [[ -n "$_swap_device" && -b "$_swap_device" ]]; then
+  if grep -qF "$_swap_device" /proc/swaps 2>/dev/null; then
+    info "Swap already active on $_swap_device."
+  elif swapon "$_swap_device"; then
+    success "Disk swap activated on $_swap_device."
+    info "Available swap: $(free -h | awk '/^Swap:/{print $2}')."
+  else
+    warn "Could not activate swap on $_swap_device."
+    warn "nixos-install will run with live-CD RAM only — risk of OOM on low-RAM machines."
+  fi
+elif [[ -n "$_swap_device" ]]; then
+  warn "Swap device $_swap_device not found (host may have swap disabled)."
+  warn "nixos-install will run with live-CD RAM only."
+fi
 
 # ---------------------------------------------------------------------------
 # 4. Create user files
@@ -1306,38 +1345,33 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 9. Apply the Home Manager configuration for each user
+# 9. Home Manager — already activated by nixos-install
 # ---------------------------------------------------------------------------
+# Home Manager runs as a NixOS module (dendritic/flake/home-nixos-module.nix),
+# so nixos-install (Step 7) already:
+#   1. Built all user HM derivations (nixvim plugins, helix + LSPs, dotfiles)
+#   2. Activated each user's HM configuration via the hm-activate-<user>
+#      system activation script, creating dotfile symlinks in $HOME
+#
+# Running "home-manager switch" again here would re-evaluate the same Nix
+# expressions and re-run the same activation scripts — doubling the RAM
+# consumed by Nix evaluation for zero additional benefit.
+#
+# If any managed dotfiles are missing after the first boot, run:
+#   just home switch [<user>@<host>]
 
 echo
-info "==> Step 9: Apply the Home Manager configuration"
-info "Running 'home-manager switch' for each user on the installed system..."
-
+info "==> Step 9: Home Manager"
+info "Already activated by nixos-install (Home Manager runs as a NixOS module)."
+_hm_hint_shown=false
 for _user in "${_ALL_PASSWD_USERS[@]}"; do
   [[ "$_user" == "root" ]] && continue
-
-  # Check whether the user exists on the installed system
-  if ! grep -q "^${_user}:" /mnt/etc/passwd 2>/dev/null; then
-    continue
+  grep -q "^${_user}:" /mnt/etc/passwd 2>/dev/null || continue
+  if [[ "$_hm_hint_shown" == "false" ]]; then
+    info "If any dotfiles are missing after the first boot, run:"
+    _hm_hint_shown=true
   fi
-
-  echo
-  info "Applying Home Manager for '$_user' (${_user}@${HOST})..."
-  # runuser doesn't require authentication when called by root, making it
-  # suitable for use inside nixos-enter without user interaction.
-  if nixos-enter --root /mnt -- \
-      runuser -u "$_user" -- \
-      home-manager switch \
-        --flake "/etc/nixos#${_user}@${HOST}" \
-        --option accept-flake-config true \
-        --option extra-substituters "$NIX_COMMUNITY_SUBSTITUTER" \
-        --option extra-trusted-public-keys "$NIX_COMMUNITY_KEY"; then
-    success "Home Manager configuration applied for '$_user'."
-  else
-    warn "Could not apply Home Manager for '$_user'."
-    warn "Run manually after the first boot: just --justfile /etc/nixos/justfile home $_user"
-    warn "(the recipe above runs: home-manager switch --flake /etc/nixos#${_user}@${HOST})"
-  fi
+  info "  just home switch ${_user}@${HOST}"
 done
 
 # ---------------------------------------------------------------------------
