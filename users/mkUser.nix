@@ -42,7 +42,7 @@
     ++ lib.optionals hasSudo [
       "wheel" # sudo
     ];
-    shell = pkgs.fish; # Default shell (Fish)
+    shell = pkgs.zsh; # Default shell (Zsh)
     # Initial password: the user will be prompted to change it on first login.
     # If a custom password is set during installation (see INSTALLATION.md),
     # the change won't be required.

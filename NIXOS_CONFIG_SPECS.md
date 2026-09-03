@@ -134,7 +134,7 @@ The `@` convention is compatible with tools like Timeshift and widely adopted by
 ### Shell
 
 - Available shells: Bash, Fish, Zsh
-- Default shell for new users: **Fish**
+- Default shell for new users: **Zsh**
 - Prompt: Starship (cross-shell)
 
 ### Editors

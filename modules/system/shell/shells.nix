@@ -1,4 +1,4 @@
-# Shells module: Bash, Fish and Zsh (Fish as default)
+# Shells module: Bash, Fish and Zsh (Zsh as default)
 { pkgs, ... }:
 
 {
@@ -43,8 +43,8 @@
     };
   };
 
-  # Set Fish as the default shell for new users
-  users.defaultUserShell = pkgs.fish;
+  # Set Zsh as the default shell for new users
+  users.defaultUserShell = pkgs.zsh;
 
   # Add shells to /etc/shells
   environment.shells = with pkgs; [
