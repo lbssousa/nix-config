@@ -1,5 +1,15 @@
 # Fixing the ABNT2 keyboard in GNOME (Wayland)
 
+> ⚠️ **Historical document.** This describes a GNOME/IBus-specific bug from
+> when this repository used GNOME as its desktop
+> (`dendritic/flake/gnome-wrapper.nix`, removed). The desktop is now the
+> Noctalia v5 suite (Umbriel + Noctalia Shell + Noctalia Greeter, see
+> `dendritic/flake/noctalia-wrapper.nix`), which doesn't use GNOME Shell,
+> Mutter or IBus's Compose-table implementation the way this document
+> describes — none of the fixes below apply to the current setup. Kept for
+> reference only (e.g. if GNOME is ever reintroduced, or for anyone reading
+> the git history around the GNOME→Noctalia migration).
+
 ## Problem
 
 In GNOME/Wayland sessions with an ABNT2 keyboard, two incorrect behaviors occurred:

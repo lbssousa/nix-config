@@ -4,7 +4,7 @@
 # complementary layers:
 #
 #   1. environment.d — read by systemd --user at session startup;
-#      inherited by GNOME Shell, VSCode, Zed and all child processes,
+#      inherited by Noctalia Shell, VSCode, Zed and all child processes,
 #      even before Bitwarden opens for the first time.
 #
 #   2. systemd path unit — watches the socket and, once detected, updates

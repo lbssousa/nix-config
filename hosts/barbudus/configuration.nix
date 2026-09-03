@@ -91,16 +91,21 @@
   # PKI keys managed via sbctl, stored in /persist/etc/secureboot.
   # NOTE: Requires initial key setup (see INSTALLATION.md)
   boot.loader.systemd-boot.enable = lib.mkForce false; # Replaced by Limine
+  # Limine requires a non-zero timeout to accept keyboard input (unlike
+  # systemd-boot, which silently polls for keys with timeout = 0). 1 second
+  # is the minimum that reliably allows pressing a key to enter the boot menu.
+  # The black backdrop + no wallpaper make the pause visually imperceptible —
+  # no resolution-change flickering, just a seamless transition to Plymouth.
+  boot.loader.timeout = 1;
   boot.loader.limine = {
     enable = true;
     maxGenerations = 10; # equivalent to systemd-boot's configurationLimit in boot.nix
     secureBoot.enable = true;
-    # boot.loader.timeout = 0 (set in modules/system/boot/boot.nix) already makes
-    # Limine skip the menu and boot the default entry immediately. Limine still
-    # renders one frame before honoring that timeout though, and by default
-    # (upstream mkDefault) that frame shows the NixOS dark-gray bootloader
-    # artwork. Disable that wallpaper and use a plain black backdrop instead,
-    # matching Plymouth's bgrt background, so the frame is imperceptible.
+    # Limine still renders one frame before the countdown expires, and by
+    # default (upstream mkDefault) that frame shows the NixOS dark-gray
+    # bootloader artwork. Disable that wallpaper and use a plain black
+    # backdrop instead, matching Plymouth's bgrt background, so the 1-second
+    # window is imperceptible.
     style = {
       wallpapers = [ ];
       backdrop = "000000";

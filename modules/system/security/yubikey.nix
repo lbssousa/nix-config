@@ -67,11 +67,19 @@ in
           };
         };
 
-        # TTY login (getty): password, keyring unlock on success.
-        # Note: nixpkgs' gdm.nix explicitly sets login.fprintAuth = false,
-        # since GNOME uses gdm-fingerprint as a separate PAM service for
-        # fingerprints.
+        # TTY console login (getty): password, keyring unlock on success.
         login.enableGnomeKeyring = true;
+
+        # Graphical login (Noctalia Greeter, via greetd): fingerprint
+        # (sufficient) → password, keyring unlock on success.
+        # enableGnomeKeyring: unlocks the keyring on successful login —
+        # despite the option name, gnome-keyring is a standalone
+        # secret-service daemon (services.gnome.gnome-keyring above) used
+        # regardless of desktop.
+        greetd = {
+          enableGnomeKeyring = true;
+          fprintAuth = true;
+        };
 
         # polkit/pkexec: fingerprint (sufficient) → password.
         # fprintd order 10700: before yubikey-notify (10850) and pam_u2f (10900).
@@ -99,9 +107,10 @@ in
           cue = true;
           # interactive deliberately omitted: without this flag, pam_u2f
           # doesn't require "press Enter" via TTY before waiting for the key
-          # touch. This lets GNOME's polkit agent (built into gnome-shell)
-          # show the graphical auth dialog — the user inserts the YubiKey and
-          # touches the key without needing to interact with a terminal.
+          # touch. This lets Noctalia's polkit agent (programs.noctalia.settings
+          # .shell.polkit_agent, see home/users/abutre/noctalia.nix) show the
+          # graphical auth dialog — the user inserts the YubiKey and touches
+          # the key without needing to interact with a terminal.
           authfile = "/persist/etc/u2f-mappings";
         };
       };
@@ -110,6 +119,7 @@ in
         sudo.u2f.enable = true;
         run0.u2f.enable = true;
         login.u2f.enable = true;
+        greetd.u2f.enable = true;
         "polkit-1".u2f.enable = true;
       };
 

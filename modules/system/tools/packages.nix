@@ -118,7 +118,7 @@ in
     lvm2
     zfs
 
-    # GStreamer and multimedia packages (useful for browsers and GNOME apps)
+    # GStreamer and multimedia packages (useful for browsers and desktop apps)
     gst_all_1.gst-libav
     gst_all_1.gst-plugins-good
     gst_all_1.gst-plugins-bad # includes the "va" plugin (VA-API), replacing gst-vaapi removed in GStreamer 1.28

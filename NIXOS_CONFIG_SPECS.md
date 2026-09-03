@@ -23,8 +23,11 @@ Provide a usage experience similar to Fedora Silverblue or the Bluefin project, 
   - `dendritic/flake/nixos-configurations.nix` — generates `nixosConfigurations.<host>`
   - `dendritic/flake/disko-configurations.nix` — generates `diskoConfigurations.<host>`
   - `dendritic/flake/home-nixos-module.nix` — wires Home Manager as a NixOS
-    module for every user (there's no standalone `homeConfigurations` output;
-    HM is applied together with `nixos-rebuild switch`)
+    module for every user, applied together with `nixos-rebuild switch`
+  - `dendritic/flake/home-configurations.nix` — also generates a standalone
+    `homeConfigurations."<user>@<host>"` output per user/host pair, deployable
+    independently via `home-manager switch` (both paths share one definition,
+    `home/mkUserHome.nix`, so they can't drift apart)
 
 ## Disk Partitioning
 
@@ -131,7 +134,7 @@ The `@` convention is compatible with tools like Timeshift and widely adopted by
 ### Shell
 
 - Available shells: Bash, Fish, Zsh
-- Default shell for new users: **Zsh**
+- Default shell for new users: **Fish**
 - Prompt: Starship (cross-shell)
 
 ### Editors
@@ -155,14 +158,35 @@ The `@` convention is compatible with tools like Timeshift and widely adopted by
 
 ## Graphical Environment
 
-### GNOME
+### Noctalia v5
 
-- GNOME is the only desktop; there's no per-host variant selection. It's applied
-  unconditionally to every host's `dendritic.nixos.sharedModules` by
-  `dendritic/flake/gnome-wrapper.nix`.
-- GDM (Wayland) as the display manager.
-- Default apps are installed via Nix (Firefox, Brave, Ghostty, Bitwarden, etc.);
-  Flatpak only for the 5 apps with no nixpkgs equivalent.
+- The Noctalia suite is the only desktop; there's no per-host variant selection. It's
+  applied unconditionally to every host's `dendritic.nixos.sharedModules` by
+  `dendritic/flake/noctalia-wrapper.nix`.
+- **Compositor**: Umbriel — an independent wlroots-based Wayland compositor
+  (`programs.umbriel`).
+- **Shell**: Noctalia — bars, launcher, dock, notifications, OSDs, lock screen,
+  session actions (`programs.noctalia`), no Qt/GTK dependency.
+- **Greeter**: Noctalia Greeter, via greetd — replaces GDM (`programs.noctalia-greeter`).
+- Per-user compositor/shell settings (keybinds, theme, dock) live in
+  `home/users/<user>/noctalia.nix`.
+- Default apps are installed via Nix (Ghostty, Bitwarden's SSH agent wiring, etc.) or
+  Homebrew (see below); Flatpak covers browsers and a handful of GUI utilities.
+
+### Homebrew (Linuxbrew)
+
+- Available system-wide, similar to Flatpak: a shared prefix at
+  `/home/linuxbrew/.linuxbrew`, group-writable by every normal user (`linuxbrew`
+  group, added by `users/mkUser.nix`).
+- Set up by `modules/system/tools/homebrew.nix` (shared prefix directory via
+  `systemd.tmpfiles.rules`, extra `nix-ld` libraries for Electron/GTK casks) and
+  `modules/home/apps/homebrew.nix` (per-user bootstrap + declarative Brewfile,
+  applied via a `systemd --user` service — Homebrew's installer refuses to run as
+  root, so this can't be a system-level service the way Flatpak's is).
+- Includes the `ublue-os/homebrew-tap` tap and the `bbrew` TUI.
+- A few apps that update very frequently upstream are installed via Homebrew
+  instead of nixpkgs (VS Code, `claude-code`, `copilot-cli`, `opencode`) — see the
+  Brewfile in `modules/home/apps/homebrew.nix` for the full, current list.
 
 ### Flatpak
 
@@ -171,15 +195,20 @@ The `@` convention is compatible with tools like Timeshift and widely adopted by
 - Repository: Flathub (configured automatically)
 - Managed declaratively via `nix-flatpak` (the `gmodena/nix-flatpak` input)
 
-**Apps installed declaratively (no nixpkgs equivalent):**
+**Apps installed declaratively** (`dendritic/flake/noctalia-wrapper.nix` — check
+that file for the current, authoritative list; it changes more often than this
+document):
 
 | App | Flatpak ID |
 |-----|-----------|
+| Bitwarden | `com.bitwarden.desktop` |
 | Flatseal | `com.github.tchx84.Flatseal` |
 | DistroShelf | `com.ranfdev.DistroShelf` |
 | Ignition | `io.github.flattool.Ignition` |
 | Warehouse | `io.github.flattool.Warehouse` |
-| Bazaar | `io.github.kolunmi.Bazaar` |
+| Firefox | `org.mozilla.firefox` |
+| Brave | `com.brave.Browser` |
+| Zoom | `us.zoom.Zoom` |
 
 **Flatpaks recommended for manual installation:**
 
@@ -248,19 +277,16 @@ flatpak install flathub org.kde.konsole    # KDE: terminal
 - `/etc/machine-id` - Unique machine ID
 - Server SSH keys (configured in ssh.nix)
 
-### Per-User Preserved Data (template)
+### Per-User Data
 
-- `~/Downloads`
-- `~/Documents`
-- `~/Pictures`, `~/Videos`, `~/Music`
-- `~/.ssh`
-- `~/.gnupg`
-- `~/.local/share/keyrings`
-- `~/.config/gh`
-- `~/.local/share/flatpak`
-- `~/.var/app`
-- `~/.local/share/containers`
-- Bash and Zsh history
+None of it needs explicit preservation entries: `/home` is its own persistent
+Btrfs subvolume (`@home`, see the table above), not part of the ephemeral tmpfs
+root. Whatever a user's session or Home Manager writes under `$HOME` — dotfiles,
+`~/.ssh`, `~/.gnupg`, browser profiles, shell history, and so on — survives
+reboots on its own. (This wasn't always the case: an earlier iteration of this
+repo ran `/home` as tmpfs too, with a hand-maintained list of bind-mounted
+per-user paths in `users/mkUser.nix`. That was reverted — see the git history
+of `disko.nix`/`modules/system/core/preservation.nix` for context.)
 
 ## Security
 
@@ -309,6 +335,7 @@ flatpak install flathub org.kde.konsole    # KDE: terminal
   buildable) and on an already-installed system. `pkgs/yubikey-gpg-import`
   packages this exact file as a plain `yubikey-gpg-import` command for the
   latter case — single source of truth, no duplicated logic.
+
 ## References and Inspirations
 
 - [Fedora Silverblue](https://silverblue.fedoraproject.org/)

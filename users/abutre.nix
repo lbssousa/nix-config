@@ -13,26 +13,11 @@ lib.mkMerge [
   {
     security.keepassxc.autoLockOnYubikeyRemove.users = [ "abutre" ];
 
-    # Dock shortcuts (GNOME Shell favorites bar) for the abutre user.
-    # Declared via programs.dconf.profiles.user.databases (system dconf
-    # database, in /etc/dconf/db/) to survive reboots with an ephemeral home.
-    programs.dconf.profiles.user.databases = [
-      {
-        settings = {
-          "org/gnome/shell" = {
-            favorite-apps = [
-              "org.mozilla.firefox.desktop"
-              "com.brave.Browser.desktop"
-              "org.gnome.TextEditor.desktop"
-              "org.gnome.Nautilus.desktop"
-              "io.github.kolunmi.Bazaar.desktop"
-              "code.desktop"
-              "dev.zed.Zed.desktop"
-            ];
-          };
-        };
-      }
-    ];
+    # Note: dock shortcuts (formerly the GNOME Shell favorites bar) are
+    # declared per-user via programs.noctalia.settings.dock.pinned in
+    # home/users/abutre/noctalia.nix — Noctalia's config lives in ~/.config
+    # (a persistent Btrfs subvolume), so no system-level dconf workaround is
+    # needed the way GNOME's ephemeral-home dconf database required.
 
     # Packages specific to the abutre user, installed via NixOS.
     # Development tools and apps exclusive to this user.

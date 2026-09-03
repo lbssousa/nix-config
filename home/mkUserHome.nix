@@ -10,6 +10,8 @@ in
   sharedModules = [
     inputs.nixvim.homeModules.nixvim
     inputs.sops-nix.homeManagerModules.sops
+    inputs.umbriel.homeModules.default
+    inputs.noctalia.homeModules.default
   ];
 
   # Per-user HM module: common.nix + user-specific home.nix (if it exists)

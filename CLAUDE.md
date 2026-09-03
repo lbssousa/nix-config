@@ -87,7 +87,7 @@ The two central inventories drive all flake outputs:
 
 Beyond configuration assembly, several files in `dendritic/flake/` are flake-parts modules that contribute to shared NixOS config or export flake packages:
 
-- **`gnome-wrapper.nix`** — adds a GNOME NixOS module to `dendritic.nixos.sharedModules` (GDM, GNOME desktop, Flatpak declarations, dconf defaults, QT/XKB env vars) and exports `packages.gnome-extensions` (PaperWM + Appindicator + Caffeine).
+- **`noctalia-wrapper.nix`** — adds the Noctalia desktop suite to `dendritic.nixos.sharedModules`: Umbriel (`programs.umbriel`, the wlroots compositor), Noctalia Shell (`programs.noctalia`, bars/launcher/dock/notifications), and Noctalia Greeter (`programs.noctalia-greeter`, replaces GDM via greetd), plus Flatpak declarations. Per-user compositor/shell settings (keybinds, theme, dock) live in `home/users/<user>/noctalia.nix`.
 - **`helix-wrapper.nix`** — builds and exports `packages.helix`: Helix editor wrapped with GABC/Gregorio tree-sitter grammar, texlab + ltex-ls + gregorio-lsp in PATH, and the full editor/LSP/keybindings config baked in via `nix-wrapper-modules`.
 - **`pkgs.nix`** — wires the local overlay into `_module.args.pkgs` for all `perSystem` modules.
 

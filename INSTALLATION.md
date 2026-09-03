@@ -361,9 +361,8 @@ sudo cp -r /tmp/nixos-config /mnt/etc/nixos
 # installation resilient to dependency download failures.
 # --option accept-flake-config true applies the flake's nixConfig (substituter + key)
 # at the same time, avoiding warnings about untrusted substituters.
-DESKTOP=plasma  # or gnome
 sudo nixos-install \
-  --flake /mnt/etc/nixos#${HOST}-${DESKTOP} \
+  --flake /mnt/etc/nixos#${HOST} \
   --option accept-flake-config true \
   --option extra-substituters "https://nix-community.cachix.org" \
   --option extra-trusted-public-keys "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCUSeBs="
@@ -403,12 +402,16 @@ sudo touch /mnt/persist/.password-change-required-<your-username>
 
 > **Note:** If passwords are set via `nixos-enter` without copying the shadow file to `/persist`, they'll be lost after the first reboot — the tmpfs root is always reset to an empty state (preservation only saves what's explicitly declared). Users will get the temporary `nixos` password and be prompted to change it.
 
-### 10. Register the YubiKey for U2F authentication
+### 10. Register the YubiKey for U2F authentication (optional)
 
-> 💡 **Recommended for users in the `wheel` group**: when `/persist/etc/u2f-mappings` exists
-> and contains the user's entry, `sudo`, `run0` and `pkexec` require a YubiKey touch.
-> If the file doesn't exist or the user has no entry in it, PAM automatically falls back
-> to **password** authentication — no lockout.
+> 💡 FIDO2/U2F PAM/PolKit authentication is **opt-in**
+> (`security.fido2Auth.enable`, off by default on every host — see
+> `modules/system/security/yubikey.nix`). This step only matters if you plan
+> to turn that option on for this host; skip it otherwise. Once enabled: for
+> users in the `wheel` group, when `/persist/etc/u2f-mappings` exists and
+> contains the user's entry, `sudo`, `run0` and `pkexec` require a YubiKey
+> touch. If the file doesn't exist or the user has no entry in it, PAM
+> automatically falls back to **password** authentication — no lockout.
 
 With the YubiKey inserted, run this **in the live environment** (outside `nixos-enter`):
 
@@ -444,7 +447,8 @@ sudo reboot
 1. **LUKS unlock**: Enter the encryption password set during disko
 2. **Login**: Use the created user with the password set during installation.
    If no password was set, use the temporary password **`nixos`** — the system will ask you to change it immediately.
-3. **YubiKey U2F** — recommended check before trying `sudo` or `run0`:
+3. **YubiKey U2F** — only relevant if `security.fido2Auth.enable` is set for
+   this host (off by default). If so, check before trying `sudo` or `run0`:
 
    ```bash
    cat /persist/etc/u2f-mappings
@@ -482,6 +486,13 @@ sudo reboot
    The Flatpaks declared in the configuration are installed automatically by the
    `flatpak-managed-install` service the first time the system boots with internet access.
    No manual action is needed.
+
+6. **Homebrew** (automatic bootstrap):
+
+   Similarly, Homebrew installs itself and applies its declarative Brewfile
+   automatically, via a `systemd --user` service, the first time each user's
+   session starts with internet access. No manual action is needed; see
+   `modules/home/apps/homebrew.nix` for the current package list.
 
 
 ## 🥾 Boot Menu (systemd-boot)
@@ -778,9 +789,11 @@ sudo cryptsetup luksDump /dev/nvme0n1p2
 
 ### Register the YubiKey after the first boot
 
-If step 10 was skipped during installation, `sudo`, `run0` and `pkexec` keep
-working via password (PAM automatically falls back to password authentication
-when there's no valid U2F mapping). To enable YubiKey authentication after boot:
+Only relevant once `security.fido2Auth.enable` is turned on for the host (off
+by default). If step 10 was skipped during installation, `sudo`, `run0` and
+`pkexec` keep working via password (PAM automatically falls back to password
+authentication when there's no valid U2F mapping). To enable YubiKey
+authentication after boot:
 
 **Normal option — via password (simplest path)**
 

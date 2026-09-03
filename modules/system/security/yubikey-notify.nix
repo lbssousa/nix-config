@@ -7,8 +7,9 @@
 # polkit-1 stacks. The script figures out the user via PAM_RUSER (or
 # loginuid as a fallback), checks whether there's a graphical session at
 # /run/user/<uid>/bus, and sends an urgent notification via
-# org.freedesktop.Notifications (gnome-shell). The call runs in the
-# background so it doesn't block sudo while waiting for U2F authentication.
+# org.freedesktop.Notifications (Noctalia Shell's notification daemon). The
+# call runs in the background so it doesn't block sudo while waiting for
+# U2F authentication.
 {
   config,
   lib,

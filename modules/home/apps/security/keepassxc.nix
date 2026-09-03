@@ -23,16 +23,15 @@
       SSHAgent.Enabled = true;
     };
 
-    # Three environment overrides are needed for proper GNOME integration:
+    # Three environment overrides, originally tuned for GNOME/qgnomeplatform,
+    # now targeting Umbriel's xdg-desktop-portal-umbriel (falls back to gtk —
+    # see programs.umbriel.portalPackage in dendritic/flake/noctalia-wrapper.nix):
     #
     # 1. QT_WAYLAND_DECORATION=adwaita
-    #    The qgnomeplatform 0.8.4 plugin (system default via
-    #    QT_WAYLAND_DECORATION=gnome) sets decoration colors once in its
-    #    constructor and doesn't watch for changes to
-    #    org.gnome.desktop.interface.color-scheme. The qadwaitadecorations
-    #    plugin subscribes to org.freedesktop.portal.Settings' SettingChanged
-    #    signal and calls updateColors() + forceRepaint() on every change,
-    #    keeping the title bar in sync with the system's light/dark mode.
+    #    Draws the client-side title bar via qadwaitadecorations, which
+    #    subscribes to org.freedesktop.portal.Settings' SettingChanged signal
+    #    and repaints on every light/dark change — desktop-agnostic as long
+    #    as the active portal implements org.freedesktop.portal.Settings.
     #
     # 2. QT_PLUGIN_PATH prefixed with qadwaitadecorations
     #    qadwaitadecorations is not a build dependency of keepassxc in
@@ -40,18 +39,11 @@
     #    by the Qt wrapper. We need to add it explicitly so Qt can find the plugin.
     #
     # 3. QT_QPA_PLATFORMTHEME=xdgdesktopportal
-    #    The "gnome" theme (qgnomeplatform, system default) opens file
-    #    dialogs as GTK3 widgets inside the KeePassXC process. This causes
-    #    two problems:
-    #    (a) gtk-application-prefer-dark-theme in settings.ini forces dark
-    #        mode regardless of GNOME's current color-scheme;
-    #    (b) toggling light/dark while the dialog is open makes GTK3 reload
-    #        the theme via inotify, and the active render causes a segfault.
-    #    With xdgdesktopportal, the file dialog is delegated to the GNOME
-    #    portal, which runs in a separate process and always reflects the
-    #    correct system mode. For fonts, cursor and other integrations,
-    #    xdgdesktopportal delegates to the underlying "gnome" theme
-    #    (determined by XDG_CURRENT_DESKTOP=GNOME).
+    #    Delegates file dialogs and color-scheme/font/cursor settings to
+    #    whatever implements the corresponding xdg-desktop-portal interfaces,
+    #    instead of hardcoding a GTK/GNOME theme backend. Verify after
+    #    switching that xdg-desktop-portal-umbriel/gtk cover these — if not,
+    #    KeePassXC falls back to Qt's own (non-portal) file dialog and theme.
     package = pkgs.symlinkJoin {
       name = "keepassxc";
       paths = [ pkgs.keepassxc ];

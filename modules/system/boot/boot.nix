@@ -21,7 +21,10 @@
       # To show the menu manually, hold down the Space key (or any key)
       # right after the UEFI firmware screen, during the boot window.
       # To change it temporarily via terminal: sudo bootctl set-timeout <seconds>
-      timeout = 0;
+      # Note: Limine hosts override this with timeout = 1 — Limine requires a
+      # non-zero value to accept keyboard input at all (unlike systemd-boot,
+      # which silently polls for keys even with timeout = 0).
+      timeout = lib.mkDefault 0;
     };
 
     # Plymouth for the boot splash screen

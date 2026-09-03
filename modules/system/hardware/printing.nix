@@ -3,16 +3,25 @@
 { pkgs, ... }:
 
 {
-  # Declarative CUPS queue to survive the ephemeral root (preservation).
+  # Declarative CUPS queues to survive the ephemeral root (preservation).
   #
   # Important: epson-printer-utility doesn't handle dnssd:// and
-  # implicitclass:// queues well; so we use an IP-based URI (socket://).
+  # implicitclass:// queues well; so we use an IP-based URI (socket://) for
+  # both queues below.
+  #
+  # Two queues for the same printer, differing only in the PPD/driver used:
+  #   - L4160_ESCPR: Epson's vendor ESC/P-R PPD (epson-escpr package).
+  #   - L4160_driverless: CUPS' generic IPP Everywhere PPD ("-m everywhere"),
+  #     no vendor driver involved.
+  # The `name` (CUPS queue name) can't contain spaces, "/" or "#", so the
+  # human-readable "L4160 (ESC/P-R)" / "L4160 (driverless)" labels live in
+  # `description` instead — that's what shows up in print dialogs.
   hardware.printers = {
     ensurePrinters = [
       {
-        name = "L4160_IP";
+        name = "L4160_ESCPR";
         location = "Wi-Fi";
-        description = "EPSON L4160 Series";
+        description = "L4160 (ESC/P-R)";
         deviceUri = "socket://EPSONE0321F.local:9100";
         model = "epson-inkjet-printer-escpr/Epson-L4160_Series-epson-escpr-en.ppd";
         # Default CUPS error-policy is "stop-printer": any filter failure
@@ -21,8 +30,16 @@
         # offending job and keeps the queue accepting new ones.
         ppdOptions."printer-error-policy" = "abort-job";
       }
+      {
+        name = "L4160_driverless";
+        location = "Wi-Fi";
+        description = "L4160 (driverless)";
+        deviceUri = "socket://EPSONE0321F.local:9100";
+        model = "everywhere";
+        ppdOptions."printer-error-policy" = "abort-job";
+      }
     ];
-    ensureDefaultPrinter = "L4160_IP";
+    ensureDefaultPrinter = "L4160_ESCPR";
   };
 
   services = {
