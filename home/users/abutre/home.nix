@@ -84,6 +84,27 @@ in
       };
     };
 
-    ssh.enable = true;
+    ssh = {
+      enable = true;
+
+      # GitHub via the YubiKey's resident ED25519-SK keys (imported by
+      # scripts/import-ssh-yubikey.sh), bypassing the SSH agent entirely.
+      # Agents (gnome-keyring, Bitwarden, etc.) refuse to sign ED25519-SK
+      # keys ("agent refused operation") — they must be signed by the FIDO
+      # authenticator directly. IdentityAgent none + IdentitiesOnly yes make
+      # ssh talk to the authenticator (prompting for a touch) instead of the
+      # agent on SSH_AUTH_SOCK; AddKeysToAgent no keeps the agent from
+      # re-registering them afterwards.
+      settings."github.com" = {
+        IdentityFile = [
+          "~/.ssh/id_ed25519_sk_rk_github.com"
+          "~/.ssh/id_ed25519_sk_rk_github.com_84f457f7c369847b436f5cac4139955e7d77f77fb490ab7f8429eeace4c19fe4"
+          "~/.ssh/id_ed25519_sk_rk_github.com_lbssousa"
+        ];
+        IdentitiesOnly = "yes";
+        IdentityAgent = "none";
+        AddKeysToAgent = "no";
+      };
+    };
   };
 }
