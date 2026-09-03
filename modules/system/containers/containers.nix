@@ -30,6 +30,7 @@
     podman-tui
   ];
 
-  # Enable user namespace support (required for rootless)
-  security.unprivilegedUsernsClone = true;
+  # User namespace support (required for rootless) — security.allowUserNamespaces
+  # already defaults to true; the old security.unprivilegedUsernsClone (removed
+  # upstream, see nixos/modules/security/misc.nix) only ever set that same default.
 }
