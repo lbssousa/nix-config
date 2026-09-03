@@ -5,7 +5,8 @@
 #
 # Homebrew's official installer refuses to run as root, so this all runs as
 # a systemd --user service instead of the system-level service Flatpak uses.
-_: {
+{ pkgs, ... }:
+{
   home = {
     sessionPath = [
       "/home/linuxbrew/.linuxbrew/bin"
@@ -27,7 +28,11 @@ _: {
         export PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:$PATH"
 
         if [ ! -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
-          NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          # NixOS has no /bin/bash (only /bin/sh) — the official installer's
+          # documented "/bin/bash -c ..." invocation doesn't exist here,
+          # which made this fail with "127" (command not found). Use the
+          # store path instead.
+          NONINTERACTIVE=1 ${pkgs.bash}/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
         fi
 
         brew tap ublue-os/homebrew-tap
