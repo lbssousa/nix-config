@@ -1,7 +1,12 @@
 # Base Home Manager configuration — shared by all users.
 # Applied as a NixOS module via home-manager.users (dendritic/flake/home-nixos-module.nix).
 # Per-user customizations live in home/users/<user>/home.nix.
-{ pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 {
   imports = [
@@ -9,6 +14,28 @@
     ../modules/home/apps/security/bitwarden.nix
     ../modules/home/apps/homebrew.nix
   ];
+
+  # Declarative ~/.config/user-dirs.dirs — previously relied on the desktop
+  # session running xdg-user-dirs-update via XDG autostart, which GNOME did
+  # but Noctalia (a minimal wlroots compositor with no session manager) does
+  # not. Without this, `xdg-user-dir` (used by _nix_cfg below and by
+  # home/users/abutre/home.nix for the age key / git-crypt paths) resolves
+  # nothing, since no user-dirs.dirs ever gets generated. Names match the
+  # pt_BR locale (i18n.defaultLocale, see modules/system/core/localization.nix)
+  # and the eza theme.filenames below, which key off these exact folder names.
+  xdg.userDirs = {
+    enable = true;
+    createDirectories = true;
+    desktop = "${config.home.homeDirectory}/Área de trabalho";
+    documents = "${config.home.homeDirectory}/Documentos";
+    download = "${config.home.homeDirectory}/Downloads";
+    music = "${config.home.homeDirectory}/Músicas";
+    pictures = "${config.home.homeDirectory}/Imagens";
+    projects = "${config.home.homeDirectory}/Projetos";
+    publicShare = "${config.home.homeDirectory}/Público";
+    templates = "${config.home.homeDirectory}/Modelos";
+    videos = "${config.home.homeDirectory}/Vídeos";
+  };
 
   # Zathura as the default PDF viewer (mkDefault so a user's home.nix can override it).
   xdg.mimeApps.defaultApplications = {
