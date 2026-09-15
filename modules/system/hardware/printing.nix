@@ -1,4 +1,4 @@
-# Printing module: Epson ESC-P/R + ecbd.service
+# Printing module: driverless (IPP Everywhere) + ecbd.service
 # Compatible with the Epson L4160 all-in-one
 { pkgs, ... }:
 
@@ -7,14 +7,17 @@
   #
   # Important: epson-printer-utility doesn't handle dnssd:// and
   # implicitclass:// queues well; so we use an IP-based URI (socket://).
+  #
+  # Driverless: CUPS' generic IPP Everywhere PPD ("-m everywhere"), no vendor
+  # driver involved.
   hardware.printers = {
     ensurePrinters = [
       {
-        name = "L4160_IP";
+        name = "L4160_driverless";
         location = "Wi-Fi";
-        description = "EPSON L4160 Series";
+        description = "L4160 (driverless)";
         deviceUri = "socket://EPSONE0321F.local:9100";
-        model = "epson-inkjet-printer-escpr/Epson-L4160_Series-epson-escpr-en.ppd";
+        model = "everywhere";
         # Default CUPS error-policy is "stop-printer": any filter failure
         # (e.g. pdftopdf/QPDF rejecting a malformed PDF) disables the whole
         # queue, requiring a manual `cupsenable`. abort-job just drops the
@@ -22,19 +25,17 @@
         ppdOptions."printer-error-policy" = "abort-job";
       }
     ];
-    ensureDefaultPrinter = "L4160_IP";
+    ensureDefaultPrinter = "L4160_driverless";
   };
 
   services = {
     # CUPS - printing system
     printing = {
       enable = true;
-      # Epson ESC/P-R inkjet driver (version 1) - compatible with L4160, L3x50, etc.
-      # epson-printer-utility is also included here so the CUPS backend (ecblp)
-      # is discovered by CUPS automatically via CUPS_SERVERBIN.
+      # epson-printer-utility is included here so the CUPS backend (ecblp)
+      # is discovered by CUPS automatically via CUPS_SERVERBIN. No vendor
+      # PPD driver (epson-escpr/epson-escpr2) — the queue is driverless.
       drivers = with pkgs; [
-        epson-escpr # ESC/P-R driver version 1 (L4160, L3x50, etc.)
-        epson-escpr2 # ESC/P-R driver version 2 (newer models)
         epson-printer-utility # ecblp CUPS backend for communication with ecbd
       ];
     };
