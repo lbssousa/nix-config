@@ -105,9 +105,9 @@ jobs:
 
       - name: Check flake
         # Evaluate the flake and allow store path realization from substituters.
-        # Note: --no-build is intentionally omitted because lanzaboote (used for Secure Boot
-        # on barbudus) uses crane which calls builtins.pathExists on derivation output paths
-        # during evaluation. With --no-build, all store path realization is blocked, causing
-        # evaluation to fail. Without it, Nix fetches needed sources from nix-community.cachix.org.
-        # nixosConfigurations are always only evaluated (not built) by nix flake check.
+        # Note: --no-build is intentionally omitted — some flake input evaluates
+        # builtins.pathExists on a derivation output path, which --no-build would
+        # block (causing evaluation to fail). Without it, Nix fetches needed
+        # sources from nix-community.cachix.org. nixosConfigurations are always only
+        # evaluated (not built) by nix flake check.
         run: nix flake check --show-trace .
